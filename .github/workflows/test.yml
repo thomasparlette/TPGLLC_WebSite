@@ -1,0 +1,20 @@
+name: Runner Test
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: self-hosted
+  steps:
+    - uses: actions/checkout@v4
+    - name: Show Runner Info
+      shell: pwsh
+      run: |
+       hostname
+       whoami
+       dotnet --info
+       git --version
+    - name: Build
+      shell: pwsh
+      run: |
+        dotnet build
