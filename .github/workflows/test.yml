@@ -6,24 +6,25 @@ on:
 jobs:
   test:
     runs-on:
-  - self-hosted
-  - windows
-  - dotnet10
-  - iis
-  - production
+      - self-hosted
+      - Windows
+      - X64
+      - iis
+      - production
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Show Runner Info
+      - name: Show Runner Information
         shell: pwsh
         run: |
           hostname
           whoami
-          dotnet --info
           git --version
+          dotnet --info
 
-      - name: Build
+      - name: Build Solution
         shell: pwsh
         run: |
           dotnet build
