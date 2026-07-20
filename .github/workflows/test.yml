@@ -5,7 +5,12 @@ on:
 
 jobs:
   test:
-    runs-on: self-hosted
+    runs-on:
+  - self-hosted
+  - windows
+  - dotnet10
+  - iis
+  - production
 
     steps:
       - uses: actions/checkout@v4
