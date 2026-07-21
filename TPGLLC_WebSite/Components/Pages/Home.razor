@@ -1,7 +1,7 @@
 ﻿@page "/"
 <PageTitle>Tom Parlette Garage LLC</PageTitle>
 
-<section class="hero">
+<section class="hero hero-panel">
     <div class="hero-copy">
         <p class="eyebrow">Automotive Repair & Diagnostics</p>
         <h1>Built on Trust. Driven by Results.</h1>
@@ -11,17 +11,17 @@
 
         <div class="hero-actions">
             <a class="btn btn-primary" href="tel:+17653463354">Call Now</a>
-            <a class="btn btn-secondary" href="mailto:tomparlettegarage@gmail.com">Email Us</a>
+            <a class="btn btn-secondary" href="#contact">Send a Message</a>
         </div>
     </div>
 
     <div class="hero-card">
-        <img class="hero-logo" src="images/logo.jpeg" alt="Tom Parlette Garage LLC logo" />
+        <img class="hero-logo" src="/images/logo.jpeg" alt="Tom Parlette Garage LLC logo" />
         <div class="hero-card-content">
             <h2>Business Info</h2>
             <p><strong>Owner:</strong> Thomas Parlette</p>
             <p><strong>Phone:</strong> (765) 346-3354</p>
-            <p><strong>Email:</strong> tomparlettegarage@gmail.com</p>
+            <p><strong>Email:</strong> <a href="mailto:tomparlettegarage@gmail.com">tomparlettegarage@gmail.com</a></p>
             <p><strong>Address:</strong> 2203 Mcclennan Ct S, Columbus, IN 47203</p>
             <p><strong>Hours:</strong> Fri–Sun, 6:30 PM – 10:00 PM</p>
         </div>
@@ -69,22 +69,22 @@
     </div>
 
     <div class="service-grid">
-        <article class="service-card">
+        <article class="service-card animate-card">
             <h3>Diagnostics</h3>
             <p>Check engine lights, drivability issues, electrical problems, and data-driven troubleshooting.</p>
         </article>
 
-        <article class="service-card">
+        <article class="service-card animate-card">
             <h3>Maintenance</h3>
             <p>Oil changes, fluids, filters, inspections, and preventive care to keep vehicles reliable.</p>
         </article>
 
-        <article class="service-card">
+        <article class="service-card animate-card">
             <h3>Brakes & Suspension</h3>
             <p>Brake repairs, shocks, struts, steering, and suspension work with attention to detail.</p>
         </article>
 
-        <article class="service-card">
+        <article class="service-card animate-card">
             <h3>Engine Repair</h3>
             <p>Engine diagnostics, repairs, cooling system service, and performance-related concerns.</p>
         </article>
@@ -93,75 +93,153 @@
 
 <section id="about" class="section split-section">
     <div class="about-copy">
-        <p class="section-kicker">About</p>
-        <h2>Honest work, quality results, and a shop you can trust.</h2>
-        <p>
-            Tom Parlette Garage LLC is built around clear communication, reliable service, and quality repairs.
-            The goal is simple: find the issue, explain it clearly, and fix it right.
-        </p>
-    </div>
-
-    <div class="feature-list">
-        <div class="feature-item">
-            <strong>Transparent estimates</strong>
-            <span>No surprises, no guesswork.</span>
-        </div>
-        <div class="feature-item">
-            <strong>Dependable repairs</strong>
-            <span>Quality work with attention to detail.</span>
-        </div>
-        <div class="feature-item">
-            <strong>Customer-focused</strong>
-            <span>Friendly communication and honest recommendations.</span>
-        </div>
-    </div>
-</section>
-
-<section class="section split-section">
-    <div>
         <p class="section-kicker">Why Choose Us</p>
         <h2>Built for trust and long-term relationships.</h2>
     </div>
 
     <div class="feature-list">
-        <div class="feature-item">
+        <div class="feature-item animate-card">
             <strong>Honest estimates</strong>
             <span>Clear pricing and clear explanations.</span>
         </div>
-        <div class="feature-item">
+        <div class="feature-item animate-card">
             <strong>Quality repairs</strong>
             <span>We focus on doing the job right.</span>
         </div>
-        <div class="feature-item">
+        <div class="feature-item animate-card">
             <strong>Modern diagnostics</strong>
             <span>We use data to isolate the problem.</span>
         </div>
-        <div class="feature-item">
+        <div class="feature-item animate-card">
             <strong>Trusted locally</strong>
             <span>Professional service for your community.</span>
         </div>
     </div>
 </section>
 
-<section id="contact" class="section contact-section">
+<section class="section split-section">
     <div>
-        <p class="section-kicker">Contact</p>
-        <h2>Ready to schedule service?</h2>
-        <p>
-            Call or email to discuss your vehicle, get an estimate, or ask a question.
-        </p>
+        <p class="section-kicker">Reviews</p>
+        <h2>Customers come back because the work is honest and dependable.</h2>
 
-        <div class="hero-actions">
-            <a class="btn btn-primary" href="tel:+17653463354">Call Now</a>
-            <a class="btn btn-secondary" href="mailto:tomparlettegarage@gmail.com">Send Email</a>
+        <div class="review-grid">
+            <div class="review-card animate-card">
+                <p class="stars">★★★★★</p>
+                <p>“Great communication and very fair.”</p>
+            </div>
+            <div class="review-card animate-card">
+                <p class="stars">★★★★★</p>
+                <p>“Fast turnaround and quality work.”</p>
+            </div>
+            <div class="review-card animate-card">
+                <p class="stars">★★★★★</p>
+                <p>“Reliable service and honest diagnosis.”</p>
+            </div>
         </div>
     </div>
 
-    <div class="quote-card">
-        <h3>Tom Parlette Garage LLC</h3>
-        <p>2203 Mcclennan Ct S</p>
-        <p>Columbus, IN 47203</p>
-        <p>(765) 346-3354</p>
-        <p>tomparlettegarage@gmail.com</p>
+    <div class="map-card animate-card">
+        <p class="section-kicker">Location</p>
+        <h2>Find us in Columbus, Indiana.</h2>
+        <div class="map-frame">
+            <iframe title="Google Map"
+                    src="https://www.google.com/maps?q=2203%20Mcclennan%20Ct%20S,%20Columbus,%20IN%2047203&output=embed"
+                    loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade">
+            </iframe>
+        </div>
     </div>
 </section>
+
+<section class="cta-band animate-card">
+    <div>
+        <p class="section-kicker">Need Service?</p>
+        <h2>Let’s get your vehicle taken care of.</h2>
+    </div>
+
+    <div class="hero-actions">
+        <a class="btn btn-primary" href="tel:+17653463354">Call Now</a>
+        <a class="btn btn-secondary" href="#contact">Send a Message</a>
+    </div>
+</section>
+
+<section id="contact" class="section contact-section">
+    <div>
+        <p class="section-kicker">Contact</p>
+        <h2>Send a message and we will get back to you.</h2>
+        <p>
+            Use the form below to send a message about your vehicle, the issue you are seeing, or to ask about scheduling.
+        </p>
+    </div>
+
+    <div class="quote-card contact-form-card animate-card">
+        <EditForm Model="_message" OnValidSubmit="SubmitMessage">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label>Name</label>
+                    <InputText class="input" @bind-Value="_message.Name" />
+                </div>
+
+                <div class="form-field">
+                    <label>Phone</label>
+                    <InputText class="input" @bind-Value="_message.Phone" />
+                </div>
+
+                <div class="form-field full">
+                    <label>Email</label>
+                    <InputText class="input" @bind-Value="_message.Email" />
+                </div>
+
+                <div class="form-field full">
+                    <label>Message</label>
+                    <InputTextArea class="input textarea" @bind-Value="_message.Body" />
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary full-width">Send Message</button>
+
+            @if (!string.IsNullOrWhiteSpace(_submitStatus))
+            {
+                <p class="form-status">@_submitStatus</p>
+            }
+        </EditForm>
+    </div>
+</section>
+
+@code {
+    private ContactMessage _message = new();
+    private string? _submitStatus;
+
+    private void SubmitMessage()
+    {
+        var subject = Uri.EscapeDataString($"Website message from {_message.Name}");
+        var body = Uri.EscapeDataString(
+            $"Name: {_message.Name}\nPhone: {_message.Phone}\nEmail: {_message.Email}\n\nMessage:\n{_message.Body}");
+
+        var mailto = $"mailto:tomparlettegarage@gmail.com?subject={subject}&body={body}";
+        _submitStatus = "Your email app will open so you can send the message.";
+
+        Navigation.NavigateTo(mailto, forceLoad: true);
+    }
+
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private sealed class ContactMessage
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        public string? Name { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string? Phone { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.EmailAddress]
+        public string? Email { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string? Body { get; set; }
+    }
+}
