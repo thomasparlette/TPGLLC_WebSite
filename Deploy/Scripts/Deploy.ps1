@@ -299,11 +299,7 @@ try {
     $backupPath = Backup-CurrentWebsite -WebsitePath $WebsitePath -BackupRoot $BackupRoot
     $releasePath = Copy-ReleaseSnapshot -PublishPath $PublishPath -ReleaseRoot $ReleaseRoot
 
-    Write-VersionFile `
-        -WebsitePath $WebsitePath `
-        -CommitSha $CommitSha `
-        -BranchName $BranchName `
-        -RunnerName $RunnerName
+    
 
     Write-Log "Placing app_offline.htm..."
     @"
@@ -328,6 +324,11 @@ try {
         Remove-Item $appOfflinePath -Force -ErrorAction SilentlyContinue
         Write-Log "Removed app_offline.htm"
     }
+	Write-VersionFile `
+        -WebsitePath $WebsitePath `
+        -CommitSha $CommitSha `
+        -BranchName $BranchName `
+        -RunnerName $RunnerName
 
     Test-HealthCheck -Url $HealthCheckUrl
     Cleanup-OldReleases -ReleaseRoot $ReleaseRoot -KeepReleases $KeepReleases
