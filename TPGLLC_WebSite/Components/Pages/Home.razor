@@ -173,7 +173,7 @@
     </div>
 
     <div class="quote-card contact-form-card animate-card">
-        <EditForm Model="_message" OnValidSubmit="SubmitMessage">
+        <EditForm Model="_message">
             <DataAnnotationsValidator />
             <ValidationSummary />
 
@@ -199,33 +199,25 @@
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary full-width">Send Message</button>
-
-            @if (!string.IsNullOrWhiteSpace(_submitStatus))
-            {
-                <p class="form-status">@_submitStatus</p>
-            }
+            <a class="btn btn-primary full-width"
+               href="@BuildMailtoLink()">
+                Send Message
+            </a>
         </EditForm>
     </div>
 </section>
 
 @code {
     private ContactMessage _message = new();
-    private string? _submitStatus;
 
-    private void SubmitMessage()
+    private string BuildMailtoLink()
     {
         var subject = Uri.EscapeDataString($"Website message from {_message.Name}");
         var body = Uri.EscapeDataString(
             $"Name: {_message.Name}\nPhone: {_message.Phone}\nEmail: {_message.Email}\n\nMessage:\n{_message.Body}");
 
-        var mailto = $"mailto:tomparlettegarage@gmail.com?subject={subject}&body={body}";
-        _submitStatus = "Your email app will open so you can send the message.";
-
-        Navigation.NavigateTo(mailto, forceLoad: true);
+        return $"mailto:tomparlettegarage@gmail.com?subject={subject}&body={body}";
     }
-
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
 
     private sealed class ContactMessage
     {
