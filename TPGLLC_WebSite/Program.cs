@@ -21,6 +21,14 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>();
+app.MapGet("/version", () =>
+{
+    var versionPath = Path.Combine(AppContext.BaseDirectory, "version.json");
+
+    return File.Exists(versionPath)
+        ? Results.File(versionPath, "application/json")
+        : Results.NotFound();
+});
 
 app.MapGet("/health", () => Results.Text("OK", "text/plain"));
 

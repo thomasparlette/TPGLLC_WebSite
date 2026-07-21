@@ -17,6 +17,15 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$HealthCheckUrl,
 
+    [Parameter(Mandatory = $true)]
+    [string]$CommitSha,
+
+    [Parameter(Mandatory = $true)]
+    [string]$BranchName,
+
+    [Parameter(Mandatory = $true)]
+    [string]$RunnerName,
+
     [int]$KeepReleases = 10,
 
     [int]$LogRetentionDays = 30,
@@ -163,6 +172,38 @@ function Copy-ReleaseSnapshot {
     return $releasePath
 }
 
+function Write-VersionFile {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$WebsitePath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$CommitSha,
+
+        [Parameter(Mandatory = $true)]
+        [string]$BranchName,
+
+        [Parameter(Mandatory = $true)]
+        [string]$RunnerName
+    )
+
+    $shortSha = if ($CommitSha.Length -ge 7) { $CommitSha.Substring(0, 7) } else { $CommitSha }
+    $versionValue = "{0}+{1}" -f (Get-Date -Format 'yyyy.MM.dd.HHmmss'), $shortSha
+
+    $versionInfo = [ordered]@{
+        version  = $versionValue
+        commit   = $CommitSha
+        branch   = $BranchName
+        deployed = (Get-Date).ToString('o')
+        runner   = $RunnerName
+    }
+
+    $versionPath = Join-Path $WebsitePath 'version.json'
+    $versionInfo | ConvertTo-Json -Depth 5 | Set-Content -Path $versionPath -Encoding UTF8
+
+    Write-Log "Version file written: $versionPath"
+}
+
 function Cleanup-OldReleases {
     param(
         [Parameter(Mandatory = $true)]
@@ -250,6 +291,9 @@ $releasePath = $null
 
 try {
     Write-Log "Starting deployment..."
+    Write-Log "Repository branch: $BranchName"
+    Write-Log "Commit SHA: $CommitSha"
+    Write-Log "Runner: $RunnerName"
 
     New-Item -ItemType Directory -Force -Path $BackupRoot | Out-Null
     New-Item -ItemType Directory -Force -Path $WebsitePath | Out-Null
@@ -257,6 +301,12 @@ try {
 
     $backupPath = Backup-CurrentWebsite -WebsitePath $WebsitePath -BackupRoot $BackupRoot
     $releasePath = Copy-ReleaseSnapshot -PublishPath $PublishPath -ReleaseRoot $ReleaseRoot
+
+    Write-VersionFile `
+        -WebsitePath $WebsitePath `
+        -CommitSha $CommitSha `
+        -BranchName $BranchName `
+        -RunnerName $RunnerName
 
     Write-Log "Placing app_offline.htm..."
     @"

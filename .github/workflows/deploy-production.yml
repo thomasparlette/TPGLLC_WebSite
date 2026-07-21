@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-
   workflow_dispatch:
 
 env:
@@ -23,14 +22,15 @@ env:
   LOG_RETENTION_DAYS: 30
   BACKUP_RETENTION_DAYS: 30
 
+  COMMIT_SHA: ${{ github.sha }}
+  BRANCH_NAME: ${{ github.ref_name }}
+  RUNNER_NAME: ${{ runner.name }}
+
 jobs:
-
   deploy:
-
     runs-on: self-hosted
 
     steps:
-
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -53,31 +53,17 @@ jobs:
       - name: Prepare Publish Folder
         shell: powershell
         run: |
-
-          New-Item `
-              -ItemType Directory `
-              -Force `
-              -Path $env:PUBLISH_DIR | Out-Null
-
-          Remove-Item `
-              -Path (Join-Path $env:PUBLISH_DIR '*') `
-              -Recurse `
-              -Force `
-              -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $env:PUBLISH_DIR | Out-Null
+          Remove-Item -Path (Join-Path $env:PUBLISH_DIR '*') -Recurse -Force -ErrorAction SilentlyContinue
 
       - name: Build Website
         shell: powershell
         run: |
-
-          dotnet publish `
-              $env:PROJECT_PATH `
-              -c Release `
-              -o $env:PUBLISH_DIR
+          dotnet publish $env:PROJECT_PATH -c Release -o $env:PUBLISH_DIR
 
       - name: Deploy Website
         shell: powershell
         run: |
-
           & "$env:GITHUB_WORKSPACE\Deploy\Scripts\Deploy.ps1" `
             -WebsitePath $env:WEBSITE_DIR `
             -PublishPath $env:PUBLISH_DIR `
@@ -87,13 +73,15 @@ jobs:
             -HealthCheckUrl $env:HEALTHCHECK_URL `
             -KeepReleases $env:KEEP_RELEASES `
             -LogRetentionDays $env:LOG_RETENTION_DAYS `
-            -BackupRetentionDays $env:BACKUP_RETENTION_DAYS
+            -BackupRetentionDays $env:BACKUP_RETENTION_DAYS `
+            -CommitSha $env:COMMIT_SHA `
+            -BranchName $env:BRANCH_NAME `
+            -RunnerName $env:RUNNER_NAME
 
       - name: Deployment Summary
         if: always()
         shell: powershell
         run: |
-
           $Summary = $env:GITHUB_STEP_SUMMARY
 
           Add-Content $Summary "# Deployment Summary"
@@ -101,17 +89,22 @@ jobs:
 
           Add-Content $Summary "**Repository**"
           Add-Content $Summary ": $env:GITHUB_REPOSITORY"
+          Add-Content $Summary ""
 
+          Add-Content $Summary "**Branch**"
+          Add-Content $Summary ": $env:BRANCH_NAME"
           Add-Content $Summary ""
 
           Add-Content $Summary "**Commit**"
-          Add-Content $Summary ": $env:GITHUB_SHA"
+          Add-Content $Summary ": $env:COMMIT_SHA"
+          Add-Content $Summary ""
 
+          Add-Content $Summary "**Runner**"
+          Add-Content $Summary ": $env:RUNNER_NAME"
           Add-Content $Summary ""
 
           Add-Content $Summary "**Status**"
           Add-Content $Summary ": ${{ job.status }}"
-
           Add-Content $Summary ""
 
           $LatestLog = Get-ChildItem `
@@ -124,9 +117,7 @@ jobs:
           if ($LatestLog)
           {
               Add-Content $Summary "Latest Log"
-
               Add-Content $Summary ""
-
               Add-Content $Summary '```text'
 
               Get-Content $LatestLog.FullName -Tail 50 |
@@ -145,14 +136,9 @@ jobs:
       - name: Upload Deployment Logs
         if: always()
         uses: actions/upload-artifact@v4
-
         with:
-
           name: DeploymentLogs
-
           path: |
             D:\Deploy\Logs\*.log
-
           if-no-files-found: warn
-
           retention-days: 14
