@@ -13,6 +13,7 @@ env:
   BACKUP_DIR: D:\Deploy\Backups
   RELEASE_DIR: D:\Deploy\Releases
   LOG_DIR: D:\Deploy\Logs
+  LOG_RETENTION_DAYS: 30
   HEALTHCHECK_URL: http://localhost/health
   APP_POOL_NAME: TPGLLC
 
@@ -53,4 +54,5 @@ jobs:
           -ReleaseRoot $env:RELEASE_DIR `
           -LogRoot $env:LOG_DIR `
           -HealthCheckUrl $env:HEALTHCHECK_URL `
-          -KeepReleases 10
+          -KeepReleases 10 `
+          -LogRetentionDays $env:LOG_RETENTION_DAYS
