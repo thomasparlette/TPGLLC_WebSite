@@ -12,6 +12,7 @@ env:
   WEBSITE_DIR: D:\Websites\TPGLLC\Published
   BACKUP_DIR: D:\Deploy\Backups
   HEALTHCHECK_URL: http://localhost
+  APP_POOL_NAME: TPGLLC
 
 jobs:
   deploy:
@@ -40,23 +41,12 @@ jobs:
         run: |
           dotnet publish $env:PROJECT_PATH -c Release -o $env:PUBLISH_DIR
 
-      - name: Backup Existing Website
+      - name: Deploy Website
         shell: powershell
         run: |
-          & "$env:GITHUB_WORKSPACE\Deploy\Scripts\Backup-Website.ps1" -WebsitePath $env:WEBSITE_DIR -BackupRoot $env:BACKUP_DIR
-
-      - name: Deploy Website Files
-        shell: powershell
-        run: |
-          & "$env:GITHUB_WORKSPACE\Deploy\Scripts\Publish-Website.ps1" -SourcePath $env:PUBLISH_DIR -WebsitePath $env:WEBSITE_DIR
-
-      - name: Health Check
-        shell: powershell
-        run: |
-          & "$env:GITHUB_WORKSPACE\Deploy\Scripts\Test-Website.ps1" -Url $env:HEALTHCHECK_URL -ExpectedText 'Tom Parlette Garage LLC'
-
-      - name: Rollback on Failure
-        if: failure()
-        shell: powershell
-        run: |
-          & "$env:GITHUB_WORKSPACE\Deploy\Scripts\Rollback-Website.ps1" -WebsitePath $env:WEBSITE_DIR -BackupRoot $env:BACKUP_DIR
+          & "$env:GITHUB_WORKSPACE\Deploy\Scripts\Deploy.ps1" `
+            -WebsitePath $env:WEBSITE_DIR `
+            -PublishPath $env:PUBLISH_DIR `
+            -BackupRoot $env:BACKUP_DIR `
+            -AppPoolName $env:APP_POOL_NAME `
+            -HealthCheckUrl $env:HEALTHCHECK_URL
