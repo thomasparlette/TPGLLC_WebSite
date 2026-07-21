@@ -18,14 +18,15 @@ param(
     [string]$HealthCheckUrl,
 
     [int]$KeepReleases = 10,
-	[int]$LogRetentionDays = 30,
-	[int]$BackupRetentionDays = 30
+
+    [int]$LogRetentionDays = 30,
+
+    [int]$BackupRetentionDays = 30
 )
 
 $ErrorActionPreference = 'Stop'
 
 New-Item -ItemType Directory -Force -Path $LogRoot | Out-Null
-
 $LogFile = Join-Path $LogRoot ("Deploy_{0}.log" -f (Get-Date -Format "yyyy-MM-dd_HHmmss"))
 
 function Write-Log {
@@ -34,7 +35,7 @@ function Write-Log {
         [string]$Message
     )
 
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $line = "[$timestamp] $Message"
 
     Write-Host $line
@@ -174,31 +175,13 @@ function Cleanup-OldReleases {
         return
     }
 
-    $releases = Get-ChildItem -Path $ReleaseRoot -Directory |
-        Sort-Object Name -Descending
-
+    $releases = Get-ChildItem -Path $ReleaseRoot -Directory | Sort-Object Name -Descending
     $oldReleases = $releases | Select-Object -Skip $KeepReleases
 
     foreach ($release in $oldReleases) {
         Write-Log "Removing old release: $($release.FullName)"
         Remove-Item $release.FullName -Recurse -Force -ErrorAction SilentlyContinue
     }
-}
-
-function Test-HealthCheck {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Url
-    )
-
-    Write-Log "Running health check: $Url"
-    $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 20
-
-    if ($response.StatusCode -lt 200 -or $response.StatusCode -ge 300) {
-        throw "Health check returned status code $($response.StatusCode)"
-    }
-
-    Write-Log "Health check passed with status code $($response.StatusCode)"
 }
 
 function Cleanup-OldLogs {
@@ -244,6 +227,23 @@ function Cleanup-OldBackups {
             Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
         }
 }
+
+function Test-HealthCheck {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Url
+    )
+
+    Write-Log "Running health check: $Url"
+    $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 20
+
+    if ($response.StatusCode -lt 200 -or $response.StatusCode -ge 300) {
+        throw "Health check returned status code $($response.StatusCode)"
+    }
+
+    Write-Log "Health check passed with status code $($response.StatusCode)"
+}
+
 $appOfflinePath = Join-Path $WebsitePath 'app_offline.htm'
 $backupPath = $null
 $releasePath = $null
@@ -284,8 +284,9 @@ try {
 
     Test-HealthCheck -Url $HealthCheckUrl
     Cleanup-OldReleases -ReleaseRoot $ReleaseRoot -KeepReleases $KeepReleases
-	Cleanup-OldLogs -LogRoot $LogRoot -RetentionDays $LogRetentionDays
-	Cleanup-OldBackups -BackupRoot $BackupRoot -RetentionDays $BackupRetentionDays
+    Cleanup-OldLogs -LogRoot $LogRoot -RetentionDays $LogRetentionDays
+    Cleanup-OldBackups -BackupRoot $BackupRoot -RetentionDays $BackupRetentionDays
+
     Write-Log "Deployment completed successfully."
     exit 0
 }
