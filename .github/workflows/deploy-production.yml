@@ -50,5 +50,6 @@ jobs:
           -PublishPath $env:PUBLISH_DIR `
           -BackupRoot $env:BACKUP_DIR `
           -ReleaseRoot $env:RELEASE_DIR `
+          -LogRoot $env:LOG_DIR `
           -HealthCheckUrl $env:HEALTHCHECK_URL `
           -KeepReleases 10

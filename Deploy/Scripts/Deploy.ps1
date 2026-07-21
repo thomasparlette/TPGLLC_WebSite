@@ -12,6 +12,9 @@ param(
     [string]$ReleaseRoot,
 
     [Parameter(Mandatory = $true)]
+    [string]$LogRoot,
+
+    [Parameter(Mandatory = $true)]
     [string]$HealthCheckUrl,
 
     [int]$KeepReleases = 10
@@ -19,16 +22,30 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+New-Item -ItemType Directory -Force -Path $LogRoot | Out-Null
+
+$LogFile = Join-Path $LogRoot ("Deploy_{0}.log" -f (Get-Date -Format "yyyy-MM-dd_HHmmss"))
+
 function Write-Log {
-    param([Parameter(Mandatory = $true)][string]$Message)
-    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-    Write-Host "[$timestamp] $Message"
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Message
+    )
+
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $line = "[$timestamp] $Message"
+
+    Write-Host $line
+    Add-Content -Path $LogFile -Value $line
 }
 
 function Invoke-RobocopySafe {
     param(
-        [Parameter(Mandatory = $true)] [string]$Source,
-        [Parameter(Mandatory = $true)] [string]$Destination
+        [Parameter(Mandatory = $true)]
+        [string]$Source,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Destination
     )
 
     if (-not (Test-Path $Source)) {
@@ -37,9 +54,11 @@ function Invoke-RobocopySafe {
 
     New-Item -ItemType Directory -Force -Path $Destination | Out-Null
 
-    robocopy $Source $Destination /MIR /XF app_offline.htm /NFL /NDL /NJH /NJS /NP /R:2 /W:2 | Out-Host
-    $code = $LASTEXITCODE
+    robocopy $Source $Destination /MIR /XF app_offline.htm /NFL /NDL /NJH /NJS /NP /R:2 /W:2 2>&1 |
+        Tee-Object -FilePath $LogFile -Append |
+        Out-Host
 
+    $code = $LASTEXITCODE
     if ($code -ge 8) {
         throw "Robocopy failed with exit code $code"
     }
@@ -49,8 +68,11 @@ function Invoke-RobocopySafe {
 
 function Backup-CurrentWebsite {
     param(
-        [Parameter(Mandatory = $true)] [string]$WebsitePath,
-        [Parameter(Mandatory = $true)] [string]$BackupRoot
+        [Parameter(Mandatory = $true)]
+        [string]$WebsitePath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$BackupRoot
     )
 
     if (-not (Test-Path $WebsitePath)) {
@@ -63,9 +85,11 @@ function Backup-CurrentWebsite {
     New-Item -ItemType Directory -Force -Path $backupPath | Out-Null
 
     Write-Log "Backing up current website to '$backupPath'..."
-    robocopy $WebsitePath $backupPath /MIR /NFL /NDL /NJH /NJS /NP /R:2 /W:2 | Out-Host
-    $code = $LASTEXITCODE
+    robocopy $WebsitePath $backupPath /MIR /NFL /NDL /NJH /NJS /NP /R:2 /W:2 2>&1 |
+        Tee-Object -FilePath $LogFile -Append |
+        Out-Host
 
+    $code = $LASTEXITCODE
     if ($code -ge 8) {
         throw "Backup failed with exit code $code"
     }
@@ -109,8 +133,11 @@ function Wait-ForFileUnlock {
 
 function Copy-ReleaseSnapshot {
     param(
-        [Parameter(Mandatory = $true)] [string]$PublishPath,
-        [Parameter(Mandatory = $true)] [string]$ReleaseRoot
+        [Parameter(Mandatory = $true)]
+        [string]$PublishPath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ReleaseRoot
     )
 
     New-Item -ItemType Directory -Force -Path $ReleaseRoot | Out-Null
@@ -120,9 +147,11 @@ function Copy-ReleaseSnapshot {
     New-Item -ItemType Directory -Force -Path $releasePath | Out-Null
 
     Write-Log "Creating release snapshot at '$releasePath'..."
-    robocopy $PublishPath $releasePath /MIR /XF app_offline.htm /NFL /NDL /NJH /NJS /NP /R:2 /W:2 | Out-Host
-    $code = $LASTEXITCODE
+    robocopy $PublishPath $releasePath /MIR /XF app_offline.htm /NFL /NDL /NJH /NJS /NP /R:2 /W:2 2>&1 |
+        Tee-Object -FilePath $LogFile -Append |
+        Out-Host
 
+    $code = $LASTEXITCODE
     if ($code -ge 8) {
         throw "Release snapshot failed with exit code $code"
     }
@@ -133,7 +162,9 @@ function Copy-ReleaseSnapshot {
 
 function Cleanup-OldReleases {
     param(
-        [Parameter(Mandatory = $true)] [string]$ReleaseRoot,
+        [Parameter(Mandatory = $true)]
+        [string]$ReleaseRoot,
+
         [int]$KeepReleases = 10
     )
 
@@ -153,7 +184,10 @@ function Cleanup-OldReleases {
 }
 
 function Test-HealthCheck {
-    param([Parameter(Mandatory = $true)] [string]$Url)
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Url
+    )
 
     Write-Log "Running health check: $Url"
     $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 20
@@ -219,7 +253,10 @@ catch {
     if ($backupPath -and (Test-Path $backupPath)) {
         try {
             Write-Log "Attempting rollback from '$backupPath'..."
-            robocopy $backupPath $WebsitePath /MIR /XF app_offline.htm /NFL /NDL /NJH /NJS /NP /R:2 /W:2 | Out-Host
+            robocopy $backupPath $WebsitePath /MIR /XF app_offline.htm /NFL /NDL /NJH /NJS /NP /R:2 /W:2 2>&1 |
+                Tee-Object -FilePath $LogFile -Append |
+                Out-Host
+
             $rollbackCode = $LASTEXITCODE
             if ($rollbackCode -ge 8) {
                 Write-Log "Rollback failed with exit code $rollbackCode"
