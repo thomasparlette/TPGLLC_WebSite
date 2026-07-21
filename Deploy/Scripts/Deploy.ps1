@@ -9,9 +9,6 @@ param(
     [string]$BackupRoot,
 
     [Parameter(Mandatory = $true)]
-    [string]$AppPoolName,
-
-    [Parameter(Mandatory = $true)]
     [string]$HealthCheckUrl
 )
 
@@ -82,6 +79,9 @@ function Test-HealthCheck {
     Write-Log "Health check passed with status code $($response.StatusCode)"
 }
 
+$appOfflinePath = Join-Path $WebsitePath 'app_offline.htm'
+$backupPath = $null
+
 try {
     Write-Log "Starting deployment..."
 
@@ -90,17 +90,23 @@ try {
 
     $backupPath = Backup-CurrentWebsite -WebsitePath $WebsitePath -BackupRoot $BackupRoot
 
-    Import-Module WebAdministration
-    Write-Log "Stopping IIS app pool '$AppPoolName'..."
-    Stop-WebAppPool -Name $AppPoolName
+    Write-Log "Placing app_offline.htm..."
+    @"
+<html>
+<head><title>Site Offline</title></head>
+<body><h1>Temporarily offline for deployment.</h1></body>
+</html>
+"@ | Set-Content -Path $appOfflinePath -Encoding UTF8
 
     try {
         Write-Log "Deploying files from '$PublishPath' to '$WebsitePath'..."
         Invoke-RobocopySafe -Source $PublishPath -Destination $WebsitePath
     }
     finally {
-        Write-Log "Starting IIS app pool '$AppPoolName'..."
-        Start-WebAppPool -Name $AppPoolName
+        if (Test-Path $appOfflinePath) {
+            Remove-Item $appOfflinePath -Force -ErrorAction SilentlyContinue
+            Write-Log "Removed app_offline.htm"
+        }
     }
 
     Test-HealthCheck -Url $HealthCheckUrl
@@ -110,21 +116,19 @@ try {
 catch {
     Write-Log "Deployment failed: $($_.Exception.Message)"
 
-    try {
-        Import-Module WebAdministration
-        Start-WebAppPool -Name $AppPoolName
-    } catch {
-        Write-Log "Could not restart app pool during failure recovery: $($_.Exception.Message)"
-    }
-
     if ($backupPath -and (Test-Path $backupPath)) {
         try {
             Write-Log "Attempting rollback from '$backupPath'..."
             robocopy $backupPath $WebsitePath /MIR /NFL /NDL /NJH /NJS /NP /R:2 /W:2 | Out-Host
             Write-Log "Rollback completed."
-        } catch {
+        }
+        catch {
             Write-Log "Rollback failed: $($_.Exception.Message)"
         }
+    }
+
+    if (Test-Path $appOfflinePath) {
+        Remove-Item $appOfflinePath -Force -ErrorAction SilentlyContinue
     }
 
     exit 1
