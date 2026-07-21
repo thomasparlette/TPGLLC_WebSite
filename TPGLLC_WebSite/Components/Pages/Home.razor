@@ -21,7 +21,7 @@
             <h2>Business Info</h2>
             <p><strong>Owner:</strong> Thomas Parlette</p>
             <p><strong>Phone:</strong> (765) 346-3354</p>
-            <p><strong>Email:</strong> <a href="mailto:tomparlettegarage@gmail.com">tomparlettegarage@gmail.com</a></p>
+            <p><strong>Email:</strong> <a href="mailto:tomparlette@tomparlettegarage.org">tomparlette@tomparlettegarage.org</a></p>
             <p><strong>Address:</strong> 2203 Mcclennan Ct S, Columbus, IN 47203</p>
             <p><strong>Hours:</strong> Fri–Sun, 6:30 PM – 10:00 PM</p>
         </div>
@@ -41,7 +41,7 @@
         <span>✉</span>
         <div>
             <strong>Email</strong>
-            <p>tomparlettegarage@gmail.com</p>
+            <p>tomparlette@tomparlettegarage.org</p>
         </div>
     </div>
 
@@ -216,7 +216,7 @@
         var body = Uri.EscapeDataString(
             $"Name: {_message.Name}\nPhone: {_message.Phone}\nEmail: {_message.Email}\n\nMessage:\n{_message.Body}");
 
-        return $"mailto:tomparlettegarage@gmail.com?subject={subject}&body={body}";
+        return $"mailto:tomparlette@tomparlettegarage.org?subject={subject}&body={body}";
     }
 
     private sealed class ContactMessage
