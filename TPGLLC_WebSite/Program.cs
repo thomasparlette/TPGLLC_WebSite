@@ -2,9 +2,6 @@ using TPGLLC_WebSite.Components;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
-using Serilog;
-
-var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((context, services, loggerConfiguration) =>
 {
