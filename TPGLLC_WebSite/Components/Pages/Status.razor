@@ -1,0 +1,95 @@
+﻿@page "/status"
+@using System.Diagnostics
+@using System.Text.Json
+@inject IWebHostEnvironment Env
+
+<PageTitle>Status</PageTitle>
+
+<h1>Site Status</h1>
+
+@if (_model is null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;">
+        <div>
+            <h3>Version</h3>
+            <p>@_model.Version</p>
+        </div>
+
+        <div>
+            <h3>Commit</h3>
+            <p>@_model.Commit</p>
+        </div>
+
+        <div>
+            <h3>Branch</h3>
+            <p>@_model.Branch</p>
+        </div>
+
+        <div>
+            <h3>Deployed</h3>
+            <p>@_model.Deployed</p>
+        </div>
+
+        <div>
+            <h3>Runner</h3>
+            <p>@_model.Runner</p>
+        </div>
+
+        <div>
+            <h3>Machine</h3>
+            <p>@Environment.MachineName</p>
+        </div>
+
+        <div>
+            <h3>Environment</h3>
+            <p>@Env.EnvironmentName</p>
+        </div>
+
+        <div>
+            <h3>App Base Path</h3>
+            <p>@Env.ContentRootPath</p>
+        </div>
+    </div>
+}
+
+@code {
+    private StatusModel? _model;
+
+    protected override void OnInitialized()
+    {
+        var versionPath = Path.Combine(Env.ContentRootPath, "version.json");
+
+        if (File.Exists(versionPath))
+        {
+            var json = File.ReadAllText(versionPath);
+            _model = JsonSerializer.Deserialize<StatusModel>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+        else
+        {
+            _model = new StatusModel
+            {
+                Version = "Not deployed yet",
+                Commit = "N/A",
+                Branch = "N/A",
+                Deployed = "N/A",
+                Runner = "N/A"
+            };
+        }
+    }
+
+    private sealed class StatusModel
+    {
+        public string? Version { get; set; }
+        public string? Commit { get; set; }
+        public string? Branch { get; set; }
+        public string? Deployed { get; set; }
+        public string? Runner { get; set; }
+    }
+}
