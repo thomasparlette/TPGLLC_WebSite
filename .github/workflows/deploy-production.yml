@@ -11,6 +11,7 @@ env:
   PUBLISH_DIR: D:\Deploy\Artifacts\publish
   WEBSITE_DIR: D:\Websites\TPGLLC\Published
   BACKUP_DIR: D:\Deploy\Backups
+  RELEASE_DIR: D:\Deploy\Releases
   HEALTHCHECK_URL: http://localhost
   APP_POOL_NAME: TPGLLC
 
@@ -48,4 +49,6 @@ jobs:
           -WebsitePath $env:WEBSITE_DIR `
           -PublishPath $env:PUBLISH_DIR `
           -BackupRoot $env:BACKUP_DIR `
-          -HealthCheckUrl $env:HEALTHCHECK_URL
+          -ReleaseRoot $env:RELEASE_DIR `
+          -HealthCheckUrl $env:HEALTHCHECK_URL `
+          -KeepReleases 10
