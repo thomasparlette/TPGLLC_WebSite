@@ -50,7 +50,7 @@ else
 
         <div class="status-card">
             <h3>Uptime</h3>
-            <p>@TimeSpan.FromMilliseconds(Environment.TickCount64)</p>
+            <p>@FormatUptime()</p>
         </div>
     </div>
 
@@ -67,7 +67,7 @@ else
 }
 
 @code {
-    private StatusModel? _model;
+    private StatusModel _model = new();
     private List<string> _recentLogLines = new();
 
     protected override void OnInitialized()
@@ -78,21 +78,43 @@ else
 
     private void LoadVersionInfo()
     {
-        var versionPath = Path.Combine(Env.ContentRootPath, "version.json");
-
-        if (File.Exists(versionPath))
+        try
         {
+            var versionPath = Path.Combine(Env.ContentRootPath, "version.json");
+
+            if (!File.Exists(versionPath))
+            {
+                _model = new StatusModel
+                {
+                    Version = "Not deployed yet",
+                    Commit = "N/A",
+                    Branch = "N/A",
+                    Deployed = "N/A",
+                    Runner = "N/A"
+                };
+                return;
+            }
+
             var json = File.ReadAllText(versionPath);
-            _model = JsonSerializer.Deserialize<StatusModel>(json, new JsonSerializerOptions
+            var model = JsonSerializer.Deserialize<StatusModel>(json, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
+
+            _model = model ?? new StatusModel
+            {
+                Version = "Unknown",
+                Commit = "N/A",
+                Branch = "N/A",
+                Deployed = "N/A",
+                Runner = "N/A"
+            };
         }
-        else
+        catch
         {
             _model = new StatusModel
             {
-                Version = "Not deployed yet",
+                Version = "Error loading version",
                 Commit = "N/A",
                 Branch = "N/A",
                 Deployed = "N/A",
@@ -103,27 +125,40 @@ else
 
     private void LoadRecentLogs()
     {
-        var logDir = Path.Combine(Env.ContentRootPath, "Logs");
-
-        if (!Directory.Exists(logDir))
+        try
         {
-            return;
+            var logDir = Path.Combine(Env.ContentRootPath, "Logs");
+
+            if (!Directory.Exists(logDir))
+            {
+                return;
+            }
+
+            var latestLog = Directory.GetFiles(logDir, "site-*.log")
+                .Select(path => new FileInfo(path))
+                .OrderByDescending(f => f.LastWriteTimeUtc)
+                .FirstOrDefault();
+
+            if (latestLog is null || !latestLog.Exists)
+            {
+                return;
+            }
+
+            var lines = File.ReadAllLines(latestLog.FullName);
+            _recentLogLines = lines
+                .Skip(Math.Max(0, lines.Length - 30))
+                .ToList();
         }
-
-        var latestLog = Directory.GetFiles(logDir, "site-*.log")
-            .Select(path => new FileInfo(path))
-            .OrderByDescending(f => f.LastWriteTimeUtc)
-            .FirstOrDefault();
-
-        if (latestLog is null || !latestLog.Exists)
+        catch
         {
-            return;
+            _recentLogLines = new List<string>();
         }
+    }
 
-        var lines = File.ReadAllLines(latestLog.FullName);
-        _recentLogLines = lines
-            .Skip(Math.Max(0, lines.Length - 30))
-            .ToList();
+    private string FormatUptime()
+    {
+        var uptime = TimeSpan.FromMilliseconds(Environment.TickCount64);
+        return $"{(int)uptime.TotalDays}d {uptime.Hours}h {uptime.Minutes}m {uptime.Seconds}s";
     }
 
     private sealed class StatusModel
