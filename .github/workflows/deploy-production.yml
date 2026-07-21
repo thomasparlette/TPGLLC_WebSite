@@ -4,50 +4,80 @@ on:
   push:
     branches:
       - master
+
   workflow_dispatch:
 
 env:
   PROJECT_PATH: TPGLLC_WebSite/TPGLLC_WebSite.csproj
+
   PUBLISH_DIR: D:\Deploy\Artifacts\publish
   WEBSITE_DIR: D:\Websites\TPGLLC\Published
+
   BACKUP_DIR: D:\Deploy\Backups
   RELEASE_DIR: D:\Deploy\Releases
   LOG_DIR: D:\Deploy\Logs
+
+  HEALTHCHECK_URL: http://localhost/health
+
+  KEEP_RELEASES: 10
   LOG_RETENTION_DAYS: 30
   BACKUP_RETENTION_DAYS: 30
-  HEALTHCHECK_URL: http://localhost/health
-  APP_POOL_NAME: TPGLLC
 
 jobs:
+
   deploy:
+
     runs-on: self-hosted
 
     steps:
+
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Show Runner Info
+      - name: Display Runner Information
         shell: powershell
         run: |
+          Write-Host "Computer:"
           hostname
+
+          Write-Host ""
+          Write-Host "User:"
           whoami
+
+          Write-Host ""
           git --version
+
+          Write-Host ""
           dotnet --info
 
       - name: Prepare Publish Folder
         shell: powershell
         run: |
-          New-Item -ItemType Directory -Force -Path $env:PUBLISH_DIR | Out-Null
-          Remove-Item -Path (Join-Path $env:PUBLISH_DIR '*') -Recurse -Force -ErrorAction SilentlyContinue
 
-      - name: Build and Publish
+          New-Item `
+              -ItemType Directory `
+              -Force `
+              -Path $env:PUBLISH_DIR | Out-Null
+
+          Remove-Item `
+              -Path (Join-Path $env:PUBLISH_DIR '*') `
+              -Recurse `
+              -Force `
+              -ErrorAction SilentlyContinue
+
+      - name: Build Website
         shell: powershell
         run: |
-          dotnet publish $env:PROJECT_PATH -c Release -o $env:PUBLISH_DIR
+
+          dotnet publish `
+              $env:PROJECT_PATH `
+              -c Release `
+              -o $env:PUBLISH_DIR
 
       - name: Deploy Website
         shell: powershell
         run: |
+
           & "$env:GITHUB_WORKSPACE\Deploy\Scripts\Deploy.ps1" `
             -WebsitePath $env:WEBSITE_DIR `
             -PublishPath $env:PUBLISH_DIR `
@@ -55,7 +85,7 @@ jobs:
             -ReleaseRoot $env:RELEASE_DIR `
             -LogRoot $env:LOG_DIR `
             -HealthCheckUrl $env:HEALTHCHECK_URL `
-            -KeepReleases 10 `
+            -KeepReleases $env:KEEP_RELEASES `
             -LogRetentionDays $env:LOG_RETENTION_DAYS `
             -BackupRetentionDays $env:BACKUP_RETENTION_DAYS
 
@@ -63,38 +93,66 @@ jobs:
         if: always()
         shell: powershell
         run: |
-          $summaryPath = $env:GITHUB_STEP_SUMMARY
-          $latestLog = Get-ChildItem -Path $env:LOG_DIR -Filter "*.log" -File |
-            Sort-Object LastWriteTime -Descending |
-            Select-Object -First 1
 
-          Add-Content -Path $summaryPath -Value "# Deployment Summary"
-          Add-Content -Path $summaryPath -Value ""
-          Add-Content -Path $summaryPath -Value "Job status: ${{ job.status }}"
-          Add-Content -Path $summaryPath -Value ""
+          $Summary = $env:GITHUB_STEP_SUMMARY
 
-          if ($null -eq $latestLog) {
-            Add-Content -Path $summaryPath -Value "No deployment log found."
-            exit 0
+          Add-Content $Summary "# Deployment Summary"
+          Add-Content $Summary ""
+
+          Add-Content $Summary "**Repository**"
+          Add-Content $Summary ": $env:GITHUB_REPOSITORY"
+
+          Add-Content $Summary ""
+
+          Add-Content $Summary "**Commit**"
+          Add-Content $Summary ": $env:GITHUB_SHA"
+
+          Add-Content $Summary ""
+
+          Add-Content $Summary "**Status**"
+          Add-Content $Summary ": ${{ job.status }}"
+
+          Add-Content $Summary ""
+
+          $LatestLog = Get-ChildItem `
+              $env:LOG_DIR `
+              -Filter "*.log" `
+              -File |
+              Sort-Object LastWriteTime -Descending |
+              Select-Object -First 1
+
+          if ($LatestLog)
+          {
+              Add-Content $Summary "Latest Log"
+
+              Add-Content $Summary ""
+
+              Add-Content $Summary '```text'
+
+              Get-Content $LatestLog.FullName -Tail 50 |
+                  ForEach-Object {
+                      Add-Content $Summary $_
+                  }
+
+              Add-Content $Summary '```'
           }
-
-          Add-Content -Path $summaryPath -Value ("Latest log: {0}" -f $latestLog.FullName)
-          Add-Content -Path $summaryPath -Value ""
-          Add-Content -Path $summaryPath -Value "Last 40 log lines:"
-          Add-Content -Path $summaryPath -Value ""
-          Add-Content -Path $summaryPath -Value '```text'
-
-          Get-Content $latestLog.FullName -Tail 40 | ForEach-Object {
-            Add-Content -Path $summaryPath -Value $_
+          else
+          {
+              Add-Content $Summary ""
+              Add-Content $Summary "No deployment log found."
           }
-
-          Add-Content -Path $summaryPath -Value '```'
 
       - name: Upload Deployment Logs
         if: always()
         uses: actions/upload-artifact@v4
+
         with:
-          name: deployment-logs
-          path: D:\Deploy\Logs\*.log
+
+          name: DeploymentLogs
+
+          path: |
+            D:\Deploy\Logs\*.log
+
           if-no-files-found: warn
+
           retention-days: 14
