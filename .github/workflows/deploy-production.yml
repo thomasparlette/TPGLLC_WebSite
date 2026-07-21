@@ -58,3 +58,26 @@ jobs:
           -KeepReleases 10 `
           -LogRetentionDays $env:LOG_RETENTION_DAYS `
           -BackupRetentionDays $env:BACKUP_RETENTION_DAYS
+
+      - name: Notify Deployment Result
+        if: always()
+        shell: powershell
+        run: |
+          $latestLog = Get-ChildItem $env:LOG_DIR -File |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+
+          if ($null -ne $latestLog) {
+            $summary = Get-Content $latestLog.FullName -Tail 40 -ErrorAction SilentlyContinue
+            Add-Content $env:GITHUB_STEP_SUMMARY "## Deployment Result"
+            Add-Content $env:GITHUB_STEP_SUMMARY ""
+            Add-Content $env:GITHUB_STEP_SUMMARY "Latest log: `$($latestLog.FullName)`"
+            Add-Content $env:GITHUB_STEP_SUMMARY ""
+            Add-Content $env:GITHUB_STEP_SUMMARY "```"
+            $summary | ForEach-Object { Add-Content $env:GITHUB_STEP_SUMMARY $_ }
+            Add-Content $env:GITHUB_STEP_SUMMARY "```"
+          } else {
+            Add-Content $env:GITHUB_STEP_SUMMARY "## Deployment Result"
+            Add-Content $env:GITHUB_STEP_SUMMARY ""
+            Add-Content $env:GITHUB_STEP_SUMMARY "No deployment log found."
+          }
