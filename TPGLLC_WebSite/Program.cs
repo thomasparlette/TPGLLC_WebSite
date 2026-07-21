@@ -1,7 +1,23 @@
 using TPGLLC_WebSite.Components;
+using Serilog;
+
+var builder = WebApplication.CreateBuilder(args);
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Host.UseSerilog((context, services, loggerConfiguration) =>
+{
+    loggerConfiguration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .WriteTo.Console()
+        .WriteTo.File(
+            path: Path.Combine(AppContext.BaseDirectory, "Logs", "site-.log"),
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 30);
+});
 // Add services to the container.
 builder.Services.AddRazorComponents();
 
@@ -44,5 +60,7 @@ app.MapGet("/version", (IWebHostEnvironment env) =>
 });
 
 app.MapGet("/health", () => Results.Text("OK", "text/plain"));
+
+app.UseSerilogRequestLogging();
 
 app.Run();
