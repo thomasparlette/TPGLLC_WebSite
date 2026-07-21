@@ -172,39 +172,36 @@
         </p>
     </div>
 
-    <div class="quote-card contact-form-card animate-card">
-        <EditForm Model="_message">
-            <DataAnnotationsValidator />
-            <ValidationSummary />
-
-            <div class="form-grid">
-                <div class="form-field">
-                    <label>Name</label>
-                    <InputText class="input" @bind-Value="_message.Name" />
-                </div>
-
-                <div class="form-field">
-                    <label>Phone</label>
-                    <InputText class="input" @bind-Value="_message.Phone" />
-                </div>
-
-                <div class="form-field full">
-                    <label>Email</label>
-                    <InputText class="input" @bind-Value="_message.Email" />
-                </div>
-
-                <div class="form-field full">
-                    <label>Message</label>
-                    <InputTextArea class="input textarea" @bind-Value="_message.Body" />
-                </div>
+    <form class="contact-form" method="post" action="/contact/send">
+        <div class="form-grid">
+            <div class="form-field">
+                <label>Name</label>
+                <input class="input" name="Name" required />
             </div>
 
-            <a class="btn btn-primary full-width"
-               href="@BuildMailtoLink()">
-                Send Message
-            </a>
-        </EditForm>
-    </div>
+            <div class="form-field">
+                <label>Phone</label>
+                <input class="input" name="Phone" required />
+            </div>
+
+            <div class="form-field full">
+                <label>Email</label>
+                <input class="input" name="Email" type="email" required />
+            </div>
+
+            <div class="form-field full" style="display:none;">
+                <label>Company</label>
+                <input class="input" name="Company" autocomplete="off" />
+            </div>
+
+            <div class="form-field full">
+                <label>Message</label>
+                <textarea class="input textarea" name="Body" rows="6" required></textarea>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary full-width">Send Message</button>
+    </form>
 </section>
 
 @code {

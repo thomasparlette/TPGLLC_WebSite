@@ -1,63 +1,70 @@
 using TPGLLC_WebSite.Components;
-using Serilog;
+using TPGLLC_WebSite.Models;
+using TPGLLC_WebSite.Services;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseSerilog((context, services, loggerConfiguration) =>
-{
-    loggerConfiguration
-        .ReadFrom.Configuration(context.Configuration)
-        .ReadFrom.Services(services)
-        .Enrich.FromLogContext()
-        .WriteTo.Console()
-        .WriteTo.File(
-            path: Path.Combine(AppContext.BaseDirectory, "Logs", "site-.log"),
-            rollingInterval: RollingInterval.Day,
-            retainedFileCountLimit: 30);
-});
-// Add services to the container.
 builder.Services.AddRazorComponents();
+
+builder.Services.Configure<GmailOptions>(builder.Configuration.GetSection("Gmail"));
+builder.Services.AddTransient<IEmailService, SmtpEmailService>();
 
 var app = builder.Build();
 
-app.Use(async (context, next) =>
-{
-    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-    context.Response.Headers["X-Frame-Options"] = "DENY";
-    context.Response.Headers["Referrer-Policy"] = "no-referrer-when-downgrade";
-    context.Response.Headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()";
-
-    await next();
-});
-
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
-
 app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>();
+
+app.MapPost("/contact/send", async (HttpRequest request, IEmailService emailService) =>
+{
+    var form = await request.ReadFormAsync();
+
+    var message = new ContactMessage
+    {
+        Name = form["Name"],
+        Phone = form["Phone"],
+        Email = form["Email"],
+        Body = form["Body"],
+        Company = form["Company"]
+    };
+
+    // Honeypot: quietly ignore spam bots.
+    if (!string.IsNullOrWhiteSpace(message.Company))
+    {
+        return Results.Redirect("/?contact=sent#contact");
+    }
+
+    if (string.IsNullOrWhiteSpace(message.Name) ||
+        string.IsNullOrWhiteSpace(message.Phone) ||
+        string.IsNullOrWhiteSpace(message.Email) ||
+        string.IsNullOrWhiteSpace(message.Body))
+    {
+        return Results.Redirect("/?contact=missing#contact");
+    }
+
+    await emailService.SendContactMessageAsync(message);
+    return Results.Redirect("/?contact=sent#contact");
+})
+.DisableAntiforgery();
+
 app.MapGet("/version", (IWebHostEnvironment env) =>
 {
     var versionPath = Path.Combine(env.ContentRootPath, "version.json");
-
-    if (!File.Exists(versionPath))
-    {
-        return Results.NotFound();
-    }
-
-    return Results.File(versionPath, "application/json");
+    return File.Exists(versionPath)
+        ? Results.File(versionPath, "application/json")
+        : Results.NotFound();
 });
 
 app.MapGet("/health", () => Results.Text("OK", "text/plain"));
-
-app.UseSerilogRequestLogging();
 
 app.Run();
