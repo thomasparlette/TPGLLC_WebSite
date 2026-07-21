@@ -1,0 +1,62 @@
+name: Deploy Production Website
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+env:
+  PROJECT_PATH: TPGLLC_WebSite/TPGLLC_WebSite.csproj
+  PUBLISH_DIR: D:\Deploy\Artifacts\publish
+  WEBSITE_DIR: D:\Websites\TPGLLC\Published
+  BACKUP_DIR: D:\Deploy\Backups
+  HEALTHCHECK_URL: http://localhost
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Show Runner Info
+        shell: powershell
+        run: |
+          hostname
+          whoami
+          git --version
+          dotnet --info
+
+      - name: Prepare Publish Folder
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path $env:PUBLISH_DIR | Out-Null
+          Remove-Item -Path (Join-Path $env:PUBLISH_DIR '*') -Recurse -Force -ErrorAction SilentlyContinue
+
+      - name: Build and Publish
+        shell: powershell
+        run: |
+          dotnet publish $env:PROJECT_PATH -c Release -o $env:PUBLISH_DIR
+
+      - name: Backup Existing Website
+        shell: powershell
+        run: |
+          & "$env:GITHUB_WORKSPACE\Deploy\Scripts\Backup-Website.ps1" -WebsitePath $env:WEBSITE_DIR -BackupRoot $env:BACKUP_DIR
+
+      - name: Deploy Website Files
+        shell: powershell
+        run: |
+          & "$env:GITHUB_WORKSPACE\Deploy\Scripts\Publish-Website.ps1" -SourcePath $env:PUBLISH_DIR -WebsitePath $env:WEBSITE_DIR
+
+      - name: Health Check
+        shell: powershell
+        run: |
+          & "$env:GITHUB_WORKSPACE\Deploy\Scripts\Test-Website.ps1" -Url $env:HEALTHCHECK_URL -ExpectedText 'Tom Parlette Garage LLC'
+
+      - name: Rollback on Failure
+        if: failure()
+        shell: powershell
+        run: |
+          & "$env:GITHUB_WORKSPACE\Deploy\Scripts\Rollback-Website.ps1" -WebsitePath $env:WEBSITE_DIR -BackupRoot $env:BACKUP_DIR
