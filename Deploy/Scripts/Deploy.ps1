@@ -35,15 +35,12 @@ function Invoke-RobocopySafe {
 
     New-Item -ItemType Directory -Force -Path $Destination | Out-Null
 
-    Write-Log "Copying files from '$Source' to '$Destination'..."
     robocopy $Source $Destination /MIR /NFL /NDL /NJH /NJS /NP /R:2 /W:2 | Out-Host
     $code = $LASTEXITCODE
 
     if ($code -ge 8) {
         throw "Robocopy failed with exit code $code"
     }
-
-    Write-Log "Robocopy completed with exit code $code"
 }
 
 function Backup-CurrentWebsite {
@@ -77,36 +74,29 @@ function Test-HealthCheck {
     param([Parameter(Mandatory = $true)] [string]$Url)
 
     Write-Log "Running health check: $Url"
-    try {
-        $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 20
-        if ($response.StatusCode -lt 200 -or $response.StatusCode -ge 300) {
-            throw "Health check returned status code $($response.StatusCode)"
-        }
-        Write-Log "Health check passed with status code $($response.StatusCode)"
+    $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 20
+    if ($response.StatusCode -lt 200 -or $response.StatusCode -ge 300) {
+        throw "Health check returned status code $($response.StatusCode)"
     }
-    catch {
-        throw "Health check failed: $($_.Exception.Message)"
-    }
+
+    Write-Log "Health check passed with status code $($response.StatusCode)"
 }
 
 try {
     Write-Log "Starting deployment..."
 
-    $publishPath = [System.IO.Path]::GetFullPath($PublishPath)
-    $websitePath = [System.IO.Path]::GetFullPath($WebsitePath)
-    $backupRoot = [System.IO.Path]::GetFullPath($BackupRoot)
+    New-Item -ItemType Directory -Force -Path $BackupRoot | Out-Null
+    New-Item -ItemType Directory -Force -Path $WebsitePath | Out-Null
 
-    New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
-    New-Item -ItemType Directory -Force -Path $websitePath | Out-Null
+    $backupPath = Backup-CurrentWebsite -WebsitePath $WebsitePath -BackupRoot $BackupRoot
 
-    $backupPath = Backup-CurrentWebsite -WebsitePath $websitePath -BackupRoot $backupRoot
-
-    Write-Log "Stopping IIS app pool '$AppPoolName'..."
     Import-Module WebAdministration
+    Write-Log "Stopping IIS app pool '$AppPoolName'..."
     Stop-WebAppPool -Name $AppPoolName
 
     try {
-        Invoke-RobocopySafe -Source $publishPath -Destination $websitePath
+        Write-Log "Deploying files from '$PublishPath' to '$WebsitePath'..."
+        Invoke-RobocopySafe -Source $PublishPath -Destination $WebsitePath
     }
     finally {
         Write-Log "Starting IIS app pool '$AppPoolName'..."
@@ -114,7 +104,6 @@ try {
     }
 
     Test-HealthCheck -Url $HealthCheckUrl
-
     Write-Log "Deployment completed successfully."
     exit 0
 }
@@ -123,10 +112,8 @@ catch {
 
     try {
         Import-Module WebAdministration
-        Write-Log "Ensuring IIS app pool '$AppPoolName' is running..."
         Start-WebAppPool -Name $AppPoolName
-    }
-    catch {
+    } catch {
         Write-Log "Could not restart app pool during failure recovery: $($_.Exception.Message)"
     }
 
@@ -134,15 +121,8 @@ catch {
         try {
             Write-Log "Attempting rollback from '$backupPath'..."
             robocopy $backupPath $WebsitePath /MIR /NFL /NDL /NJH /NJS /NP /R:2 /W:2 | Out-Host
-            $rollbackCode = $LASTEXITCODE
-            if ($rollbackCode -ge 8) {
-                Write-Log "Rollback robocopy exit code: $rollbackCode"
-            }
-            else {
-                Write-Log "Rollback completed."
-            }
-        }
-        catch {
+            Write-Log "Rollback completed."
+        } catch {
             Write-Log "Rollback failed: $($_.Exception.Message)"
         }
     }
