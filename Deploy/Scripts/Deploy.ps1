@@ -15,7 +15,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 function Write-Log {
-    param([string]$Message)
+    param([Parameter(Mandatory = $true)][string]$Message)
     $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     Write-Host "[$timestamp] $Message"
 }
@@ -38,6 +38,8 @@ function Invoke-RobocopySafe {
     if ($code -ge 8) {
         throw "Robocopy failed with exit code $code"
     }
+
+    Write-Log "Robocopy completed with exit code $code"
 }
 
 function Backup-CurrentWebsite {
@@ -67,11 +69,45 @@ function Backup-CurrentWebsite {
     return $backupPath
 }
 
+function Wait-ForFileUnlock {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+
+        [int]$TimeoutSeconds = 30
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+
+    while ((Get-Date) -lt $deadline) {
+        if (-not (Test-Path $Path)) {
+            return
+        }
+
+        try {
+            $stream = [System.IO.File]::Open(
+                $Path,
+                [System.IO.FileMode]::Open,
+                [System.IO.FileAccess]::ReadWrite,
+                [System.IO.FileShare]::None
+            )
+            $stream.Close()
+            return
+        }
+        catch {
+            Start-Sleep -Seconds 1
+        }
+    }
+
+    throw "Timed out waiting for file unlock: $Path"
+}
+
 function Test-HealthCheck {
     param([Parameter(Mandatory = $true)] [string]$Url)
 
     Write-Log "Running health check: $Url"
     $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 20
+
     if ($response.StatusCode -lt 200 -or $response.StatusCode -ge 300) {
         throw "Health check returned status code $($response.StatusCode)"
     }
@@ -98,15 +134,20 @@ try {
 </html>
 "@ | Set-Content -Path $appOfflinePath -Encoding UTF8
 
-    try {
-        Write-Log "Deploying files from '$PublishPath' to '$WebsitePath'..."
-        Invoke-RobocopySafe -Source $PublishPath -Destination $WebsitePath
+    Start-Sleep -Seconds 2
+
+    $mainDll = Join-Path $WebsitePath 'TPGLLC_WebSite.dll'
+    if (Test-Path $mainDll) {
+        Write-Log "Waiting for application DLL to unlock..."
+        Wait-ForFileUnlock -Path $mainDll -TimeoutSeconds 30
     }
-    finally {
-        if (Test-Path $appOfflinePath) {
-            Remove-Item $appOfflinePath -Force -ErrorAction SilentlyContinue
-            Write-Log "Removed app_offline.htm"
-        }
+
+    Write-Log "Deploying files from '$PublishPath' to '$WebsitePath'..."
+    Invoke-RobocopySafe -Source $PublishPath -Destination $WebsitePath
+
+    if (Test-Path $appOfflinePath) {
+        Remove-Item $appOfflinePath -Force -ErrorAction SilentlyContinue
+        Write-Log "Removed app_offline.htm"
     }
 
     Test-HealthCheck -Url $HealthCheckUrl
@@ -116,19 +157,25 @@ try {
 catch {
     Write-Log "Deployment failed: $($_.Exception.Message)"
 
+    if (Test-Path $appOfflinePath) {
+        Remove-Item $appOfflinePath -Force -ErrorAction SilentlyContinue
+    }
+
     if ($backupPath -and (Test-Path $backupPath)) {
         try {
             Write-Log "Attempting rollback from '$backupPath'..."
             robocopy $backupPath $WebsitePath /MIR /NFL /NDL /NJH /NJS /NP /R:2 /W:2 | Out-Host
-            Write-Log "Rollback completed."
+            $rollbackCode = $LASTEXITCODE
+            if ($rollbackCode -ge 8) {
+                Write-Log "Rollback failed with exit code $rollbackCode"
+            }
+            else {
+                Write-Log "Rollback completed."
+            }
         }
         catch {
             Write-Log "Rollback failed: $($_.Exception.Message)"
         }
-    }
-
-    if (Test-Path $appOfflinePath) {
-        Remove-Item $appOfflinePath -Force -ErrorAction SilentlyContinue
     }
 
     exit 1
