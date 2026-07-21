@@ -13,7 +13,7 @@ env:
   BACKUP_DIR: D:\Deploy\Backups
   RELEASE_DIR: D:\Deploy\Releases
   LOG_DIR: D:\Deploy\Logs
-  HEALTHCHECK_URL: http://localhost
+  HEALTHCHECK_URL: http://localhost/health
   APP_POOL_NAME: TPGLLC
 
 jobs:

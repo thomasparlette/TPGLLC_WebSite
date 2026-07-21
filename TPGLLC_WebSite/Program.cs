@@ -22,4 +22,6 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>();
 
+app.MapGet("/health", () => Results.Text("OK", "text/plain"));
+
 app.Run();
