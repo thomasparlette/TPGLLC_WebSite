@@ -1,5 +1,4 @@
 ﻿@page "/status"
-@using System.Diagnostics
 @using System.Text.Json
 @inject IWebHostEnvironment Env
 
@@ -13,45 +12,45 @@
 }
 else
 {
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;">
-        <div>
+    <div class="status-grid">
+        <div class="status-card">
             <h3>Version</h3>
             <p>@_model.Version</p>
         </div>
 
-        <div>
+        <div class="status-card">
             <h3>Commit</h3>
             <p>@_model.Commit</p>
         </div>
 
-        <div>
+        <div class="status-card">
             <h3>Branch</h3>
             <p>@_model.Branch</p>
         </div>
 
-        <div>
+        <div class="status-card">
             <h3>Deployed</h3>
             <p>@_model.Deployed</p>
         </div>
 
-        <div>
+        <div class="status-card">
             <h3>Runner</h3>
             <p>@_model.Runner</p>
         </div>
 
-        <div>
+        <div class="status-card">
             <h3>Machine</h3>
             <p>@Environment.MachineName</p>
         </div>
 
-        <div>
+        <div class="status-card">
             <h3>Environment</h3>
             <p>@Env.EnvironmentName</p>
         </div>
 
-        <div>
-            <h3>App Base Path</h3>
-            <p>@Env.ContentRootPath</p>
+        <div class="status-card">
+            <h3>Uptime</h3>
+            <p>@TimeSpan.FromMilliseconds(Environment.TickCount64)</p>
         </div>
     </div>
 }
