@@ -1,3 +1,51 @@
 ﻿@inherits LayoutComponentBase
 
-@Body
+<div class="app-shell">
+    <header class="site-header">
+        <a class="brand" href="/">
+            <img class="brand-logo" src="images/logo.jpeg" alt="Tom Parlette Garage LLC logo" />
+            <div class="brand-copy">
+                <span class="brand-name">Tom Parlette Garage LLC</span>
+                <span class="brand-tagline">Built on Trust. Driven by Results.</span>
+            </div>
+        </a>
+
+        <nav class="site-nav">
+            <a href="/#services">Services</a>
+            <a href="/#about">About</a>
+            <a href="/#contact">Contact</a>
+            <a href="/status">Status</a>
+        </nav>
+
+        <a class="btn btn-primary header-cta" href="tel:+17653463354">Call Now</a>
+    </header>
+
+    <main class="page-content">
+        @Body
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-grid">
+            <div>
+                <div class="footer-brand">Tom Parlette Garage LLC</div>
+                <p>Complete automotive repair with honest communication and dependable work.</p>
+            </div>
+
+            <div>
+                <div class="footer-heading">Contact</div>
+                <p><a href="tel:+17653463354">(765) 346-3354</a></p>
+                <p><a href="mailto:tomparlettegarage@gmail.com">tomparlettegarage@gmail.com</a></p>
+            </div>
+
+            <div>
+                <div class="footer-heading">Location</div>
+                <p>2203 Mcclennan Ct S<br />Columbus, IN 47203</p>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <span>&copy; @DateTime.Now.Year Tom Parlette Garage LLC</span>
+            <span>Honest service • Quality work • Trusted locally</span>
+        </div>
+    </footer>
+</div>
