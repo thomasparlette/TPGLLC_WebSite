@@ -23,13 +23,10 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$BranchName,
 
-    [Parameter(Mandatory = $true)]
-    [string]$RunnerName,
+    [string]$RunnerName = $env:COMPUTERNAME,
 
     [int]$KeepReleases = 10,
-
     [int]$LogRetentionDays = 30,
-
     [int]$BackupRetentionDays = 30
 )
 
