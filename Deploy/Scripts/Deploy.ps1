@@ -32,7 +32,7 @@ function Invoke-RobocopySafe {
 
     New-Item -ItemType Directory -Force -Path $Destination | Out-Null
 
-    robocopy $Source $Destination /MIR /NFL /NDL /NJH /NJS /NP /R:2 /W:2 | Out-Host
+    robocopy $Source $Destination /MIR /XF app_offline.htm /NFL /NDL /NJH /NJS /NP /R:2 /W:2 | Out-Host
     $code = $LASTEXITCODE
 
     if ($code -ge 8) {
