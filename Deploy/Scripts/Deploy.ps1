@@ -17,8 +17,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$HealthCheckUrl,
 
-    [int]$KeepReleases = 10
-	[int]$LogRetentionDays = 30
+    [int]$KeepReleases = 10,
+	[int]$LogRetentionDays = 30,
+	[int]$BackupRetentionDays = 30
 )
 
 $ErrorActionPreference = 'Stop'
@@ -222,6 +223,27 @@ function Cleanup-OldLogs {
         }
 }
 
+function Cleanup-OldBackups {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$BackupRoot,
+
+        [int]$RetentionDays = 30
+    )
+
+    if (-not (Test-Path $BackupRoot)) {
+        return
+    }
+
+    $cutoff = (Get-Date).AddDays(-$RetentionDays)
+
+    Get-ChildItem -Path $BackupRoot -Directory |
+        Where-Object { $_.LastWriteTime -lt $cutoff } |
+        ForEach-Object {
+            Write-Log "Removing old backup: $($_.FullName)"
+            Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+        }
+}
 $appOfflinePath = Join-Path $WebsitePath 'app_offline.htm'
 $backupPath = $null
 $releasePath = $null
@@ -263,6 +285,7 @@ try {
     Test-HealthCheck -Url $HealthCheckUrl
     Cleanup-OldReleases -ReleaseRoot $ReleaseRoot -KeepReleases $KeepReleases
 	Cleanup-OldLogs -LogRoot $LogRoot -RetentionDays $LogRetentionDays
+	Cleanup-OldBackups -BackupRoot $BackupRoot -RetentionDays $BackupRetentionDays
     Write-Log "Deployment completed successfully."
     exit 0
 }
