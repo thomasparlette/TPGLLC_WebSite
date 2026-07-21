@@ -53,12 +53,30 @@ else
             <p>@TimeSpan.FromMilliseconds(Environment.TickCount64)</p>
         </div>
     </div>
+
+    <h2 style="margin-top:1.5rem;">Recent Logs</h2>
+
+    @if (_recentLogLines.Count == 0)
+    {
+        <p>No recent log entries found.</p>
+    }
+    else
+    {
+        <pre class="log-panel">@string.Join(Environment.NewLine, _recentLogLines)</pre>
+    }
 }
 
 @code {
     private StatusModel? _model;
+    private List<string> _recentLogLines = new();
 
     protected override void OnInitialized()
+    {
+        LoadVersionInfo();
+        LoadRecentLogs();
+    }
+
+    private void LoadVersionInfo()
     {
         var versionPath = Path.Combine(Env.ContentRootPath, "version.json");
 
@@ -81,6 +99,31 @@ else
                 Runner = "N/A"
             };
         }
+    }
+
+    private void LoadRecentLogs()
+    {
+        var logDir = Path.Combine(Env.ContentRootPath, "Logs");
+
+        if (!Directory.Exists(logDir))
+        {
+            return;
+        }
+
+        var latestLog = Directory.GetFiles(logDir, "site-*.log")
+            .Select(path => new FileInfo(path))
+            .OrderByDescending(f => f.LastWriteTimeUtc)
+            .FirstOrDefault();
+
+        if (latestLog is null || !latestLog.Exists)
+        {
+            return;
+        }
+
+        var lines = File.ReadAllLines(latestLog.FullName);
+        _recentLogLines = lines
+            .Skip(Math.Max(0, lines.Length - 30))
+            .ToList();
     }
 
     private sealed class StatusModel
