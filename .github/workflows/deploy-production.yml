@@ -12,6 +12,7 @@ env:
   WEBSITE_DIR: D:\Websites\TPGLLC\Published
   BACKUP_DIR: D:\Deploy\Backups
   RELEASE_DIR: D:\Deploy\Releases
+  LOG_DIR: D:\Deploy\Logs
   HEALTHCHECK_URL: http://localhost
   APP_POOL_NAME: TPGLLC
 
