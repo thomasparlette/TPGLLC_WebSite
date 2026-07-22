@@ -95,6 +95,10 @@
     <div class="about-copy">
         <p class="section-kicker">Why Choose Us</p>
         <h2>Built for trust and long-term relationships.</h2>
+        <p>
+            Tom Parlette Garage LLC is built around clear communication, reliable service, and quality repairs.
+            The goal is simple: find the issue, explain it clearly, and fix it right.
+        </p>
     </div>
 
     <div class="feature-list">
@@ -171,37 +175,38 @@
             Use the form below to send a message about your vehicle, the issue you are seeing, or to ask about scheduling.
         </p>
     </div>
+
     <div class="quote-card contact-form-card animate-card">
-    <form class="contact-form" method="post" action="/contact/send">
-        <div class="form-grid">
-            <div class="form-field">
-                <label>Name</label>
-                <input class="input" name="Name" required />
+        <form class="contact-form" method="post" action="/contact/send">
+            <div class="form-grid">
+                <div class="form-field">
+                    <label>Name</label>
+                    <input class="input" name="Name" required />
+                </div>
+
+                <div class="form-field">
+                    <label>Phone</label>
+                    <input class="input" name="Phone" required />
+                </div>
+
+                <div class="form-field full">
+                    <label>Email</label>
+                    <input class="input" name="Email" type="email" required />
+                </div>
+
+                <div class="form-field full" style="display:none;">
+                    <label>Company</label>
+                    <input class="input" name="Company" autocomplete="off" />
+                </div>
+
+                <div class="form-field full">
+                    <label>Message</label>
+                    <textarea class="input textarea" name="Body" rows="6" required></textarea>
+                </div>
             </div>
 
-            <div class="form-field">
-                <label>Phone</label>
-                <input class="input" name="Phone" required />
-            </div>
-
-            <div class="form-field full">
-                <label>Email</label>
-                <input class="input" name="Email" type="email" required />
-            </div>
-
-            <div class="form-field full" style="display:none;">
-                <label>Company</label>
-                <input class="input" name="Company" autocomplete="off" />
-            </div>
-
-            <div class="form-field full">
-                <label>Message</label>
-                <textarea class="input textarea" name="Body" rows="6" required></textarea>
-            </div>
-        </div>
-
-        <button type="submit" class="btn btn-primary full-width">Send Message</button>
-    </form>
+            <button type="submit" class="btn btn-primary full-width">Send Message</button>
+        </form>
     </div>
 </section>
 
