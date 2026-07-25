@@ -15,7 +15,7 @@
         </div>
     </div>
 
-    <div class="hero-card">
+    <div class="hero-card animate-card">
         <img class="hero-logo" src="/images/logo.jpeg" alt="Tom Parlette Garage LLC logo" />
         <div class="hero-card-content">
             <h2>Business Info</h2>
@@ -29,7 +29,7 @@
 </section>
 
 <section class="contact-strip">
-    <div class="contact-pill">
+    <div class="contact-pill animate-card">
         <span>📞</span>
         <div>
             <strong>Call</strong>
@@ -37,7 +37,7 @@
         </div>
     </div>
 
-    <div class="contact-pill">
+    <div class="contact-pill animate-card">
         <span>✉</span>
         <div>
             <strong>Email</strong>
@@ -45,7 +45,7 @@
         </div>
     </div>
 
-    <div class="contact-pill">
+    <div class="contact-pill animate-card">
         <span>📍</span>
         <div>
             <strong>Location</strong>
@@ -53,7 +53,7 @@
         </div>
     </div>
 
-    <div class="contact-pill">
+    <div class="contact-pill animate-card">
         <span>🕒</span>
         <div>
             <strong>Hours</strong>
@@ -91,10 +91,14 @@
     </div>
 </section>
 
-<section id="about" class="section split-section">
+<section id="why-us" class="section split-section">
     <div class="about-copy">
         <p class="section-kicker">Why Choose Us</p>
         <h2>Built for trust and long-term relationships.</h2>
+        <p>
+            Tom Parlette Garage LLC is built around clear communication, reliable service, and quality repairs.
+            The goal is simple: find the issue, explain it clearly, and fix it right.
+        </p>
     </div>
 
     <div class="feature-list">
@@ -117,7 +121,7 @@
     </div>
 </section>
 
-<section class="section split-section">
+<section id="reviews" class="section split-section">
     <div>
         <p class="section-kicker">Reviews</p>
         <h2>Customers come back because the work is honest and dependable.</h2>
@@ -172,36 +176,38 @@
         </p>
     </div>
 
-    <form class="contact-form" method="post" action="/contact/send">
-        <div class="form-grid">
-            <div class="form-field">
-                <label>Name</label>
-                <input class="input" name="Name" required />
+    <div class="quote-card contact-form-card animate-card">
+        <form class="contact-form" method="post" action="/contact/send">
+            <div class="form-grid">
+                <div class="form-field">
+                    <label>Name</label>
+                    <input class="input" name="Name" required />
+                </div>
+
+                <div class="form-field">
+                    <label>Phone</label>
+                    <input class="input" name="Phone" required />
+                </div>
+
+                <div class="form-field full">
+                    <label>Email</label>
+                    <input class="input" name="Email" type="email" required />
+                </div>
+
+                <div class="form-field full" style="display:none;">
+                    <label>Company</label>
+                    <input class="input" name="Company" autocomplete="off" />
+                </div>
+
+                <div class="form-field full">
+                    <label>Message</label>
+                    <textarea class="input textarea" name="Body" rows="6" required></textarea>
+                </div>
             </div>
 
-            <div class="form-field">
-                <label>Phone</label>
-                <input class="input" name="Phone" required />
-            </div>
-
-            <div class="form-field full">
-                <label>Email</label>
-                <input class="input" name="Email" type="email" required />
-            </div>
-
-            <div class="form-field full" style="display:none;">
-                <label>Company</label>
-                <input class="input" name="Company" autocomplete="off" />
-            </div>
-
-            <div class="form-field full">
-                <label>Message</label>
-                <textarea class="input textarea" name="Body" rows="6" required></textarea>
-            </div>
-        </div>
-
-        <button type="submit" class="btn btn-primary full-width">Send Message</button>
-    </form>
+            <button type="submit" class="btn btn-primary full-width">Send Message</button>
+        </form>
+    </div>
 </section>
 
 @code {

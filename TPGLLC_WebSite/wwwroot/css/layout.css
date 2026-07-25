@@ -1,0 +1,143 @@
+﻿html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    margin: 0;
+    background-color: linear-gradient(180deg, #ffffff 0%, var(--bg) 100%);
+    color: var(--text);
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.app-shell {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: rgba(255,255,255, 0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    min-width: 0;
+}
+
+.brand-logo {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    border-radius: 14px;
+    background;
+    #fff;
+    box-shadow: var(--shadow);
+}
+
+.brand-copy {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+}
+
+.brand-name {
+    font-family: Montserrat, system-ui, sans-serif;
+    font-weight: 800;
+    font-size: 1.05rem;
+    letter-spacing: 0.02rem;
+    color: var(--navy);
+}
+
+.brand-tagline {
+    color: var(--muted);
+   font-size: 0.92rem;
+}
+
+.site-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.15rem;
+    flex-wrap: wrap;
+    justify-contentL center;
+    color: var(--navy);
+    font-weight: 600;
+}
+
+.site-nav a {
+    position: relative;
+    padding: 0.25rem 0;
+}
+
+.site-nav a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -0.15rem;
+    width: 100%;
+    height: 2px;
+    background: var(--red);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.2s ease;
+}
+
+.site-nav a:hover::after {
+    transform: scaleX(1);
+}
+.page-content {
+    width: min(1190px, calc(100% - 2rem));
+    margin: 0 auto;
+    padding: 1.5rem 0 3rem;
+    flex: 1;
+}
+.site-footer {
+    background: #081b40;
+    color: rgba(255, 255, 255, 0.9);
+    margin-top: 3rem;
+    padding: 2rem 0 1rem;
+}
+
+.footer-grid {
+    width: min(1180px, calc(100% - 2rem));
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.footer-brand,
+.footer-heading {
+    font-family: Montserrat, system-ui, sans-serif;
+    font-weight: 800;
+    margin-bottom: 0.6rem;
+    color: #fff;
+}
+
+.footer-bottom {
+    width: min(1180px, calc(100% - 2rem));
+    margin: 1.5rem auto 0;
+    padding-top: 1rem;
+    border-top 1px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.92rem;
+    color: rgba(255,255,255, 0.75);
+}
