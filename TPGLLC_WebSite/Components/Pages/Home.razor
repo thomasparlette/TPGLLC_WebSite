@@ -1,234 +1,373 @@
 ﻿@page "/"
+@using Microsoft.AspNetCore.Components
 <PageTitle>Tom Parlette Garage LLC</PageTitle>
 
-<section class="hero hero-panel">
-    <div class="hero-copy">
-        <p class="eyebrow">Automotive Repair & Diagnostics</p>
+<section class="hero-shell">
+    <div class="hero-main">
+        <img class="hero-logo" src="/images/logo.jpeg" alt="Tom Parlette Garage LLC logo" />
+
+        <div class="hero-divider"></div>
+
+        <p class="eyebrow">Automotive & Motorcycle Repair</p>
         <h1>Built on Trust. Driven by Results.</h1>
         <p class="lead">
-            Dependable automotive repair, honest estimates, and clear communication for every customer.
+            Professional repair, honest estimates, and clear communication for every customer and every ride.
         </p>
 
+        <div class="hero-highlights">
+            <span>Diagnostics</span>
+            <span>Maintenance</span>
+            <span>Brake Repair</span>
+            <span>Electrical</span>
+            <span>Suspension</span>
+            <span>Motorcycles</span>
+        </div>
+
         <div class="hero-actions">
-            <a class="btn btn-primary" href="tel:+17653463354">Call Now</a>
-            <a class="btn btn-secondary" href="#contact">Send a Message</a>
+            <a class="btn btn-primary" href="#appointment">Request Appointment</a>
+            <a class="btn btn-secondary" href="tel:+17653463354">Call Now</a>
         </div>
     </div>
 
-    <div class="hero-card">
-        <img class="hero-logo" src="/images/logo.jpeg" alt="Tom Parlette Garage LLC logo" />
-        <div class="hero-card-content">
-            <h2>Business Info</h2>
-            <p><strong>Owner:</strong> Thomas Parlette</p>
-            <p><strong>Phone:</strong> (765) 346-3354</p>
-            <p><strong>Email:</strong> <a href="mailto:tomparlette@tomparlettegarage.org">tomparlette@tomparlettegarage.org</a></p>
-            <p><strong>Address:</strong> 2203 Mcclennan Ct S, Columbus, IN 47203</p>
-            <p><strong>Hours:</strong> Fri–Sun, 6:30 PM – 10:00 PM</p>
+    <aside class="hero-aside">
+        <div class="hero-aside-card animate-card">
+            <div class="aside-icon">🕒</div>
+            <h3>Honest Service Every Time</h3>
+            <p>Clear answers. No surprises.</p>
         </div>
-    </div>
+
+        <div class="hero-aside-card animate-card">
+            <div class="aside-icon">🛡</div>
+            <h3>Quality Repairs Done Right</h3>
+            <p>We diagnose the problem, not guess.</p>
+        </div>
+
+        <div class="hero-aside-card animate-card">
+            <div class="aside-icon">👥</div>
+            <h3>Local & Reliable</h3>
+            <p>Proudly serving Columbus and the surrounding area.</p>
+        </div>
+    </aside>
 </section>
 
-<section class="contact-strip">
-    <div class="contact-pill">
-        <span>📞</span>
-        <div>
-            <strong>Call</strong>
-            <p>(765) 346-3354</p>
-        </div>
-    </div>
-
-    <div class="contact-pill">
-        <span>✉</span>
-        <div>
-            <strong>Email</strong>
-            <p>tomparlette@tomparlettegarage.org</p>
-        </div>
-    </div>
-
-    <div class="contact-pill">
-        <span>📍</span>
-        <div>
-            <strong>Location</strong>
-            <p>Columbus, IN</p>
-        </div>
-    </div>
-
-    <div class="contact-pill">
-        <span>🕒</span>
-        <div>
-            <strong>Hours</strong>
-            <p>Fri–Sun, 6:30 PM – 10:00 PM</p>
-        </div>
-    </div>
-</section>
-
-<section id="services" class="section">
-    <div class="section-heading">
-        <p class="section-kicker">What We Do</p>
-        <h2>Professional automotive service for everyday drivers.</h2>
+<section id="services" class="section services-band">
+    <div class="section-heading center">
+        <p class="section-kicker">Services We Provide</p>
+        <h2>Clear repairs, careful diagnostics, and dependable service.</h2>
     </div>
 
     <div class="service-grid">
         <article class="service-card animate-card">
+            <div class="service-icon">⚙</div>
             <h3>Diagnostics</h3>
-            <p>Check engine lights, drivability issues, electrical problems, and data-driven troubleshooting.</p>
+            <p>Check engine lights, drivability issues, and electrical troubleshooting.</p>
         </article>
 
         <article class="service-card animate-card">
+            <div class="service-icon">🛑</div>
+            <h3>Brake Repair</h3>
+            <p>Pads, rotors, calipers, and brake system inspections.</p>
+        </article>
+
+        <article class="service-card animate-card">
+            <div class="service-icon">🛞</div>
+            <h3>Suspension &amp; Steering</h3>
+            <p>Shocks, struts, steering, and ride quality concerns.</p>
+        </article>
+
+        <article class="service-card animate-card">
+            <div class="service-icon">🛢</div>
             <h3>Maintenance</h3>
-            <p>Oil changes, fluids, filters, inspections, and preventive care to keep vehicles reliable.</p>
+            <p>Oil changes, fluids, filters, and preventative care.</p>
         </article>
 
         <article class="service-card animate-card">
-            <h3>Brakes & Suspension</h3>
-            <p>Brake repairs, shocks, struts, steering, and suspension work with attention to detail.</p>
+            <div class="service-icon">🔋</div>
+            <h3>Electrical Systems</h3>
+            <p>Battery, charging, starter, wiring, and sensor issues.</p>
         </article>
 
         <article class="service-card animate-card">
+            <div class="service-icon">🚗</div>
             <h3>Engine Repair</h3>
-            <p>Engine diagnostics, repairs, cooling system service, and performance-related concerns.</p>
+            <p>Cooling, timing, misfires, and major engine repairs.</p>
+        </article>
+
+        <article class="service-card animate-card">
+            <div class="service-icon">🏍</div>
+            <h3>Motorcycle Service</h3>
+            <p>Maintenance, diagnosis, and repair for motorcycles and small-bore machines.</p>
         </article>
     </div>
 </section>
 
-<section id="about" class="section split-section">
-    <div class="about-copy">
-        <p class="section-kicker">Why Choose Us</p>
-        <h2>Built for trust and long-term relationships.</h2>
-    </div>
+<section id="about" class="section about-section">
+    <div class="about-grid">
+        <div class="about-copy">
+            <p class="section-kicker">About</p>
+            <h2>A shop built on trust and straightforward communication.</h2>
+            <p>
+                Tom Parlette Garage LLC provides automotive and motorcycle repair with a focus on honest diagnosis,
+                quality workmanship, and practical solutions that keep customers informed.
+            </p>
+            <p>
+                The goal is simple: explain the problem clearly, repair it correctly, and make sure you know what was
+                done before the vehicle leaves the shop.
+            </p>
+        </div>
 
-    <div class="feature-list">
-        <div class="feature-item animate-card">
-            <strong>Honest estimates</strong>
-            <span>Clear pricing and clear explanations.</span>
-        </div>
-        <div class="feature-item animate-card">
-            <strong>Quality repairs</strong>
-            <span>We focus on doing the job right.</span>
-        </div>
-        <div class="feature-item animate-card">
-            <strong>Modern diagnostics</strong>
-            <span>We use data to isolate the problem.</span>
-        </div>
-        <div class="feature-item animate-card">
-            <strong>Trusted locally</strong>
-            <span>Professional service for your community.</span>
-        </div>
-    </div>
-</section>
-
-<section class="section split-section">
-    <div>
-        <p class="section-kicker">Reviews</p>
-        <h2>Customers come back because the work is honest and dependable.</h2>
-
-        <div class="review-grid">
-            <div class="review-card animate-card">
-                <p class="stars">★★★★★</p>
-                <p>“Great communication and very fair.”</p>
-            </div>
-            <div class="review-card animate-card">
-                <p class="stars">★★★★★</p>
-                <p>“Fast turnaround and quality work.”</p>
-            </div>
-            <div class="review-card animate-card">
-                <p class="stars">★★★★★</p>
-                <p>“Reliable service and honest diagnosis.”</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="map-card animate-card">
-        <p class="section-kicker">Location</p>
-        <h2>Find us in Columbus, Indiana.</h2>
-        <div class="map-frame">
-            <iframe title="Google Map"
-                    src="https://www.google.com/maps?q=2203%20Mcclennan%20Ct%20S,%20Columbus,%20IN%2047203&output=embed"
-                    loading="lazy"
-                    referrerpolicy="no-referrer-when-downgrade">
-            </iframe>
+        <div class="feature-panel animate-card">
+            <h3>What you can expect</h3>
+            <ul class="check-list compact">
+                <li>Clear estimates and direct communication</li>
+                <li>Diagnostics before parts replacement</li>
+                <li>Professional repairs done right</li>
+                <li>Automotive and motorcycle service</li>
+            </ul>
         </div>
     </div>
 </section>
 
-<section class="cta-band animate-card">
+<section id="process" class="section">
+    <div class="section-heading">
+        <p class="section-kicker">Our Process</p>
+        <h2>Simple, clear, and professional from start to finish.</h2>
+    </div>
+
+    <div class="process-grid">
+        <div class="process-step animate-card">
+            <div class="step-number">1</div>
+            <h3>Inspect</h3>
+            <p>We listen to your concerns and inspect the vehicle.</p>
+        </div>
+
+        <div class="process-step animate-card">
+            <div class="step-number">2</div>
+            <h3>Diagnose</h3>
+            <p>We identify the issue with proper tools and testing.</p>
+        </div>
+
+        <div class="process-step animate-card">
+            <div class="step-number">3</div>
+            <h3>Discuss</h3>
+            <p>We explain the findings and review the options.</p>
+        </div>
+
+        <div class="process-step animate-card">
+            <div class="step-number">4</div>
+            <h3>Repair</h3>
+            <p>We complete the work with care and quality parts.</p>
+        </div>
+
+        <div class="process-step animate-card">
+            <div class="step-number">5</div>
+            <h3>Verify</h3>
+            <p>We test everything before the vehicle is returned.</p>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="section-heading">
+        <p class="section-kicker">Why Customers Choose Us</p>
+        <h2>Built around trust and direct communication.</h2>
+    </div>
+
+    <div class="why-grid">
+        <div class="feature-panel animate-card">
+            <ul class="check-list">
+                <li>Honest estimates and clear communication</li>
+                <li>Diagnostics before replacing parts</li>
+                <li>Professional repairs done right</li>
+                <li>Modern tools and practical experience</li>
+                <li>Locally owned and operated</li>
+                <li>Automotive and motorcycle service</li>
+            </ul>
+        </div>
+
+        <div class="feature-panel animate-card">
+            <h3>We service</h3>
+            <div class="vehicle-grid">
+                <span>Cars</span>
+                <span>SUVs</span>
+                <span>Trucks</span>
+                <span>Vans</span>
+                <span>Motorcycles</span>
+                <span>Domestic</span>
+                <span>Asian</span>
+                <span>European</span>
+                <span>Gasoline</span>
+                <span>Light Diesel</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="faq" class="section faq-section">
+    <div class="section-heading">
+        <p class="section-kicker">FAQ</p>
+        <h2>Common questions customers ask.</h2>
+    </div>
+
+    <div class="faq-grid">
+        <details class="faq-item">
+            <summary>Do I need an appointment?</summary>
+            <p>Appointments are recommended so we can make time for a full inspection and give you clear next steps.</p>
+        </details>
+
+        <details class="faq-item">
+            <summary>Do you work on motorcycles too?</summary>
+            <p>Yes. Motorcycle service is part of the shop and can be requested through the same appointment form.</p>
+        </details>
+
+        <details class="faq-item">
+            <summary>How do I request service?</summary>
+            <p>Use the appointment request form below or call the shop directly.</p>
+        </details>
+
+        <details class="faq-item">
+            <summary>Will I get a confirmation?</summary>
+            <p>Yes. Your request is marked pending and you will receive a notification once it is submitted.</p>
+        </details>
+    </div>
+</section>
+
+<section id="appointment" class="cta-band animate-card">
     <div>
         <p class="section-kicker">Need Service?</p>
-        <h2>Let’s get your vehicle taken care of.</h2>
+        <h2>Request an appointment and we will get back to you.</h2>
     </div>
 
     <div class="hero-actions">
-        <a class="btn btn-primary" href="tel:+17653463354">Call Now</a>
-        <a class="btn btn-secondary" href="#contact">Send a Message</a>
+        <a class="btn btn-primary" href="#contact">Request Appointment</a>
+        <a class="btn btn-secondary" href="tel:+17653463354">Call Now</a>
     </div>
 </section>
 
 <section id="contact" class="section contact-section">
     <div>
         <p class="section-kicker">Contact</p>
-        <h2>Send a message and we will get back to you.</h2>
+        <h2>Send a message about your vehicle.</h2>
         <p>
-            Use the form below to send a message about your vehicle, the issue you are seeing, or to ask about scheduling.
+            Tell us what your vehicle needs and we will review your request.
         </p>
     </div>
 
-    <form class="contact-form" method="post" action="/contact/send">
-        <div class="form-grid">
-            <div class="form-field">
-                <label>Name</label>
-                <input class="input" name="Name" required />
+    <div class="quote-card contact-form-card animate-card">
+        @if (AppointmentStatus == "sent")
+        {
+            <div class="success-card">
+                <div class="success-icon">✓</div>
+                <div>
+                    <h3>Request received</h3>
+                    <p>Your appointment request is pending review. We will contact you soon.</p>
+                    @if (!string.IsNullOrWhiteSpace(RequestId))
+                    {
+                        <p class="request-id">Reference: @RequestId</p>
+                    }
+                </div>
+            </div>
+        }
+        else if (AppointmentStatus == "missing")
+        {
+            <div class="form-status warning">
+                Please complete all required fields.
+            </div>
+        }
+
+        <form class="contact-form" method="post" action="/appointment/request">
+            <div class="form-grid">
+                <div class="form-field">
+                    <label>Name</label>
+                    <input class="input" name="Name" required />
+                </div>
+
+                <div class="form-field">
+                    <label>Phone</label>
+                    <input class="input" name="Phone" required />
+                </div>
+
+                <div class="form-field full">
+                    <label>Email</label>
+                    <input class="input" name="Email" type="email" required />
+                </div>
+
+                <div class="form-field">
+                    <label>Vehicle Type</label>
+                    <select class="input" name="VehicleType">
+                        <option value="">Select type</option>
+                        <option>Car</option>
+                        <option>Truck</option>
+                        <option>SUV</option>
+                        <option>Van</option>
+                        <option>Motorcycle</option>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label>Vehicle Year</label>
+                    <input class="input" name="VehicleYear" required />
+                </div>
+
+                <div class="form-field">
+                    <label>Vehicle Make</label>
+                    <input class="input" name="VehicleMake" required />
+                </div>
+
+                <div class="form-field">
+                    <label>Vehicle Model</label>
+                    <input class="input" name="VehicleModel" required />
+                </div>
+
+                <div class="form-field">
+                    <label>Mileage</label>
+                    <input class="input" name="Mileage" />
+                </div>
+
+                <div class="form-field">
+                    <label>Preferred Date</label>
+                    <input class="input" name="PreferredDate" type="date" required />
+                </div>
+
+                <div class="form-field full">
+                    <label>Preferred Time</label>
+                    <input class="input" name="PreferredTime" type="time" required />
+                </div>
+
+                <div class="form-field full">
+                    <label>Service Needed</label>
+                    <select class="input" name="ServiceNeeded" required>
+                        <option value="">Select a service</option>
+                        <option>Diagnostics</option>
+                        <option>Brake Repair</option>
+                        <option>Suspension &amp; Steering</option>
+                        <option>Maintenance</option>
+                        <option>Electrical Systems</option>
+                        <option>Engine Repair</option>
+                        <option>Motorcycle Service</option>
+                    </select>
+                </div>
+
+                <div class="form-field full" style="display:none;">
+                    <label>Company</label>
+                    <input class="input" name="Company" autocomplete="off" />
+                </div>
+
+                <div class="form-field full">
+                    <label>Message</label>
+                    <textarea class="input textarea" name="Message" rows="6" required></textarea>
+                </div>
             </div>
 
-            <div class="form-field">
-                <label>Phone</label>
-                <input class="input" name="Phone" required />
-            </div>
-
-            <div class="form-field full">
-                <label>Email</label>
-                <input class="input" name="Email" type="email" required />
-            </div>
-
-            <div class="form-field full" style="display:none;">
-                <label>Company</label>
-                <input class="input" name="Company" autocomplete="off" />
-            </div>
-
-            <div class="form-field full">
-                <label>Message</label>
-                <textarea class="input textarea" name="Body" rows="6" required></textarea>
-            </div>
-        </div>
-
-        <button type="submit" class="btn btn-primary full-width">Send Message</button>
-    </form>
+            <button type="submit" class="btn btn-primary full-width">Request Appointment</button>
+        </form>
+    </div>
 </section>
 
 @code {
-    private ContactMessage _message = new();
+    [SupplyParameterFromQuery(Name = "appointment")]
+    public string? AppointmentStatus { get; set; }
 
-    private string BuildMailtoLink()
-    {
-        var subject = Uri.EscapeDataString($"Website message from {_message.Name}");
-        var body = Uri.EscapeDataString(
-            $"Name: {_message.Name}\nPhone: {_message.Phone}\nEmail: {_message.Email}\n\nMessage:\n{_message.Body}");
-
-        return $"mailto:tomparlette@tomparlettegarage.org?subject={subject}&body={body}";
-    }
-
-    private sealed class ContactMessage
-    {
-        [System.ComponentModel.DataAnnotations.Required]
-        public string? Name { get; set; }
-
-        [System.ComponentModel.DataAnnotations.Required]
-        public string? Phone { get; set; }
-
-        [System.ComponentModel.DataAnnotations.Required]
-        [System.ComponentModel.DataAnnotations.EmailAddress]
-        public string? Email { get; set; }
-
-        [System.ComponentModel.DataAnnotations.Required]
-        public string? Body { get; set; }
-    }
+    [SupplyParameterFromQuery(Name = "requestId")]
+    public string? RequestId { get; set; }
 }
