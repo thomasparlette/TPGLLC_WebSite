@@ -4,5 +4,5 @@ namespace TPGLLC_WebSite.Services;
 
 public interface IEmailService
 {
-    Task SendContactMessageAsync(ContactMessage message, CancellationToken cancellationToken = default);
+    Task SendPendingAppointmentAsync(AppointmentRequest request, CancellationToken cancellationToken = default);
 }

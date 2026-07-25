@@ -3,21 +3,32 @@
 }
 
 body {
-    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     margin: 0;
-    background-color: linear-gradient(180deg, #ffffff 0%, var(--bg) 100%);
+    font-family: "Inter", "Segoe UI", sans-serif;
+    background: linear-gradient(180deg, #ffffff 0%, var(--bg) 100%);
     color: var(--text);
 }
 
+* {
+    box-sizing: border-box;
+}
+
 a {
-    color: inherit;
     text-decoration: none;
+    color: inherit;
 }
 
 .app-shell {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+}
+
+.page-content {
+    width: min(1200px, calc(100% - 2rem));
+    margin: 0 auto;
+    padding: 1.5rem 0 3rem;
+    flex: 1;
 }
 
 .site-header {
@@ -29,115 +40,131 @@ a {
     justify-content: space-between;
     gap: 1rem;
     padding: 1rem 1.5rem;
-    background: rgba(255,255,255, 0.92);
+    background: linear-gradient(180deg, #08203f 0%, #0d2a63 100%);
     backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .brand {
     display: flex;
     align-items: center;
-    gap: 0.9rem;
-    min-width: 0;
+    gap: 0.8rem;
 }
 
 .brand-logo {
     width: 48px;
     height: 48px;
     object-fit: contain;
-    border-radius: 14px;
-    background;
-    #fff;
-    box-shadow: var(--shadow);
+    display: block;
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 3px;
 }
 
 .brand-copy {
     display: flex;
     flex-direction: column;
-    line-height: 1.15;
+    line-height: 1.1;
 }
 
 .brand-name {
-    font-family: Montserrat, system-ui, sans-serif;
+    font-family: "Montserrat", sans-serif;
+    font-size: 1.1rem;
     font-weight: 800;
-    font-size: 1.05rem;
-    letter-spacing: 0.02rem;
-    color: var(--navy);
+    color: #ffffff;
 }
 
 .brand-tagline {
-    color: var(--muted);
-   font-size: 0.92rem;
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.75);
 }
 
 .site-nav {
     display: flex;
     align-items: center;
-    gap: 1.15rem;
-    flex-wrap: wrap;
-    justify-contentL center;
-    color: var(--navy);
-    font-weight: 600;
+    gap: 1.2rem;
 }
 
-.site-nav a {
-    position: relative;
-    padding: 0.25rem 0;
+    .site-nav a {
+        position: relative;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.92);
+        transition: 0.2s;
+    }
+
+        .site-nav a:hover {
+            color: #ffffff;
+        }
+
+        .site-nav a::after {
+            content: "";
+            position: absolute;
+            bottom: -6px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--red);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: 0.2s;
+        }
+
+        .site-nav a:hover::after {
+            transform: scaleX(1);
+        }
+
+.hamburger {
+    display: none;
+    border: none;
+    background: transparent;
+    color: #ffffff;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0;
 }
 
-.site-nav a::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    bottom: -0.15rem;
-    width: 100%;
-    height: 2px;
-    background: var(--red);
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform 0.2s ease;
+.header-cta {
+    white-space: nowrap;
 }
 
-.site-nav a:hover::after {
-    transform: scaleX(1);
-}
-.page-content {
-    width: min(1190px, calc(100% - 2rem));
-    margin: 0 auto;
-    padding: 1.5rem 0 3rem;
-    flex: 1;
-}
 .site-footer {
+    margin-top: 4rem;
     background: #081b40;
-    color: rgba(255, 255, 255, 0.9);
-    margin-top: 3rem;
-    padding: 2rem 0 1rem;
+    color: rgba(255, 255, 255, 0.85);
 }
 
 .footer-grid {
-    width: min(1180px, calc(100% - 2rem));
+    width: min(1200px, calc(100% - 2rem));
     margin: 0 auto;
+    padding: 3rem 0;
     display: grid;
-    grid-template-columns: 1.6fr 1fr 1fr;
-    gap: 1.5rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
 }
 
 .footer-brand,
 .footer-heading {
-    font-family: Montserrat, system-ui, sans-serif;
-    font-weight: 800;
-    margin-bottom: 0.6rem;
-    color: #fff;
+    font-family: "Montserrat", sans-serif;
+    color: #ffffff;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
 }
 
+.footer-grid a {
+    color: #ffffff;
+}
+
+    .footer-grid a:hover {
+        color: var(--red);
+    }
+
 .footer-bottom {
-    width: min(1180px, calc(100% - 2rem));
-    margin: 1.5rem auto 0;
-    padding-top: 1rem;
-    border-top 1px solid rgba(255, 255, 255, 0.12);
+    width: min(1200px, calc(100% - 2rem));
+    margin: 0 auto;
+    padding: 1rem 0;
     display: flex;
     justify-content: space-between;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    font-size: 0.85rem;
     gap: 1rem;
-    font-size: 0.92rem;
-    color: rgba(255,255,255, 0.75);
 }

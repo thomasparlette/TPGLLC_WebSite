@@ -38,10 +38,10 @@
 .hero-card,
 .quote-card,
 .service-card,
-.feature-item,
-.contact-pill,
-.review-card,
-.map-card {
+.feature-panel,
+.hero-aside-card,
+.process-step,
+.faq-item {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -54,9 +54,10 @@
     padding: 0.8rem 0.95rem;
     border-radius: 14px;
     border: 1px solid var(--border);
-    background: #fff;
+    background: #ffffff;
     color: var(--text);
     box-sizing: border-box;
+    font: inherit;
 }
 
 .textarea {
