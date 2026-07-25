@@ -10,6 +10,8 @@ builder.Services.Configure<GmailOptions>(builder.Configuration.GetSection("Gmail
 builder.Services.AddSingleton<IAppointmentRequestStore, FileAppointmentRequestStore>();
 builder.Services.AddTransient<IEmailService, SmtpEmailService>();
 builder.Services.AddTransient<IAppointmentRequestService, AppointmentRequestService>();
+
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -24,6 +26,8 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>();
+
+app.MapGet("/health", () => Results.Text("OK", "text/plain"));
 
 app.MapPost("/appointment/request", async (HttpRequest request, IAppointmentRequestService appointmentService) =>
 {
@@ -70,5 +74,5 @@ app.MapPost("/appointment/request", async (HttpRequest request, IAppointmentRequ
 })
 .DisableAntiforgery();
 
-app.MapGet("/health", () => Results.Text("OK", "text/plain"));
+
 app.Run();
