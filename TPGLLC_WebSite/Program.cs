@@ -69,4 +69,6 @@ app.MapPost("/appointment/request", async (HttpRequest request, IAppointmentRequ
     return Results.Redirect($"/?appointment=sent&requestId={requestId}#appointment");
 })
 .DisableAntiforgery();
+
+app.MapGet("/health", () => Results.Text("OK", "text/plain"));
 app.Run();
