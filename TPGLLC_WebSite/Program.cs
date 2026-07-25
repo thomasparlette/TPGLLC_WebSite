@@ -1,15 +1,14 @@
 using TPGLLC_WebSite.Components;
 using TPGLLC_WebSite.Models;
 using TPGLLC_WebSite.Services;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents();
 
 builder.Services.Configure<GmailOptions>(builder.Configuration.GetSection("Gmail"));
-builder.Services.AddSingleton<IAppointmentRequestStore, FileAppointmentRequestStore>();
 builder.Services.AddTransient<IEmailService, SmtpEmailService>();
-builder.Services.AddTransient<IAppointmentRequestService, AppointmentRequestService>(); ;
 
 var app = builder.Build();
 
@@ -26,49 +25,46 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>();
 
-app.MapPost("/appointment/request", async (HttpRequest request, IAppointmentRequestService appointmentService) =>
+app.MapPost("/contact/send", async (HttpRequest request, IEmailService emailService) =>
 {
     var form = await request.ReadFormAsync();
 
-    var appointment = new AppointmentRequest
+    var message = new ContactMessage
     {
         Name = form["Name"],
         Phone = form["Phone"],
         Email = form["Email"],
-        VehicleType = form["VehicleType"],
-        VehicleYear = form["VehicleYear"],
-        VehicleMake = form["VehicleMake"],
-        VehicleModel = form["VehicleModel"],
-        Mileage = form["Mileage"],
-        PreferredDate = form["PreferredDate"],
-        PreferredTime = form["PreferredTime"],
-        ServiceNeeded = form["ServiceNeeded"],
-        Message = form["Message"],
+        Body = form["Body"],
         Company = form["Company"]
     };
 
-    if (!string.IsNullOrWhiteSpace(appointment.Company))
+    // Honeypot: quietly ignore spam bots.
+    if (!string.IsNullOrWhiteSpace(message.Company))
     {
-        return Results.Redirect("/?appointment=sent");
+        return Results.Redirect("/?contact=sent#contact");
     }
 
-    if (string.IsNullOrWhiteSpace(appointment.Name) ||
-        string.IsNullOrWhiteSpace(appointment.Phone) ||
-        string.IsNullOrWhiteSpace(appointment.Email) ||
-        string.IsNullOrWhiteSpace(appointment.VehicleYear) ||
-        string.IsNullOrWhiteSpace(appointment.VehicleMake) ||
-        string.IsNullOrWhiteSpace(appointment.VehicleModel) ||
-        string.IsNullOrWhiteSpace(appointment.PreferredDate) ||
-        string.IsNullOrWhiteSpace(appointment.PreferredTime) ||
-        string.IsNullOrWhiteSpace(appointment.ServiceNeeded) ||
-        string.IsNullOrWhiteSpace(appointment.Message))
+    if (string.IsNullOrWhiteSpace(message.Name) ||
+        string.IsNullOrWhiteSpace(message.Phone) ||
+        string.IsNullOrWhiteSpace(message.Email) ||
+        string.IsNullOrWhiteSpace(message.Body))
     {
-        return Results.Redirect("/?appointment=missing#appointment");
+        return Results.Redirect("/?contact=missing#contact");
     }
 
-    var requestId = await appointmentService.SubmitAsync(appointment);
-    return Results.Redirect($"/?appointment=sent&requestId={requestId}#appointment");
+    await emailService.SendContactMessageAsync(message);
+    return Results.Redirect("/?contact=sent#contact");
 })
 .DisableAntiforgery();
+
+app.MapGet("/version", (IWebHostEnvironment env) =>
+{
+    var versionPath = Path.Combine(env.ContentRootPath, "version.json");
+    return File.Exists(versionPath)
+        ? Results.File(versionPath, "application/json")
+        : Results.NotFound();
+});
+
+app.MapGet("/health", () => Results.Text("OK", "text/plain"));
 
 app.Run();
