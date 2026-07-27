@@ -1,0 +1,39 @@
+﻿@page "/account"
+@rendermode InteractiveServer
+
+<PageTitle>Customer Account</PageTitle>
+
+<div class="account-page">
+    <div class="account-card">
+        <div class="account-badge">Customer Portal</div>
+
+        <h1>Create your customer account</h1>
+        <p class="account-lead">
+            Customer accounts are now connected to the site foundation. Sign in or create an account to
+            prepare for appointment tracking, vehicle records, and the future customer portal.
+        </p>
+
+        <div class="account-feature-list">
+            <div class="account-feature">
+                <h3>Sign in</h3>
+                <p>Use the standard Identity sign-in pages.</p>
+            </div>
+
+            <div class="account-feature">
+                <h3>2FA Ready</h3>
+                <p>Identity supports two-factor authentication through the normal account management flow.</p>
+            </div>
+
+            <div class="account-feature">
+                <h3>Future portal</h3>
+                <p>Appointments, vehicles, invoices, and repair updates will land here later.</p>
+            </div>
+        </div>
+
+        <div class="account-actions">
+            <a class="btn btn-primary" href="/account/login">Sign In</a>
+            <a class="btn btn-secondary" href="/account/register">Create Account</a>
+            <a class="btn btn-tertiary" href="/">Back to Home</a>
+        </div>
+    </div>
+</div>

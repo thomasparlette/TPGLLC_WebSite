@@ -1,0 +1,72 @@
+﻿@page "/account/login"
+@model TPGLLC.Web.Areas.Identity.Pages.Account.LoginModel
+@{
+    Layout = null;
+    ViewData["Title"] = "Sign in";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="~/" />
+
+    <link rel="stylesheet" href="/css/variables.css" />
+    <link rel="stylesheet" href="/css/layout.css" />
+    <link rel="stylesheet" href="/css/components.css" />
+    <link rel="stylesheet" href="/css/home.css" />
+    <link rel="stylesheet" href="/css/animations.css" />
+    <link rel="stylesheet" href="/css/mobile.css" />
+
+    <title>Sign in</title>
+</head>
+<body>
+    <div class="app-shell">
+        <main class="page-content">
+            <div class="auth-page">
+                <div class="auth-card">
+                    <h1>Sign in</h1>
+                    <p>Use your account to manage appointments and vehicles.</p>
+
+                    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+                    {
+                        <div class="form-status warning">@Model.ErrorMessage</div>
+                    }
+
+                    <form method="post">
+                        <div asp-validation-summary="ModelOnly" class="validation-errors"></div>
+
+                        <div class="form-field full">
+                            <label asp-for="Input.Email"></label>
+                            <input asp-for="Input.Email" class="input" />
+                            <span asp-validation-for="Input.Email" class="validation-message"></span>
+                        </div>
+
+                        <div class="form-field full">
+                            <label asp-for="Input.Password"></label>
+                            <input asp-for="Input.Password" class="input" type="password" />
+                            <span asp-validation-for="Input.Password" class="validation-message"></span>
+                        </div>
+
+                        <div class="form-field full">
+                            <label>
+                                <input asp-for="Input.RememberMe" />
+                                Remember me
+                            </label>
+                        </div>
+
+                        <input asp-for="Input.ReturnUrl" type="hidden" />
+
+                        <button class="btn btn-primary full-width" type="submit">Log in</button>
+                    </form>
+
+                    <p style="margin-top:1rem;">
+                        Need an account? <a href="/account/register">Register</a>
+                    </p>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
