@@ -22,7 +22,7 @@ public sealed class LoginModel : PageModel
 
     public void OnGet(string? returnUrl = null)
     {
-        Input.ReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/customer/dashboard" : returnUrl;
+        Input.ReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/account" : returnUrl;
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -61,7 +61,7 @@ public sealed class LoginModel : PageModel
             return returnUrl;
         }
 
-        return "/customer/dashboard";
+        return "/account";
     }
 
     public sealed class InputModel

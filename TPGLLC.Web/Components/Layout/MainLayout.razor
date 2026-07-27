@@ -24,13 +24,13 @@
             <a href="/#appointment" @onclick="CloseMenu">Request Appointment</a>
 
             <AuthorizeView>
-                <Authorized Context="auth">
-                    <a href="/customer/dashboard" @onclick="CloseMenu">My Account</a>
-                    <a href="/account/Logout" @onclick="CloseMenu">Sign Out</a>
+                <Authorized>
+                    <a href="/account" @onclick="CloseMenu">My Account</a>
+                    <a href="/Identity/Account/Logout" @onclick="CloseMenu">Sign Out</a>
                 </Authorized>
                 <NotAuthorized>
-                    <a href="/account/login" @onclick="CloseMenu">Sign In</a>
-                    <a href="/account/register" @onclick="CloseMenu">Create Account</a>
+                    <a href="/Identity/Account/Login" @onclick="CloseMenu">Sign In</a>
+                    <a href="/Identity/Account/Register" @onclick="CloseMenu">Create Account</a>
                 </NotAuthorized>
             </AuthorizeView>
 
@@ -42,10 +42,10 @@
 
         <AuthorizeView>
             <Authorized>
-                <a class="btn btn-primary header-cta" href="/customer/dashboard">My Account</a>
+                <a class="btn btn-primary header-cta" href="/account">My Account</a>
             </Authorized>
             <NotAuthorized>
-                <a class="btn btn-primary header-cta" href="/account/register">Create Account</a>
+                <a class="btn btn-primary header-cta" href="/Identity/Account/Register">Create Account</a>
             </NotAuthorized>
         </AuthorizeView>
     </header>
@@ -72,7 +72,7 @@
                 <p><a href="/#services">Services</a></p>
                 <p><a href="/#appointment">Request Appointment</a></p>
                 <p><a href="/#faq">FAQ</a></p>
-                <p><a href="/account/login">Customer Account</a></p>
+                <p><a href="/account">Customer Account</a></p>
             </div>
         </div>
 

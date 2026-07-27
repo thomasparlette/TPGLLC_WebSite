@@ -1,40 +1,17 @@
-﻿@page "/account/logout"
+﻿@page
 @model TPGLLC.Web.Areas.Identity.Pages.Account.LogoutModel
 @{
-    Layout = null;
     ViewData["Title"] = "Sign out";
 }
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <base href="~/" />
+<div class="auth-page">
+    <div class="auth-card">
+        <h2>Signing out...</h2>
+        <p>Please wait while we securely end your session.</p>
 
-    <link rel="stylesheet" href="/css/variables.css" />
-    <link rel="stylesheet" href="/css/layout.css" />
-    <link rel="stylesheet" href="/css/components.css" />
-    <link rel="stylesheet" href="/css/home.css" />
-    <link rel="stylesheet" href="/css/animations.css" />
-    <link rel="stylesheet" href="/css/mobile.css" />
-
-    <title>Sign out</title>
-</head>
-<body>
-    <div class="app-shell">
-        <main class="page-content">
-            <div class="auth-page">
-                <div class="auth-card">
-                    <h2>Signing out...</h2>
-                    <p>Please wait while we securely end your session.</p>
-
-                    <form method="post">
-                        <button class="btn btn-primary full-width" type="submit">Sign out</button>
-                    </form>
-                </div>
-            </div>
-        </main>
+        <form method="post">
+            @Html.AntiForgeryToken()
+            <button class="btn btn-primary full-width" type="submit">Sign out</button>
+        </form>
     </div>
-</body>
-</html>
+</div>

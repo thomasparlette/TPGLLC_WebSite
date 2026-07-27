@@ -1,0 +1,369 @@
+param(
+    [Parameter(Mandatory = $true)]
+    [string]$WebsitePath,
+
+    [Parameter(Mandatory = $true)]
+    [string]$PublishPath,
+
+    [Parameter(Mandatory = $true)]
+    [string]$BackupRoot,
+
+    [Parameter(Mandatory = $true)]
+    [string]$ReleaseRoot,
+
+    [Parameter(Mandatory = $true)]
+    [string]$LogRoot,
+
+    [Parameter(Mandatory = $true)]
+    [string]$HealthCheckUrl,
+
+    [Parameter(Mandatory = $true)]
+    [string]$CommitSha,
+
+    [Parameter(Mandatory = $true)]
+    [string]$BranchName,
+
+    [string]$RunnerName = $env:COMPUTERNAME,
+
+    [int]$KeepReleases = 10,
+    [int]$LogRetentionDays = 30,
+    [int]$BackupRetentionDays = 30
+)
+
+$ErrorActionPreference = 'Stop'
+
+New-Item -ItemType Directory -Force -Path $LogRoot | Out-Null
+$LogFile = Join-Path $LogRoot ("Deploy_{0}.log" -f (Get-Date -Format "yyyy-MM-dd_HHmmss"))
+
+function Write-Log {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Message
+    )
+
+    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $line = "[$timestamp] $Message"
+
+    Write-Host $line
+    Add-Content -Path $LogFile -Value $line
+}
+
+function Invoke-RobocopySafe {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Source,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Destination
+    )
+
+    if (-not (Test-Path $Source)) {
+        throw "Source path does not exist: $Source"
+    }
+
+    New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+
+    robocopy $Source $Destination /MIR /XF app_offline.htm /NFL /NDL /NJH /NJS /NP /R:2 /W:2 2>&1 |
+        Tee-Object -FilePath $LogFile -Append |
+        Out-Host
+
+    $code = $LASTEXITCODE
+    if ($code -ge 8) {
+        throw "Robocopy failed with exit code $code"
+    }
+
+    Write-Log "Robocopy completed with exit code $code"
+}
+
+function Backup-CurrentWebsite {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$WebsitePath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$BackupRoot
+    )
+
+    if (-not (Test-Path $WebsitePath)) {
+        Write-Log "Website path does not exist yet. Skipping backup."
+        return $null
+    }
+
+    $stamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
+    $backupPath = Join-Path $BackupRoot $stamp
+    New-Item -ItemType Directory -Force -Path $backupPath | Out-Null
+
+    Write-Log "Backing up current website to '$backupPath'..."
+    robocopy $WebsitePath $backupPath /MIR /NFL /NDL /NJH /NJS /NP /R:2 /W:2 2>&1 |
+        Tee-Object -FilePath $LogFile -Append |
+        Out-Host
+
+    $code = $LASTEXITCODE
+    if ($code -ge 8) {
+        throw "Backup failed with exit code $code"
+    }
+
+    Write-Log "Backup created at: $backupPath"
+    return $backupPath
+}
+
+function Wait-ForFileUnlock {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+
+        [int]$TimeoutSeconds = 30
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+
+    while ((Get-Date) -lt $deadline) {
+        if (-not (Test-Path $Path)) {
+            return
+        }
+
+        try {
+            $stream = [System.IO.File]::Open(
+                $Path,
+                [System.IO.FileMode]::Open,
+                [System.IO.FileAccess]::ReadWrite,
+                [System.IO.FileShare]::None
+            )
+            $stream.Close()
+            return
+        }
+        catch {
+            Start-Sleep -Seconds 1
+        }
+    }
+
+    throw "Timed out waiting for file unlock: $Path"
+}
+
+function Copy-ReleaseSnapshot {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PublishPath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ReleaseRoot
+    )
+
+    New-Item -ItemType Directory -Force -Path $ReleaseRoot | Out-Null
+
+    $stamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
+    $releasePath = Join-Path $ReleaseRoot $stamp
+    New-Item -ItemType Directory -Force -Path $releasePath | Out-Null
+
+    Write-Log "Creating release snapshot at '$releasePath'..."
+    robocopy $PublishPath $releasePath /MIR /XF app_offline.htm /NFL /NDL /NJH /NJS /NP /R:2 /W:2 2>&1 |
+        Tee-Object -FilePath $LogFile -Append |
+        Out-Host
+
+    $code = $LASTEXITCODE
+    if ($code -ge 8) {
+        throw "Release snapshot failed with exit code $code"
+    }
+
+    Write-Log "Release snapshot created at: $releasePath"
+    return $releasePath
+}
+
+function Write-VersionFile {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$WebsitePath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$CommitSha,
+
+        [Parameter(Mandatory = $true)]
+        [string]$BranchName,
+
+        [Parameter(Mandatory = $true)]
+        [string]$RunnerName
+    )
+
+    $shortSha = if ($CommitSha.Length -ge 7) { $CommitSha.Substring(0, 7) } else { $CommitSha }
+    $versionValue = "{0}+{1}" -f (Get-Date -Format 'yyyy.MM.dd.HHmmss'), $shortSha
+
+    $versionInfo = [ordered]@{
+        version  = $versionValue
+        commit   = $CommitSha
+        branch   = $BranchName
+        deployed = (Get-Date).ToString('o')
+        runner   = $RunnerName
+    }
+
+    $versionPath = Join-Path $WebsitePath 'version.json'
+    $versionInfo | ConvertTo-Json -Depth 5 | Set-Content -Path $versionPath -Encoding UTF8
+
+    Write-Log "Version file written: $versionPath"
+}
+
+function Cleanup-OldReleases {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ReleaseRoot,
+
+        [int]$KeepReleases = 10
+    )
+
+    if (-not (Test-Path $ReleaseRoot)) {
+        return
+    }
+
+    $releases = Get-ChildItem -Path $ReleaseRoot -Directory | Sort-Object Name -Descending
+    $oldReleases = $releases | Select-Object -Skip $KeepReleases
+
+    foreach ($release in $oldReleases) {
+        Write-Log "Removing old release: $($release.FullName)"
+        Remove-Item $release.FullName -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Cleanup-OldLogs {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$LogRoot,
+
+        [int]$RetentionDays = 30
+    )
+
+    if (-not (Test-Path $LogRoot)) {
+        return
+    }
+
+    $cutoff = (Get-Date).AddDays(-$RetentionDays)
+
+    Get-ChildItem -Path $LogRoot -File |
+        Where-Object { $_.LastWriteTime -lt $cutoff } |
+        ForEach-Object {
+            Write-Log "Removing old log: $($_.FullName)"
+            Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
+        }
+}
+
+function Cleanup-OldBackups {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$BackupRoot,
+
+        [int]$RetentionDays = 30
+    )
+
+    if (-not (Test-Path $BackupRoot)) {
+        return
+    }
+
+    $cutoff = (Get-Date).AddDays(-$RetentionDays)
+
+    Get-ChildItem -Path $BackupRoot -Directory |
+        Where-Object { $_.LastWriteTime -lt $cutoff } |
+        ForEach-Object {
+            Write-Log "Removing old backup: $($_.FullName)"
+            Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+        }
+}
+
+function Test-HealthCheck {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Url
+    )
+
+    Write-Log "Running health check: $Url"
+    $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 20
+
+    if ($response.StatusCode -lt 200 -or $response.StatusCode -ge 300) {
+        throw "Health check returned status code $($response.StatusCode)"
+    }
+
+    Write-Log "Health check passed with status code $($response.StatusCode)"
+}
+
+$appOfflinePath = Join-Path $WebsitePath 'app_offline.htm'
+$backupPath = $null
+$releasePath = $null
+
+try {
+    Write-Log "Starting deployment..."
+    Write-Log "Repository branch: $BranchName"
+    Write-Log "Commit SHA: $CommitSha"
+    Write-Log "Runner: $RunnerName"
+
+    New-Item -ItemType Directory -Force -Path $BackupRoot | Out-Null
+    New-Item -ItemType Directory -Force -Path $WebsitePath | Out-Null
+    New-Item -ItemType Directory -Force -Path $ReleaseRoot | Out-Null
+
+    $backupPath = Backup-CurrentWebsite -WebsitePath $WebsitePath -BackupRoot $BackupRoot
+    $releasePath = Copy-ReleaseSnapshot -PublishPath $PublishPath -ReleaseRoot $ReleaseRoot
+
+    
+
+    Write-Log "Placing app_offline.htm..."
+    @"
+<html>
+<head><title>Site Offline</title></head>
+<body><h1>Temporarily offline for deployment.</h1></body>
+</html>
+"@ | Set-Content -Path $appOfflinePath -Encoding UTF8
+
+    Start-Sleep -Seconds 2
+
+    $mainDll = Join-Path $WebsitePath 'TPGLLC_WebSite.dll'
+    if (Test-Path $mainDll) {
+        Write-Log "Waiting for application DLL to unlock..."
+        Wait-ForFileUnlock -Path $mainDll -TimeoutSeconds 30
+    }
+
+    Write-Log "Deploying release '$releasePath' to '$WebsitePath'..."
+    Invoke-RobocopySafe -Source $releasePath -Destination $WebsitePath
+
+    if (Test-Path $appOfflinePath) {
+        Remove-Item $appOfflinePath -Force -ErrorAction SilentlyContinue
+        Write-Log "Removed app_offline.htm"
+    }
+	Write-VersionFile `
+        -WebsitePath $WebsitePath `
+        -CommitSha $CommitSha `
+        -BranchName $BranchName `
+        -RunnerName $RunnerName
+
+    Test-HealthCheck -Url $HealthCheckUrl
+    Cleanup-OldReleases -ReleaseRoot $ReleaseRoot -KeepReleases $KeepReleases
+    Cleanup-OldLogs -LogRoot $LogRoot -RetentionDays $LogRetentionDays
+    Cleanup-OldBackups -BackupRoot $BackupRoot -RetentionDays $BackupRetentionDays
+
+    Write-Log "Deployment completed successfully."
+    exit 0
+}
+catch {
+    Write-Log "Deployment failed: $($_.Exception.Message)"
+
+    if (Test-Path $appOfflinePath) {
+        Remove-Item $appOfflinePath -Force -ErrorAction SilentlyContinue
+    }
+
+    if ($backupPath -and (Test-Path $backupPath)) {
+        try {
+            Write-Log "Attempting rollback from '$backupPath'..."
+            robocopy $backupPath $WebsitePath /MIR /XF app_offline.htm /NFL /NDL /NJH /NJS /NP /R:2 /W:2 2>&1 |
+                Tee-Object -FilePath $LogFile -Append |
+                Out-Host
+
+            $rollbackCode = $LASTEXITCODE
+            if ($rollbackCode -ge 8) {
+                Write-Log "Rollback failed with exit code $rollbackCode"
+            }
+            else {
+                Write-Log "Rollback completed."
+            }
+        }
+        catch {
+            Write-Log "Rollback failed: $($_.Exception.Message)"
+        }
+    }
+
+    exit 1
+}

@@ -45,9 +45,9 @@ builder.Services
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
-    options.LoginPath = "/account/login";
-    options.LogoutPath = "/account/logout";
-    options.AccessDeniedPath = "/account/login";
+    options.LoginPath = "/Identity/Account/Login";
+    options.LogoutPath = "/Identity/Account/Logout";
+    options.AccessDeniedPath = "/Identity/Account/Login";
     options.SlidingExpiration = true;
     options.Cookie.HttpOnly = true;
 });
@@ -65,14 +65,6 @@ builder.Services.AddHttpClient<VehicleApiClient>(client =>
     client.BaseAddress = new Uri(apiBaseUrl, UriKind.Absolute);
     client.Timeout = TimeSpan.FromSeconds(60);
 });
-
-/*
-builder.Services.AddHttpClient<AppointmentApiClient>(client =>
-{
-    client.BaseAddress = new Uri(apiBaseUrl, UriKind.Absolute);
-    client.Timeout = TimeSpan.FromSeconds(60);
-});
-*/
 
 var app = builder.Build();
 
@@ -95,5 +87,12 @@ app.MapRazorComponents<App>()
    .AddInteractiveServerRenderMode();
 
 app.MapGet("/health", () => Results.Text("OK", "text/plain"));
+app.MapGet("/version", (IWebHostEnvironment env) =>
+{
+    var versionPath = Path.Combine(env.ContentRootPath, "version.json");
+    return File.Exists(versionPath)
+        ? Results.File(versionPath, "application/json")
+        : Results.NotFound();
+});
 
 app.Run();

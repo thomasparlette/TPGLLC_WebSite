@@ -1,77 +1,54 @@
-﻿@page "/account/register"
+﻿@page
 @model TPGLLC.Web.Areas.Identity.Pages.Account.RegisterModel
 @{
-    Layout = null;
     ViewData["Title"] = "Create account";
 }
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <base href="~/" />
+<div class="auth-page">
+    <div class="auth-card">
+        <h1>Create account</h1>
+        <p>Register to track vehicles and appointments.</p>
 
-    <link rel="stylesheet" href="/css/variables.css" />
-    <link rel="stylesheet" href="/css/layout.css" />
-    <link rel="stylesheet" href="/css/components.css" />
-    <link rel="stylesheet" href="/css/home.css" />
-    <link rel="stylesheet" href="/css/animations.css" />
-    <link rel="stylesheet" href="/css/mobile.css" />
+        @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+        {
+            <div class="form-status warning">@Model.ErrorMessage</div>
+        }
 
-    <title>Create account</title>
-</head>
-<body>
-    <div class="app-shell">
-        <main class="page-content">
-            <div class="auth-page">
-                <div class="auth-card">
-                    <h1>Create account</h1>
-                    <p>Register to track vehicles and appointments.</p>
+        <form method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="validation-errors"></div>
 
-                    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
-                    {
-                        <div class="form-status warning">@Model.ErrorMessage</div>
-                    }
-
-                    <form method="post">
-                        <div asp-validation-summary="ModelOnly" class="validation-errors"></div>
-
-                        <div class="form-field full">
-                            <label asp-for="Input.DisplayName"></label>
-                            <input asp-for="Input.DisplayName" class="input" />
-                            <span asp-validation-for="Input.DisplayName" class="validation-message"></span>
-                        </div>
-
-                        <div class="form-field full">
-                            <label asp-for="Input.Email"></label>
-                            <input asp-for="Input.Email" class="input" />
-                            <span asp-validation-for="Input.Email" class="validation-message"></span>
-                        </div>
-
-                        <div class="form-field full">
-                            <label asp-for="Input.Password"></label>
-                            <input asp-for="Input.Password" class="input" type="password" />
-                            <span asp-validation-for="Input.Password" class="validation-message"></span>
-                        </div>
-
-                        <div class="form-field full">
-                            <label asp-for="Input.ConfirmPassword"></label>
-                            <input asp-for="Input.ConfirmPassword" class="input" type="password" />
-                            <span asp-validation-for="Input.ConfirmPassword" class="validation-message"></span>
-                        </div>
-
-                        <input asp-for="Input.ReturnUrl" type="hidden" />
-
-                        <button class="btn btn-primary full-width" type="submit">Create account</button>
-                    </form>
-
-                    <p style="margin-top:1rem;">
-                        Already have an account? <a href="/account/login">Log in</a>
-                    </p>
-                </div>
+            <div class="form-field full">
+                <label asp-for="Input.DisplayName"></label>
+                <input asp-for="Input.DisplayName" class="input" />
+                <span asp-validation-for="Input.DisplayName" class="validation-message"></span>
             </div>
-        </main>
+
+            <div class="form-field full">
+                <label asp-for="Input.Email"></label>
+                <input asp-for="Input.Email" class="input" />
+                <span asp-validation-for="Input.Email" class="validation-message"></span>
+            </div>
+
+            <div class="form-field full">
+                <label asp-for="Input.Password"></label>
+                <input asp-for="Input.Password" class="input" type="password" />
+                <span asp-validation-for="Input.Password" class="validation-message"></span>
+            </div>
+
+            <div class="form-field full">
+                <label asp-for="Input.ConfirmPassword"></label>
+                <input asp-for="Input.ConfirmPassword" class="input" type="password" />
+                <span asp-validation-for="Input.ConfirmPassword" class="validation-message"></span>
+            </div>
+
+            <input asp-for="Input.ReturnUrl" type="hidden" />
+
+            <button class="btn btn-primary full-width" type="submit">Create account</button>
+        </form>
+
+        <p style="margin-top:1rem;">
+            Already have an account? <a href="/Identity/Account/Login">Log in</a>
+        </p>
     </div>
-</body>
-</html>
+</div>
