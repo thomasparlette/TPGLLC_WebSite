@@ -1,0 +1,149 @@
+﻿@page "/customer/appointments"
+@inject CustomerPortalStore PortalStore
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@layout CustomerLayout
+
+<div class="quote-card" style="margin-bottom:1.5rem;">
+    <p class="section-kicker">Appointments</p>
+    <h1 style="margin-top:0;">My Appointments</h1>
+    <p style="margin-bottom:0;">Schedule service using one of your registered vehicles.</p>
+</div>
+
+<div style="display:grid;grid-template-columns:1.2fr .8fr;gap:1.5rem;">
+    <section class="quote-card">
+        <h2 style="margin-top:0;">Schedule Appointment</h2>
+
+        <EditForm Model="_model" OnValidSubmit="SubmitAsync" FormName="CustomerAppointmentForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            @if (!string.IsNullOrWhiteSpace(_message))
+            {
+                <div class="form-status">@_message</div>
+            }
+
+            <div class="form-grid">
+                <div class="form-field full">
+                    <label>Vehicle</label>
+                    <select class="input" value="@_model.VehicleName" @onchange="OnVehicleChanged">
+                        <option value="">Select vehicle</option>
+                        @foreach (var vehicle in PortalStore.Vehicles)
+                        {
+                            <option value="@vehicle.DisplayName">@vehicle.DisplayName</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-field full">
+                    <label>Service Needed</label>
+                    <InputText class="input" @bind-Value="_model.Service" placeholder="Oil change, diagnostics, brakes..." />
+                </div>
+
+                <div class="form-field">
+                    <label>Date</label>
+                    <InputText class="input" @bind-Value="_model.Date" type="date" />
+                </div>
+
+                <div class="form-field">
+                    <label>Time</label>
+                    <InputText class="input" @bind-Value="_model.Time" type="time" />
+                </div>
+
+                <div class="form-field full">
+                    <label>Notes</label>
+                    <InputTextArea class="input textarea" @bind-Value="_model.Notes" rows="4" />
+                </div>
+            </div>
+
+            <div class="hero-actions" style="margin-top:1rem;">
+                <button class="btn btn-primary" type="submit">Request Appointment</button>
+            </div>
+        </EditForm>
+    </section>
+
+    <aside class="quote-card">
+        <h2 style="margin-top:0;">Upcoming</h2>
+
+        @if (PortalStore.Appointments.Count == 0)
+        {
+            <p>No appointments scheduled.</p>
+        }
+        else
+        {
+            <div style="display:flex;flex-direction:column;gap:.75rem;">
+                @foreach (var appointment in PortalStore.Appointments)
+                {
+                    <div style="padding:.9rem 1rem;border-radius:1rem;background:rgba(255,255,255,.04);">
+                        <strong>@appointment.VehicleName</strong>
+                        <div>@appointment.Service</div>
+                        <div>@appointment.Date.ToString("MMM d, yyyy") at @appointment.Time.ToString("h:mm tt")</div>
+                        <div>@appointment.Status</div>
+                    </div>
+                }
+            </div>
+        }
+    </aside>
+</div>
+
+@code {
+    private readonly AppointmentModel _model = new();
+    private string? _message;
+
+    private Task OnVehicleChanged(ChangeEventArgs e)
+    {
+        _model.VehicleName = e.Value?.ToString() ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task SubmitAsync()
+    {
+        _message = null;
+
+        if (string.IsNullOrWhiteSpace(_model.VehicleName) ||
+            string.IsNullOrWhiteSpace(_model.Service) ||
+            string.IsNullOrWhiteSpace(_model.Date) ||
+            string.IsNullOrWhiteSpace(_model.Time))
+        {
+            _message = "Please complete the appointment form.";
+            return Task.CompletedTask;
+        }
+
+        var date = DateOnly.Parse(_model.Date);
+        var time = TimeOnly.Parse(_model.Time);
+
+        PortalStore.AddAppointment(new CustomerAppointmentDto(
+            Id: Guid.NewGuid(),
+            VehicleName: _model.VehicleName,
+            Service: _model.Service,
+            Date: date,
+            Time: time,
+            Status: "Requested",
+            Notes: string.IsNullOrWhiteSpace(_model.Notes) ? string.Empty : _model.Notes));
+
+        _message = "Your appointment request has been added.";
+        _model.Service = string.Empty;
+        _model.Date = string.Empty;
+        _model.Time = string.Empty;
+        _model.Notes = string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private sealed class AppointmentModel
+    {
+        [Required]
+        public string VehicleName { get; set; } = string.Empty;
+
+        [Required]
+        public string Service { get; set; } = string.Empty;
+
+        [Required]
+        public string Date { get; set; } = string.Empty;
+
+        [Required]
+        public string Time { get; set; } = string.Empty;
+
+        public string Notes { get; set; } = string.Empty;
+    }
+}

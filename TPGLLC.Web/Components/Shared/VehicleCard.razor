@@ -1,0 +1,54 @@
+﻿<div class="quote-card" style="height:100%;display:flex;flex-direction:column;gap:1rem;">
+    <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;">
+        <div>
+            <p class="section-kicker">@VehicleType</p>
+            <h3 style="margin-top:0;">@DisplayName</h3>
+            <p style="margin:0;">@Make @Model</p>
+            @if (!string.IsNullOrWhiteSpace(Trim))
+            {
+                <p style="margin:.25rem 0 0 0;">@Trim</p>
+            }
+        </div>
+
+        @if (IsPrimary)
+        {
+            <span class="btn btn-primary" style="pointer-events:none;">Primary</span>
+        }
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr;gap:.35rem;">
+        @if (!string.IsNullOrWhiteSpace(Vin))
+        {
+            <div><strong>VIN:</strong> @Vin</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Mileage))
+        {
+            <div><strong>Mileage:</strong> @Mileage</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Notes))
+        {
+            <div><strong>Notes:</strong> @Notes</div>
+        }
+    </div>
+
+    <div class="hero-actions" style="margin-top:auto;">
+        <a class="btn btn-secondary" href="@HistoryHref">Service History</a>
+        <a class="btn btn-primary" href="@AppointmentsHref">Appointments</a>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string DisplayName { get; set; } = string.Empty;
+    [Parameter] public string VehicleType { get; set; } = string.Empty;
+    [Parameter] public string Make { get; set; } = string.Empty;
+    [Parameter] public string Model { get; set; } = string.Empty;
+    [Parameter] public string? Trim { get; set; }
+    [Parameter] public string? Vin { get; set; }
+    [Parameter] public string? Mileage { get; set; }
+    [Parameter] public string? Notes { get; set; }
+    [Parameter] public bool IsPrimary { get; set; }
+    [Parameter] public string HistoryHref { get; set; } = "/customer/history";
+    [Parameter] public string AppointmentsHref { get; set; } = "/customer/appointments";
+}

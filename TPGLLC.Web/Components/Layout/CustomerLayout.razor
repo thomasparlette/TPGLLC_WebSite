@@ -1,0 +1,32 @@
+﻿@inherits LayoutComponentBase
+@using TPGLLC.Web.Features.Portal
+@inject CustomerPortalStore PortalStore
+
+<div class="app-shell">
+    <header class="site-header">
+        <a class="brand" href="/customer/dashboard">
+            <img class="brand-logo" src="/images/logo.jpeg" alt="Tom Parlette Garage LLC logo" />
+            <div class="brand-copy">
+                <span class="brand-name">Tom Parlette Garage LLC</span>
+                <span class="brand-tagline">Customer Portal</span>
+            </div>
+        </a>
+
+        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+            <div class="brand-tagline">Welcome, @PortalStore.Profile.DisplayName</div>
+            <a class="btn btn-secondary" href="/Identity/Account/Logout">Sign Out</a>
+        </div>
+    </header>
+
+    <main class="page-content">
+        <div style="display:grid;grid-template-columns:280px minmax(0,1fr);gap:1.5rem;align-items:start;">
+            <aside class="quote-card" style="position:sticky;top:1rem;">
+                <SidebarNavigation />
+            </aside>
+
+            <section>
+                @Body
+            </section>
+        </div>
+    </main>
+</div>

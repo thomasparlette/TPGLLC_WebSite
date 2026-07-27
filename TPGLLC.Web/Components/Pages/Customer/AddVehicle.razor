@@ -1,0 +1,249 @@
+﻿@page "/customer/vehicles/add"
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@layout CustomerLayout
+@using System.ComponentModel.DataAnnotations
+@using TPGLLC.Web.Services
+
+@inject VehicleApiClient VehicleApi
+@inject CustomerPortalStore PortalStore
+@inject NavigationManager Nav
+
+<div class="quote-card" style="margin-bottom:1.5rem;">
+    <p class="section-kicker">Add Vehicle</p>
+    <h1 style="margin-top:0;">Vehicle Wizard</h1>
+    <p style="margin-bottom:0;">Add an automotive, motorcycle, or custom vehicle to your profile.</p>
+</div>
+
+<div class="quote-card">
+    <EditForm Model="_model" OnValidSubmit="SubmitAsync" FormName="AddVehicleForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        @if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <div class="form-status warning">@_error</div>
+        }
+
+        <div class="form-grid">
+            <div class="form-field full">
+                <label>Vehicle Type</label>
+                <select class="input" value="@_model.VehicleType" @onchange="OnVehicleTypeChanged">
+                    <option value="">Select type</option>
+                    @foreach (var type in _vehicleTypes)
+                    {
+                        <option value="@type">@type</option>
+                    }
+                </select>
+            </div>
+
+            @if (IsCatalogVehicle)
+            {
+                <div class="form-field">
+                    <label>Year</label>
+                    <select class="input" value="@_model.Year" @onchange="OnYearChanged">
+                        <option value="">Select year</option>
+                        @foreach (var year in _years)
+                        {
+                            <option value="@year">@year</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label>Make</label>
+                    <select class="input" value="@_model.Make" @onchange="OnMakeChanged">
+                        <option value="">Select make</option>
+                        @foreach (var make in _makes)
+                        {
+                            <option value="@make">@make</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label>Model</label>
+                    <select class="input" value="@_model.Model" @onchange="OnModelChanged">
+                        <option value="">Select model</option>
+                        @foreach (var model in _models)
+                        {
+                            <option value="@model">@model</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label>Trim / Engine</label>
+                    <InputText class="input" @bind-Value="_model.Trim" />
+                </div>
+            }
+            else
+            {
+                <div class="form-field">
+                    <label>Year</label>
+                    <InputText class="input" @bind-Value="_model.Year" placeholder="Enter year" />
+                </div>
+
+                <div class="form-field">
+                    <label>Make</label>
+                    <InputText class="input" @bind-Value="_model.Make" placeholder="Enter make" />
+                </div>
+
+                <div class="form-field">
+                    <label>Model</label>
+                    <InputText class="input" @bind-Value="_model.Model" placeholder="Enter model" />
+                </div>
+
+                <div class="form-field">
+                    <label>Trim / Engine</label>
+                    <InputText class="input" @bind-Value="_model.Trim" />
+                </div>
+            }
+
+            <div class="form-field full">
+                <label>Nickname (optional)</label>
+                <InputText class="input" @bind-Value="_model.Nickname" />
+            </div>
+
+            <div class="form-field">
+                <label>VIN (optional)</label>
+                <InputText class="input" @bind-Value="_model.Vin" maxlength="17" />
+            </div>
+
+            <div class="form-field">
+                <label>Mileage (optional)</label>
+                <InputText class="input" @bind-Value="_model.Mileage" />
+            </div>
+
+            <div class="form-field full">
+                <label>Notes (optional)</label>
+                <InputTextArea class="input textarea" @bind-Value="_model.Notes" rows="4" />
+            </div>
+        </div>
+
+        <div class="hero-actions" style="margin-top:1rem;">
+            <button class="btn btn-primary" type="submit">Save Vehicle</button>
+            <a class="btn btn-secondary" href="/customer/vehicles">Cancel</a>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private readonly AddVehicleModel _model = new();
+    private readonly IReadOnlyList<string> _vehicleTypes = ["Automotive", "Motorcycle", "Other"];
+    private IReadOnlyList<int> _years = [];
+    private IReadOnlyList<string> _makes = [];
+    private IReadOnlyList<string> _models = [];
+    private string? _error;
+
+    private bool IsCatalogVehicle =>
+        string.Equals(_model.VehicleType, "Automotive", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(_model.VehicleType, "Motorcycle", StringComparison.OrdinalIgnoreCase);
+
+    private async Task OnVehicleTypeChanged(ChangeEventArgs e)
+    {
+        _model.VehicleType = e.Value?.ToString() ?? string.Empty;
+        _model.Year = string.Empty;
+        _model.Make = string.Empty;
+        _model.Model = string.Empty;
+        _years = [];
+        _makes = [];
+        _models = [];
+
+        if (IsCatalogVehicle)
+        {
+            _years = await VehicleApi.GetYearsAsync(_model.VehicleType);
+        }
+    }
+
+    private async Task OnYearChanged(ChangeEventArgs e)
+    {
+        _model.Year = e.Value?.ToString() ?? string.Empty;
+        _model.Make = string.Empty;
+        _model.Model = string.Empty;
+        _makes = [];
+        _models = [];
+
+        if (IsCatalogVehicle && int.TryParse(_model.Year, out var year))
+        {
+            _makes = await VehicleApi.GetMakesAsync(_model.VehicleType, year);
+        }
+    }
+
+    private async Task OnMakeChanged(ChangeEventArgs e)
+    {
+        _model.Make = e.Value?.ToString() ?? string.Empty;
+        _model.Model = string.Empty;
+        _models = [];
+
+        if (IsCatalogVehicle && int.TryParse(_model.Year, out var year))
+        {
+            _models = await VehicleApi.GetModelsAsync(_model.VehicleType, year, _model.Make);
+        }
+    }
+
+    private Task OnModelChanged(ChangeEventArgs e)
+    {
+        _model.Model = e.Value?.ToString() ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task SubmitAsync()
+    {
+        _error = null;
+
+        if (string.IsNullOrWhiteSpace(_model.VehicleType))
+        {
+            _error = "Please select a vehicle type.";
+            return Task.CompletedTask;
+        }
+
+        if (string.IsNullOrWhiteSpace(_model.Year) ||
+            string.IsNullOrWhiteSpace(_model.Make) ||
+            string.IsNullOrWhiteSpace(_model.Model))
+        {
+            _error = "Please complete the vehicle details.";
+            return Task.CompletedTask;
+        }
+
+        var displayName = string.Join(' ', new[] { _model.Year, _model.Make, _model.Model }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+        PortalStore.AddVehicle(new CustomerVehicleDto(
+            Id: Guid.NewGuid(),
+            DisplayName: displayName,
+            VehicleType: _model.VehicleType,
+            Year: _model.Year,
+            Make: _model.Make,
+            Model: _model.Model,
+            Trim: string.IsNullOrWhiteSpace(_model.Trim) ? null : _model.Trim,
+            Vin: string.IsNullOrWhiteSpace(_model.Vin) ? null : _model.Vin,
+            Mileage: string.IsNullOrWhiteSpace(_model.Mileage) ? null : _model.Mileage,
+            IsPrimary: PortalStore.Vehicles.Count == 0,
+            Notes: string.IsNullOrWhiteSpace(_model.Notes) ? null : _model.Notes));
+
+        Nav.NavigateTo("/customer/vehicles");
+        return Task.CompletedTask;
+    }
+
+    private sealed class AddVehicleModel
+    {
+        [Required]
+        public string VehicleType { get; set; } = string.Empty;
+
+        [Required]
+        public string Year { get; set; } = string.Empty;
+
+        [Required]
+        public string Make { get; set; } = string.Empty;
+
+        [Required]
+        public string Model { get; set; } = string.Empty;
+
+        public string? Trim { get; set; }
+        public string? Nickname { get; set; }
+        public string? Vin { get; set; }
+        public string? Mileage { get; set; }
+        public string? Notes { get; set; }
+    }
+}

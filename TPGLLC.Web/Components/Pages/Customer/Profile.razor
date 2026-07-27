@@ -1,0 +1,129 @@
+﻿@page "/customer/profile"
+@rendermode InteractiveServer
+@inject CustomerPortalStore PortalStore
+@attribute [Authorize]
+
+@layout CustomerLayout
+
+<div class="quote-card" style="margin-bottom:1.5rem;">
+    <p class="section-kicker">Profile</p>
+    <h1 style="margin-top:0;">My Profile</h1>
+    <p style="margin-bottom:0;">Update your contact information.</p>
+</div>
+
+<div class="quote-card">
+    <EditForm Model="_model" OnValidSubmit="SaveAsync" FormName="CustomerProfileForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        @if (!string.IsNullOrWhiteSpace(_message))
+        {
+            <div class="form-status">@_message</div>
+        }
+
+        <div class="form-grid">
+            <div class="form-field full">
+                <label>Name</label>
+                <InputText class="input" @bind-Value="_model.DisplayName" />
+            </div>
+
+            <div class="form-field full">
+                <label>Email</label>
+                <InputText class="input" @bind-Value="_model.Email" />
+            </div>
+
+            <div class="form-field">
+                <label>Phone</label>
+                <InputText class="input" @bind-Value="_model.Phone" />
+            </div>
+
+            <div class="form-field">
+                <label>Address Line 1</label>
+                <InputText class="input" @bind-Value="_model.AddressLine1" />
+            </div>
+
+            <div class="form-field full">
+                <label>Address Line 2</label>
+                <InputText class="input" @bind-Value="_model.AddressLine2" />
+            </div>
+
+            <div class="form-field">
+                <label>City</label>
+                <InputText class="input" @bind-Value="_model.City" />
+            </div>
+
+            <div class="form-field">
+                <label>State</label>
+                <InputText class="input" @bind-Value="_model.State" />
+            </div>
+
+            <div class="form-field">
+                <label>Postal Code</label>
+                <InputText class="input" @bind-Value="_model.PostalCode" />
+            </div>
+        </div>
+
+        <div class="hero-actions" style="margin-top:1rem;">
+            <button class="btn btn-primary" type="submit">Save Profile</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private readonly ProfileModel _model = new();
+    private string? _message;
+
+    protected override void OnInitialized()
+    {
+        _model.DisplayName = PortalStore.Profile.DisplayName;
+        _model.Email = PortalStore.Profile.Email;
+        _model.Phone = PortalStore.Profile.Phone;
+        _model.AddressLine1 = PortalStore.Profile.AddressLine1;
+        _model.AddressLine2 = PortalStore.Profile.AddressLine2 ?? string.Empty;
+        _model.City = PortalStore.Profile.City;
+        _model.State = PortalStore.Profile.State;
+        _model.PostalCode = PortalStore.Profile.PostalCode;
+    }
+
+    private Task SaveAsync()
+    {
+        PortalStore.UpdateProfile(new CustomerProfileDto(
+            DisplayName: _model.DisplayName,
+            Email: _model.Email,
+            Phone: _model.Phone,
+            AddressLine1: _model.AddressLine1,
+            AddressLine2: string.IsNullOrWhiteSpace(_model.AddressLine2) ? null : _model.AddressLine2,
+            City: _model.City,
+            State: _model.State,
+            PostalCode: _model.PostalCode));
+
+        _message = "Profile saved.";
+        return Task.CompletedTask;
+    }
+
+    private sealed class ProfileModel
+    {
+        [Required]
+        public string DisplayName { get; set; } = string.Empty;
+
+        [Required, EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required]
+        public string Phone { get; set; } = string.Empty;
+
+        [Required]
+        public string AddressLine1 { get; set; } = string.Empty;
+
+        public string? AddressLine2 { get; set; }
+
+        [Required]
+        public string City { get; set; } = string.Empty;
+
+        [Required]
+        public string State { get; set; } = string.Empty;
+
+        [Required]
+        public string PostalCode { get; set; } = string.Empty;
+    }
+}

@@ -5,6 +5,7 @@ using TPGLLC.Data;
 using TPGLLC.Shared.Identity;
 using TPGLLC.Web.Components;
 using TPGLLC.Web.Services;
+using TPGLLC.Web.Features.Portal;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,6 +66,8 @@ builder.Services.AddHttpClient<VehicleApiClient>(client =>
     client.BaseAddress = new Uri(apiBaseUrl, UriKind.Absolute);
     client.Timeout = TimeSpan.FromSeconds(60);
 });
+
+builder.Services.AddScoped<CustomerPortalStore>();
 
 var app = builder.Build();
 

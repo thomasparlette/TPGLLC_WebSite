@@ -126,13 +126,3 @@ jobs:
               Add-Content $Summary ""
               Add-Content $Summary "No deployment log found."
           }
-
-      - name: Upload Deployment Logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: DeploymentLogs
-          path: |
-            D:\Deploy\Logs\*.log
-          if-no-files-found: warn
-          retention-days: 14

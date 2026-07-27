@@ -30,4 +30,9 @@
     <ProjectReference Include="..\TPGLLC.Shared\TPGLLC.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Features\Appointments\" />
+    <Folder Include="Features\Vehicles\" />
+  </ItemGroup>
+
 </Project>

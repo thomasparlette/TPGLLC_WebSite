@@ -1,0 +1,45 @@
+﻿@page "/customer/vehicles"
+@rendermode InteractiveServer
+@inject CustomerPortalStore PortalStore
+@attribute [Authorize]
+
+@layout CustomerLayout
+@using TPGLLC.Web.Components.Shared
+
+<div class="quote-card" style="margin-bottom:1.5rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+    <div>
+        <p class="section-kicker">Vehicles</p>
+        <h1 style="margin-top:0;">My Vehicles</h1>
+        <p style="margin-bottom:0;">Your registered vehicles and motorcycles.</p>
+    </div>
+
+    <a class="btn btn-primary" href="/customer/vehicles/add">Add Vehicle</a>
+</div>
+
+@if (PortalStore.Vehicles.Count == 0)
+{
+    <div class="quote-card">
+        <h3>No vehicles yet</h3>
+        <p>Add your first vehicle to begin tracking appointments and service history.</p>
+        <a class="btn btn-primary" href="/customer/vehicles/add">Add Vehicle</a>
+    </div>
+}
+else
+{
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem;">
+        @foreach (var vehicle in PortalStore.Vehicles)
+        {
+            <VehicleCard DisplayName="@vehicle.DisplayName"
+                         VehicleType="@vehicle.VehicleType"
+                         Make="@vehicle.Make"
+                         Model="@vehicle.Model"
+                         Trim="@vehicle.Trim"
+                         Vin="@vehicle.Vin"
+                         Mileage="@vehicle.Mileage"
+                         Notes="@vehicle.Notes"
+                         IsPrimary="@vehicle.IsPrimary"
+                         HistoryHref="/customer/history"
+                         AppointmentsHref="/customer/appointments" />
+        }
+    </div>
+}

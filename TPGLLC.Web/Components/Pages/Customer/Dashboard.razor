@@ -1,45 +1,75 @@
 ﻿@page "/customer/dashboard"
-
-@attribute [Authorize]
 @rendermode InteractiveServer
-<PageTitle>Customer Dashboard</PageTitle>
+@inject CustomerPortalStore PortalStore
+@attribute [Authorize]
 
-<h1>Customer Dashboard</h1>
+@layout CustomerLayout
+@using TPGLLC.Web.Components.Shared
 
-<p>
-    Welcome to your account.
-</p>
+<div class="quote-card" style="margin-bottom:1.5rem;">
+    <p class="section-kicker">Dashboard</p>
+    <h1 style="margin-top:0;">Welcome back, @PortalStore.Profile.DisplayName</h1>
+    <p style="margin-bottom:0;">
+        Manage your vehicles, appointments, service history, and invoices in one place.
+    </p>
+</div>
 
-<div class="dashboard-grid">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-bottom:1.5rem;">
+    <DashboardCard Title="My Vehicles"
+                   Value="@PortalStore.Vehicles.Count.ToString()"
+                   Description="Registered in your profile"
+                   Kicker="Overview"
+                   Href="/customer/vehicles"
+                   ActionText="Manage" />
 
-    <div class="dashboard-card">
+    <DashboardCard Title="Appointments"
+                   Value="@PortalStore.Appointments.Count.ToString()"
+                   Description="Scheduled or pending"
+                   Kicker="Overview"
+                   Href="/customer/appointments"
+                   ActionText="View" />
 
-        <h3>My Vehicles</h3>
+    <DashboardCard Title="Service History"
+                   Value="@PortalStore.History.Count.ToString()"
+                   Description="Completed shop visits"
+                   Kicker="Overview"
+                   Href="/customer/history"
+                   ActionText="Review" />
 
-        <p>
-            No vehicles yet.
-        </p>
+    <DashboardCard Title="Invoices"
+                   Value="@PortalStore.Invoices.Count(i => !i.Paid).ToString()"
+                   Description="Outstanding invoices"
+                   Kicker="Overview"
+                   Href="/customer/invoices"
+                   ActionText="Open" />
+</div>
 
-    </div>
+<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:1.5rem;">
+    <section class="quote-card">
+        <p class="section-kicker">Recent Activity</p>
+        <h2 style="margin-top:0;">Latest service updates</h2>
 
-    <div class="dashboard-card">
+        <div style="display:flex;flex-direction:column;gap:.75rem;">
+            @foreach (var entry in PortalStore.History.Take(3))
+            {
+                <div style="padding:.9rem 1rem;border-radius:1rem;background:rgba(255,255,255,.04);">
+                    <strong>@entry.Service</strong>
+                    <div>@entry.VehicleName</div>
+                    <div>@entry.Date.ToString("MMM d, yyyy") • @entry.Status</div>
+                </div>
+            }
+        </div>
+    </section>
 
-        <h3>Appointments</h3>
+    <section class="quote-card">
+        <p class="section-kicker">Quick Actions</p>
+        <h2 style="margin-top:0;">Get started</h2>
 
-        <p>
-            No appointments yet.
-        </p>
-
-    </div>
-
-    <div class="dashboard-card">
-
-        <h3>Invoices</h3>
-
-        <p>
-            Coming Soon
-        </p>
-
-    </div>
-
+        <div class="hero-actions" style="display:flex;flex-direction:column;gap:.75rem;">
+            <a class="btn btn-primary" href="/customer/vehicles">Manage Vehicles</a>
+            <a class="btn btn-secondary" href="/customer/vehicles/add">Add Vehicle</a>
+            <a class="btn btn-secondary" href="/customer/appointments">Schedule Appointment</a>
+            <a class="btn btn-secondary" href="/customer/profile">Edit Profile</a>
+        </div>
+    </section>
 </div>
