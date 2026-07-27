@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  PROJECT_PATH: TPGLLC_WebSite/TPGLLC_WebSite.csproj
+  PROJECT_PATH: TPGLLC.Web/TPGLLC.Web.csproj
   PUBLISH_DIR: D:\Deploy\Artifacts\publish
   WEBSITE_DIR: D:\Websites\TPGLLC\Published
   BACKUP_DIR: D:\Deploy\Backups
