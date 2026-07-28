@@ -33,12 +33,29 @@ param(
     [Parameter(Mandatory = $false)]
     [string]$AppPoolName = "TPGLLC",
 
-    [switch]$RunMigrations,
-    [switch]$RunBootstrapper,
-    [switch]$RunVehicleImporter,
-    [switch]$ForceVehicleImporter,
-    [switch]$RestartIIS = $true,
-    [switch]$SkipHealthCheck
+    $runMigrations = To-Bool $env:RUN_MIGRATIONS
+	$runBootstrapper = To-Bool $env:RUN_BOOTSTRAPPER
+	$runVehicleImporter = To-Bool $env:RUN_VEHICLE_IMPORTER
+	$forceVehicleImporter = To-Bool $env:FORCE_VEHICLE_IMPORTER
+	$restartIis = To-Bool $env:RESTART_IIS
+	$skipHealthCheck = To-Bool $env:SKIP_HEALTH_CHECK
+
+& "$env:GITHUB_WORKSPACE\Deploy\Scripts\Deploy.ps1" `
+    -WebsitePath $env:WEBSITE_DIR `
+    -PublishPath $env:PUBLISH_DIR `
+    -BackupRoot $env:BACKUP_DIR `
+    -ReleaseRoot $env:RELEASE_DIR `
+    -LogRoot $env:LOG_DIR `
+    -HealthCheckUrl $env:HEALTHCHECK_URL `
+    -CommitSha $env:COMMIT_SHA `
+    -BranchName $env:BRANCH_NAME `
+    -RunnerName $env:COMPUTERNAME `
+    -RunMigrations:$runMigrations `
+    -RunBootstrapper:$runBootstrapper `
+    -RunVehicleImporter:$runVehicleImporter `
+    -ForceVehicleImporter:$forceVehicleImporter `
+    -RestartIIS:$restartIis `
+    -SkipHealthCheck:$skipHealthCheck
 )
 
 Set-StrictMode -Version Latest
@@ -481,6 +498,16 @@ function Run-VehicleImporter {
         )
 
     Set-VehicleImporterCompleted -Stamp $script:DeploymentStamp
+}
+
+function To-Bool {
+    param([object]$Value)
+
+    if ($null -eq $Value) { return $false }
+
+    if ($Value -is [bool]) { return $Value }
+
+    return [System.Convert]::ToBoolean($Value)
 }
 
 # -----------------------------
