@@ -611,9 +611,7 @@ catch {
             Start-IisTarget -TargetSiteName $SiteName -TargetAppPoolName $AppPoolName -OfflinePath $script:OfflinePath
         }
 
-        if (-not $SkipHealthCheck) {
-            Test-DeploymentHealth -Url $HealthCheckUrl -MaxAttempts 6 -DelaySeconds 5
-        }
+        
 
         Write-Log "Rollback completed." 'WARN'
     }

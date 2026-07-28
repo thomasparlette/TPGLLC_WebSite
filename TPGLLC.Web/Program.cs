@@ -130,6 +130,6 @@ app.MapGet("/version", (IWebHostEnvironment env) =>
         ? Results.File(versionPath, "application/json")
         : Results.NotFound();
 });
-app.UseHttpsRedirection();
-app.MapControllers();
+//app.UseHttpsRedirection();
+//app.MapControllers();
 app.Run();
