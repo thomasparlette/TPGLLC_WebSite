@@ -14,6 +14,12 @@ public sealed class VehicleCatalogImportService
     private readonly IVpicApiClient _vpic;
     private readonly ILogger<VehicleCatalogImportService> _logger;
 
+    private readonly IReadOnlyList<(string VehicleType, string ApiSlug)> _vehicleTypes =
+    [
+        ("Automotive", "car"),
+        ("Motorcycle", "motorcycle")
+    ];
+
     public VehicleCatalogImportService(
         TPGLLCDbContext db,
         IVpicApiClient vpic,
@@ -25,129 +31,146 @@ public sealed class VehicleCatalogImportService
     }
 
     public async Task RunAsync(CancellationToken cancellationToken = default)
-{
-    var endYear = DateTime.UtcNow.Year;
-
-    _logger.LogInformation(
-        "Starting vPIC import for years {StartYear} through {EndYear}",
-        StartYear,
-        endYear);
-
-    await _db.Database.MigrateAsync(cancellationToken);
-
-    var existingKeys = await LoadExistingKeysAsync(cancellationToken);
-    _logger.LogInformation("Loaded {Count} existing catalog keys.", existingKeys.Count);
-
-    var seenThisRun = new HashSet<VehicleCatalogKey>();
-    var pending = new List<VehicleCatalogEntry>(BatchSize);
-
-    var imported = 0;
-    var skippedExisting = 0;
-    var skippedDuplicateSource = 0;
-    var lookupFailures = 0;
-
-    try
     {
-        _logger.LogInformation("Loading broad make list.");
+        var endYear = DateTime.UtcNow.Year;
 
-        var makes = await _vpic.GetMakesForVehicleTypeAsync(cancellationToken);
+        _logger.LogInformation(
+            "Starting vPIC import for years {StartYear} through {EndYear}",
+            StartYear,
+            endYear);
 
-        _logger.LogInformation("Found {MakeCount} makes.", makes.Count);
+        await _db.Database.MigrateAsync(cancellationToken);
 
-        for (var year = StartYear; year <= endYear; year++)
+        var existingKeys = await LoadExistingKeysAsync(cancellationToken);
+        _logger.LogInformation("Loaded {Count} existing catalog keys.", existingKeys.Count);
+
+        var seenThisRun = new HashSet<VehicleCatalogKey>();
+        var pending = new List<VehicleCatalogEntry>(BatchSize);
+
+        var imported = 0;
+        var skippedExisting = 0;
+        var skippedDuplicateSource = 0;
+        var lookupFailures = 0;
+
+        foreach (var vehicleType in _vehicleTypes)
         {
-            _logger.LogInformation("Importing year {Year}", year);
-
-            foreach (var make in makes)
+            try
             {
-                IReadOnlyList<VpicModelDto> models;
+                _logger.LogInformation("Loading makes for {VehicleType}.", vehicleType.VehicleType);
 
-                try
+                var makes = await _vpic.GetMakesForVehicleTypeAsync(vehicleType.ApiSlug, cancellationToken);
+
+                _logger.LogInformation(
+                    "Found {MakeCount} makes for {VehicleType}",
+                    makes.Count,
+                    vehicleType.VehicleType);
+
+                for (var year = StartYear; year <= endYear; year++)
                 {
-                    models = await _vpic.GetModelsForMakeIdYearAsync(
-                        make.MakeId,
-                        year,
-                        cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    lookupFailures++;
-                    _logger.LogWarning(
-                        ex,
-                        "Skipping {Year} {MakeName} because model lookup failed",
-                        year,
-                        make.MakeName);
+                    _logger.LogInformation("Importing {VehicleType} year {Year}", vehicleType.VehicleType, year);
 
-                    continue;
-                }
-
-                if (models.Count == 0)
-                {
-                    continue;
-                }
-
-                foreach (var model in models)
-                {
-                    if (string.IsNullOrWhiteSpace(model.ModelName))
+                    foreach (var make in makes)
                     {
-                        continue;
-                    }
+                        IReadOnlyList<VpicModelDto> models;
 
-                    var key = new VehicleCatalogKey(
-                        year,
-                        model.MakeId,
-                        model.ModelId);
+                        try
+                        {
+                            models = await _vpic.GetModelsForMakeIdYearAsync(
+                                make.MakeId,
+                                year,
+                                cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            lookupFailures++;
+                            _logger.LogWarning(
+                                ex,
+                                "Skipping {VehicleType} {Year} {MakeName} because model lookup failed",
+                                vehicleType.VehicleType,
+                                year,
+                                make.MakeName);
 
-                    if (!seenThisRun.Add(key))
-                    {
-                        skippedDuplicateSource++;
-                        continue;
-                    }
+                            continue;
+                        }
 
-                    if (existingKeys.Contains(key))
-                    {
-                        skippedExisting++;
-                        continue;
-                    }
+                        if (models.Count == 0)
+                        {
+                            continue;
+                        }
 
-                    pending.Add(new VehicleCatalogEntry
-                    {
-                        VehicleType = Truncate(make.VehicleTypeName, 20),
-                        ModelYear = year,
-                        MakeId = model.MakeId,
-                        ModelId = model.ModelId,
-                        Make = Truncate(model.MakeName, 120),
-                        Model = Truncate(model.ModelName, 120),
-                        SyncedAtUtc = DateTimeOffset.UtcNow
-                    });
+                        _logger.LogInformation(
+                            "{VehicleType} {Year} {MakeName}: {Count} models returned.",
+                            vehicleType.VehicleType,
+                            year,
+                            make.MakeName,
+                            models.Count);
 
-                    if (pending.Count >= BatchSize)
-                    {
-                        imported += await FlushAsync(pending, cancellationToken);
-                        pending.Clear();
+                        foreach (var model in models)
+                        {
+                            if (string.IsNullOrWhiteSpace(model.ModelName))
+                            {
+                                continue;
+                            }
+
+                            var key = new VehicleCatalogKey(
+                                year,
+                                model.MakeId,
+                                model.ModelId);
+
+                            if (!seenThisRun.Add(key))
+                            {
+                                skippedDuplicateSource++;
+                                continue;
+                            }
+
+                            if (existingKeys.Contains(key))
+                            {
+                                skippedExisting++;
+                                continue;
+                            }
+
+                            pending.Add(new VehicleCatalogEntry
+                            {
+                                VehicleType = Truncate(make.VehicleTypeName, 20),
+                                ModelYear = year,
+                                MakeId = model.MakeId,
+                                ModelId = model.ModelId,
+                                Make = Truncate(model.MakeName, 120),
+                                Model = Truncate(model.ModelName, 120),
+                                SyncedAtUtc = DateTimeOffset.UtcNow
+                            });
+
+                            if (pending.Count >= BatchSize)
+                            {
+                                imported += await FlushAsync(pending, cancellationToken);
+                                pending.Clear();
+                            }
+                        }
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Vehicle type import failed for {VehicleType}",
+                    vehicleType.VehicleType);
+            }
         }
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "Vehicle catalog import failed.");
-    }
 
-    if (pending.Count > 0)
-    {
-        imported += await FlushAsync(pending, cancellationToken);
-        pending.Clear();
-    }
+        if (pending.Count > 0)
+        {
+            imported += await FlushAsync(pending, cancellationToken);
+            pending.Clear();
+        }
 
-    _logger.LogInformation(
-        "vPIC import complete. Imported {Imported} new rows. Skipped {SkippedExisting} existing rows. Skipped {SkippedDuplicateSource} duplicate source rows. Lookup failures: {LookupFailures}.",
-        imported,
-        skippedExisting,
-        skippedDuplicateSource,
-        lookupFailures);
-}
+        _logger.LogInformation(
+            "vPIC import complete. Imported {Imported} new rows. Skipped {SkippedExisting} existing rows. Skipped {SkippedDuplicateSource} duplicate source rows. Lookup failures: {LookupFailures}.",
+            imported,
+            skippedExisting,
+            skippedDuplicateSource,
+            lookupFailures);
+    }
 
     private async Task<HashSet<VehicleCatalogKey>> LoadExistingKeysAsync(CancellationToken cancellationToken)
     {
