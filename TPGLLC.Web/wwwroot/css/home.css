@@ -290,21 +290,22 @@
     }
 
 .vehicle-grid {
+    grid-column: 1 / -1;
+    width: 100%;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1rem;
     align-items: start;
 }
 
+.vehicle-grid .form-field {
+    min-width: 0;
+}
 
-    .vehicle-grid .form-field {
-        min-width: 0;
-    }
-
-    .vehicle-grid .input {
-        width: 100%;
-        box-sizing: border-box;
-    }
+.vehicle-grid .input {
+    width: 100%;
+    box-sizing: border-box;
+}
 
 .faq-section .faq-grid {
     display: grid;
