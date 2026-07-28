@@ -85,16 +85,22 @@ jobs:
       - name: Restore
         shell: pwsh
         run: |
-          dotnet restore $env:PROJECT_PATH
+          dotnet restore TPGLLC.sln
+      
       - name: Restore .NET Tools
         shell: pwsh
         run: |
           dotnet tool restore
+      
+      - name: Build Solution
+        shell: pwsh
+        run: |
+          dotnet build TPGLLC.sln -c Release --no-restore    
 
       - name: Publish Website
         shell: pwsh
         run: |
-          dotnet publish $env:PROJECT_PATH -c Release -o $env:PUBLISH_DIR --no-restore
+          dotnet publish TPGLLC.Web/TPGLLC.Web.csproj -c Release -o $env:PUBLISH_DIR --no-build
 
       - name: Deploy Website
         shell: pwsh
