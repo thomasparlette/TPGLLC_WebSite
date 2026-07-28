@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Asp.Versioning.Mvc" Version="10.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="10.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.10" />
@@ -27,6 +28,7 @@
   <ItemGroup>
     <ProjectReference Include="..\TPGLLC.Application\TPGLLC.Application.csproj" />
     <ProjectReference Include="..\TPGLLC.Data\TPGLLC.Data.csproj" />
+    <ProjectReference Include="..\TPGLLC.Services\TPGLLC.Services.csproj" />
     <ProjectReference Include="..\TPGLLC.Shared\TPGLLC.Shared.csproj" />
   </ItemGroup>
 

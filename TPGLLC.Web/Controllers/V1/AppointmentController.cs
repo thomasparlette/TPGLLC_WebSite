@@ -1,5 +1,4 @@
-﻿using Asp.Versioning;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using TPGLLC.Data.Entities;
 using TPGLLC.Application.Appointments;
 using TPGLLC.Services.Scheduling;
@@ -7,8 +6,7 @@ using TPGLLC.Services.Scheduling;
 namespace TPGLLC.Api.Controllers.V1;
 
 [ApiController]
-[ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/appointments")]
+[Route("api/v1/appointments")]
 public sealed class AppointmentController : ControllerBase
 {
     private readonly IAppointmentRequestService _appointments;

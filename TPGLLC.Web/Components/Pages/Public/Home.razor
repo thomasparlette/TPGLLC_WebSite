@@ -1,8 +1,8 @@
 ﻿@page "/"
 @rendermode InteractiveServer
 @using TPGLLC.Web.Services
-
-@inject VehicleApiClient VehicleApi
+@using TPGLLC.Services.Vehicles;
+@inject IVehicleCatalogService VehicleCatalog
 
 
 <PageTitle>Tom Parlette Garage LLC</PageTitle>
@@ -392,7 +392,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _years = await VehicleApi.GetYearsAsync();
+        _years = await VehicleCatalog.GetYearsAsync();
 
         if (_years.Count == 0)
         {
@@ -412,7 +412,7 @@
 
         if (int.TryParse(_selectedYear, out var year))
         {
-            _makes = await VehicleApi.GetMakesAsync(year);
+            _makes = await VehicleCatalog.GetMakesAsync(year);
         }
 
         await InvokeAsync(StateHasChanged);
@@ -427,7 +427,7 @@
         if (int.TryParse(_selectedYear, out var year) &&
             !string.IsNullOrWhiteSpace(_selectedMake))
         {
-            _models = await VehicleApi.GetModelsAsync(year, _selectedMake);
+            _models = await VehicleCatalog.GetModelsAsync(year, _selectedMake);
         }
 
         await InvokeAsync(StateHasChanged);

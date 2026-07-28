@@ -1,11 +1,13 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using TPGLLC.Data;
 using TPGLLC.Shared.Identity;
 using TPGLLC.Web.Components;
-using TPGLLC.Web.Services;
 using TPGLLC.Web.Features.Portal;
+using TPGLLC.Web.Services;
+using TPGLLC.Services.Vehicles;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,11 +43,6 @@ var connectionString =
     ?? envConnection
     ?? throw new InvalidOperationException("Missing WebsiteDb connection string.");
 
-/*var connectionString =
-    builder.Configuration.GetConnectionString("WebsiteDb")
-    ?? Environment.GetEnvironmentVariable("ConnectionStrings__WebsiteDb")
-    ?? throw new InvalidOperationException("Missing WebsiteDb connection string.");
-*/
 builder.Services.AddDbContext<TPGLLCDbContext>(options =>
     options.UseSqlServer(connectionString,
         sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)));
@@ -94,13 +91,11 @@ if (builder.Environment.IsProduction() &&
     apiBaseUrl = "https://api.tomparlettegarage.org/";
 }
 
-builder.Services.AddHttpClient<VehicleApiClient>(client =>
-{
-    client.BaseAddress = new Uri(apiBaseUrl, UriKind.Absolute);
-    client.Timeout = TimeSpan.FromSeconds(60);
-});
-
 builder.Services.AddScoped<CustomerPortalStore>();
+
+
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<IVehicleCatalogService, VehicleCatalogService>();
 
 var app = builder.Build();
 
@@ -130,6 +125,4 @@ app.MapGet("/version", (IWebHostEnvironment env) =>
         ? Results.File(versionPath, "application/json")
         : Results.NotFound();
 });
-//app.UseHttpsRedirection();
-//app.MapControllers();
 app.Run();

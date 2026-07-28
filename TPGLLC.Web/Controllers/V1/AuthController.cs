@@ -1,5 +1,4 @@
-﻿using Asp.Versioning;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TPGLLC.Application.Authentication;
 using TPGLLC.Services.Authentication;
@@ -7,8 +6,7 @@ using TPGLLC.Services.Authentication;
 namespace TPGLLC.Api.Controllers.V1;
 
 [ApiController]
-[ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/auth")]
+[Route("api/v1/auth")]
 public sealed class AuthController : ControllerBase
 {
     private readonly IAuthenticationService _authenticationService;
