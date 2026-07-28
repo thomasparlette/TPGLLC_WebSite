@@ -2,7 +2,9 @@
 @rendermode InteractiveServer
 @using TPGLLC.Web.Services;
 @using TPGLLC.Services.Vehicles;
+@using TPGLLC.Web.Services.Appointments
 @inject IVehicleCatalogService VehicleCatalog
+@inject IAppointmentService AppointmentService
 
 <PageTitle>Tom Parlette Garage LLC</PageTitle>
 
@@ -296,40 +298,40 @@
                     <InputText class="input" type="email" @bind-Value="_appointment.Email" />
                 </div>
 
-                <div class="form-grid vehicle-grid">
-                    <div class="form-field">
-                        <label>Vehicle Year</label>
-                        <select class="input" value="@(_selectedYear ?? string.Empty)" @onchange="OnVehicleYearChanged">
-                            <option value="">Select year</option>
-                            @foreach (var year in _years)
-                            {
-                                <option value="@year">@year</option>
-                            }
-                        </select>
-                    </div>
+                    <div class="form-grid vehicle-grid">
+                        <div class="form-field">
+                            <label>Vehicle Year</label>
+                            <select class="input" @bind="_appointment.VehicleYear" @bind:after="OnVehicleYearChanged">
+                                <option value="">Select year</option>
+                                @foreach (var year in _years)
+                                {
+                                    <option value="@year">@year</option>
+                                }
+                            </select>
+                        </div>
 
-                    <div class="form-field">
-                        <label>Vehicle Make</label>
-                        <select class="input" value="@(_selectedMake ?? string.Empty)" @onchange="OnVehicleMakeChanged" disabled="@(_makes.Count == 0)">
-                            <option value="">Select make</option>
-                            @foreach (var make in _makes)
-                            {
-                                <option value="@make">@make</option>
-                            }
-                        </select>
-                    </div>
+                        <div class="form-field">
+                            <label>Vehicle Make</label>
+                            <select class="input" @bind="_appointment.VehicleMake" @bind:after="OnVehicleMakeChanged" disabled="@(_makes.Count == 0)">
+                                <option value="">Select make</option>
+                                @foreach (var make in _makes)
+                                {
+                                    <option value="@make">@make</option>
+                                }
+                            </select>
+                        </div>
 
-                    <div class="form-field">
-                        <label>Vehicle Model</label>
-                        <select class="input" value="@(_selectedModel ?? string.Empty)" @onchange="OnVehicleModelChanged" disabled="@(_models.Count == 0)">
-                            <option value="">Select model</option>
-                            @foreach (var model in _models)
-                            {
-                                <option value="@model">@model</option>
-                            }
-                        </select>
+                        <div class="form-field">
+                            <label>Vehicle Model</label>
+                            <select class="input" @bind="_appointment.VehicleModel" @bind:after="OnVehicleModelChanged" disabled="@(_models.Count == 0)">
+                                <option value="">Select model</option>
+                                @foreach (var model in _models)
+                                {
+                                    <option value="@model">@model</option>
+                                }
+                            </select>
+                        </div>
                     </div>
-                </div>
 
                 <div class="form-field full">
                     <label>VIN (optional)</label>
@@ -383,7 +385,11 @@
 
 </section>
 
-@code {private readonly AppointmentRequest _appointment = new();private IReadOnlyList<int> _years = [];private IReadOnlyList<string> _makes = [];private IReadOnlyList<string> _models = [];private string? _selectedYear;private string? _selectedMake;private string? _selectedModel;
+@code {
+    private readonly AppointmentRequest _appointment = new();
+    private IReadOnlyList<int> _years = [];
+    private IReadOnlyList<string> _makes = [];
+    private IReadOnlyList<string> _models = [];
 
 private string? _submitError;
 private string? _requestId;
@@ -401,21 +407,15 @@ protected override async Task OnInitializedAsync()
     }
 }
 
-    private async Task OnVehicleYearChanged(ChangeEventArgs e)
+    private async Task OnVehicleYearChanged()
     {
-        _selectedYear = e.Value?.ToString();
-        _appointment.VehicleYear = _selectedYear;
-
-        _selectedMake = null;
-        _selectedModel = null;
-
         _appointment.VehicleMake = null;
         _appointment.VehicleModel = null;
 
         _makes = [];
         _models = [];
 
-        if (int.TryParse(_selectedYear, out var year))
+        if (int.TryParse(_appointment.VehicleYear, out var year))
         {
             _makes = await VehicleCatalog.GetMakesAsync(year);
         }
@@ -423,77 +423,87 @@ protected override async Task OnInitializedAsync()
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task OnVehicleMakeChanged(ChangeEventArgs e)
+    private async Task OnVehicleMakeChanged()
     {
-        _selectedMake = e.Value?.ToString();
-        _appointment.VehicleMake = _selectedMake;
-
-        _selectedModel = null;
         _appointment.VehicleModel = null;
-
         _models = [];
 
-        if (int.TryParse(_selectedYear, out var year) &&
-            !string.IsNullOrWhiteSpace(_selectedMake))
+        if (int.TryParse(_appointment.VehicleYear, out var year) &&
+            !string.IsNullOrWhiteSpace(_appointment.VehicleMake))
         {
-            _models = await VehicleCatalog.GetModelsAsync(year, _selectedMake);
+            _models = await VehicleCatalog.GetModelsAsync(year, _appointment.VehicleMake);
         }
 
         await InvokeAsync(StateHasChanged);
     }
-    private Task OnVehicleModelChanged(ChangeEventArgs e)
-    {
-        _selectedModel = e.Value?.ToString();
-        _appointment.VehicleModel = _selectedModel;
 
-        return Task.CompletedTask;
-    }
-private async Task SubmitAppointment()
+
+    private Task OnVehicleModelChanged()
 {
-    _submitError = null;
-
-    if (string.IsNullOrWhiteSpace(_appointment.VehicleYear))
-    {
-        _submitError = "Please select a vehicle year.";
-        return;
-    }
-
-    if (string.IsNullOrWhiteSpace(_appointment.PreferredDate) ||
-        string.IsNullOrWhiteSpace(_appointment.PreferredTime) ||
-        string.IsNullOrWhiteSpace(_appointment.ServiceNeeded) ||
-        string.IsNullOrWhiteSpace(_appointment.Message))
-    {
-        _submitError = "Please complete the required fields.";
-        return;
-    }
-
-   
+    return Task.CompletedTask;
 }
 
-private void ResetForm()
-{
-    _appointment.Name = null;
-    _appointment.Phone = null;
-    _appointment.Email = null;
-    _appointment.VehicleYear = null;
-    _appointment.VehicleMake = null;
-    _appointment.VehicleModel = null;
-    _appointment.Vin = null;
-    _appointment.Mileage = null;
-    _appointment.PreferredDate = null;
-    _appointment.PreferredTime = null;
-    _appointment.ServiceNeeded = null;
-    _appointment.Message = null;
-    _appointment.Company = null;
-    _selectedYear = null;
-    _selectedMake = null;
-    _selectedModel = null;
-    _makes = [];
-    _models = [];
-    _submitError = null;
-    _requestId = null;
-    _submitted = false;
-}
+
+    private async Task SubmitAppointment()
+    {
+        _submitError = null;
+
+        if (string.IsNullOrWhiteSpace(_appointment.VehicleYear))
+        {
+            _submitError = "Please select a vehicle year.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_appointment.PreferredDate) ||
+            string.IsNullOrWhiteSpace(_appointment.PreferredTime) ||
+            string.IsNullOrWhiteSpace(_appointment.ServiceNeeded) ||
+            string.IsNullOrWhiteSpace(_appointment.Message))
+        {
+            _submitError = "Please complete the required fields.";
+            return;
+        }
+
+        try
+        {
+            var result = await AppointmentService.SubmitAsync(_appointment);
+
+            if (!result.Success)
+            {
+                _submitError = result.ErrorMessage ?? "Unable to submit the appointment request.";
+                return;
+            }
+
+            _requestId = result.RequestId.ToString("D");
+            _submitted = true;
+        }
+        catch (Exception ex)
+        {
+            _submitError = ex.Message;
+        }
+    }
+
+    private void ResetForm()
+    {
+        _appointment.Name = null;
+        _appointment.Phone = null;
+        _appointment.Email = null;
+        _appointment.VehicleYear = null;
+        _appointment.VehicleMake = null;
+        _appointment.VehicleModel = null;
+        _appointment.Vin = null;
+        _appointment.Mileage = null;
+        _appointment.PreferredDate = null;
+        _appointment.PreferredTime = null;
+        _appointment.ServiceNeeded = null;
+        _appointment.Message = null;
+        _appointment.Company = null;
+
+        _makes = [];
+        _models = [];
+        _submitError = null;
+        _requestId = null;
+        _submitted = false;
+    }
 
 private string GetVehicleSummary()
 {

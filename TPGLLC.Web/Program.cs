@@ -1,5 +1,4 @@
-using Asp.Versioning;
-using Microsoft.AspNetCore.Components.Authorization;
+
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using TPGLLC.Data;
@@ -8,6 +7,7 @@ using TPGLLC.Web.Components;
 using TPGLLC.Web.Features.Portal;
 using TPGLLC.Web.Services;
 using TPGLLC.Services.Vehicles;
+using TPGLLC.Web.Services.Appointments;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -94,8 +94,15 @@ if (builder.Environment.IsProduction() &&
 builder.Services.AddScoped<CustomerPortalStore>();
 
 
+
 builder.Services.AddMemoryCache();
+
 builder.Services.AddScoped<IVehicleCatalogService, VehicleCatalogService>();
+
+builder.Services.Configure<AppointmentEmailOptions>(
+    builder.Configuration.GetSection("Gmail"));
+
+builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 
 var app = builder.Build();
 
