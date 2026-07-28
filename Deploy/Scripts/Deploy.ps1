@@ -379,23 +379,35 @@ function Run-Migrations {
     $dataProject = Get-ProjectPath 'TPGLLC.Data\TPGLLC.Data.csproj'
     $apiStartupProject = Get-ProjectPath 'TPGLLC.Api\TPGLLC.Api.csproj'
 
-    $environment = @{
-        DOTNET_ENVIRONMENT = 'Production'
-        ASPNETCORE_ENVIRONMENT = 'Production'
-    }
+    Push-Location $repoRoot
+    try {
+        Write-Log "Restoring dotnet tools..."
+        & dotnet tool restore
+        if ($LASTEXITCODE -ne 0) {
+            throw "dotnet tool restore failed with exit code $LASTEXITCODE."
+        }
 
-    Invoke-DotNetCommand `
-        -Description 'EF Core database update' `
-        -WorkingDirectory $repoRoot `
-        -Environment $environment `
-        -Arguments @(
-            'ef',
-            'database',
-            'update',
-            '--project', $dataProject,
-            '--startup-project', $apiStartupProject,
-            '--configuration', 'Release'
-        )
+        $environment = @{
+            DOTNET_ENVIRONMENT = 'Production'
+            ASPNETCORE_ENVIRONMENT = 'Production'
+        }
+
+        Invoke-DotNetCommand `
+            -Description 'EF Core database update' `
+            -WorkingDirectory $repoRoot `
+            -Environment $environment `
+            -Arguments @(
+                'ef',
+                'database',
+                'update',
+                '--project', $dataProject,
+                '--startup-project', $apiStartupProject,
+                '--configuration', 'Release'
+            )
+    }
+    finally {
+        Pop-Location
+    }
 }
 
 function Run-Bootstrapper {
