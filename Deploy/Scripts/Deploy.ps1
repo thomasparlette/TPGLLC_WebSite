@@ -20,7 +20,7 @@ param(
 
     [Parameter(Mandatory = $false)]
     [string]$CommitSha = "",
-
+ 
     [Parameter(Mandatory = $false)]
     [string]$BranchName = "",
 
@@ -95,11 +95,15 @@ function Invoke-RobocopyMirror {
         [string]$Description = 'copy'
     )
 
+    if (-not (Test-Path -LiteralPath $Source)) {
+        throw "Robocopy $Description source does not exist: $Source"
+    }
+
     Ensure-Directory -Path $Destination
 
     $args = @(
-        "`"$Source`"",
-        "`"$Destination`"",
+        $Source,
+        $Destination,
         '/MIR',
         '/R:2',
         '/W:2',
@@ -111,13 +115,20 @@ function Invoke-RobocopyMirror {
         '/XJ'
     )
 
-    foreach ($excludeFile in $ExcludeFiles) {
-        $args += @('/XF', "`"$excludeFile`"")
+    if ($ExcludeFiles.Count -gt 0) {
+        $args += '/XF'
+        $args += $ExcludeFiles
     }
 
     Write-Log "Starting robocopy $Description from '$Source' to '$Destination'."
 
-    & robocopy @args | Out-Null
+    $output = & robocopy @args 2>&1
+    foreach ($line in $output) {
+        if ($line) {
+            Write-Log $line
+        }
+    }
+
     $exitCode = $LASTEXITCODE
 
     if ($exitCode -ge 8) {
