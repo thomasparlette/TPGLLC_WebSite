@@ -40,7 +40,12 @@ param(
     [switch]$RestartIIS = $true,
     [switch]$SkipHealthCheck
 )
-
+Write-Log "RunMigrations     : $RunMigrations"
+Write-Log "RunBootstrapper   : $RunBootstrapper"
+Write-Log "RunVehicleImporter: $RunVehicleImporter"
+Write-Log "ForceImport       : $ForceVehicleImporter"
+Write-Log "RestartIIS        : $RestartIIS"
+Write-Log "SkipHealthCheck   : $SkipHealthCheck"
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
