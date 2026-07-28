@@ -103,7 +103,10 @@ jobs:
       - name: Build Solution
         shell: pwsh
         run: |
-          dotnet build TPGLLC.sln -c Release --no-restore    
+          $sln = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Filter *.slnx -Recurse | Select-Object -First 1
+          if (-not $sln) { throw "No solution file found." }
+          Write-Host "Using solution: $($sln.FullName)"
+          dotnet build $sln.FullName -c Release --no-restore    
 
       - name: Publish Website
         shell: pwsh
