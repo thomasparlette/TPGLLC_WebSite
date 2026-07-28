@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace TPGLLC.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class CheckPendingChanges : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -19,7 +19,7 @@ namespace TPGLLC.Data.Migrations
                     Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     Phone = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Email = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    VehicleType = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
+                    VehicleType = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: true),
                     VehicleYear = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
                     VehicleMake = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: true),
                     VehicleModel = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: true),

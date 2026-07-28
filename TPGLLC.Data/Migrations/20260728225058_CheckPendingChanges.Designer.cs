@@ -12,8 +12,8 @@ using TPGLLC.Data;
 namespace TPGLLC.Data.Migrations
 {
     [DbContext(typeof(TPGLLCDbContext))]
-    [Migration("20260727213035_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260728225058_CheckPendingChanges")]
+    partial class CheckPendingChanges
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -196,7 +196,6 @@ namespace TPGLLC.Data.Migrations
                         .HasColumnType("nvarchar(120)");
 
                     b.Property<string>("VehicleType")
-                        .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 

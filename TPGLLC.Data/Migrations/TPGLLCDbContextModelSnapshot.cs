@@ -193,7 +193,6 @@ namespace TPGLLC.Data.Migrations
                         .HasColumnType("nvarchar(120)");
 
                     b.Property<string>("VehicleType")
-                        .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
