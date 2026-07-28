@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using TPGLLC.Data.Configurations;
 using TPGLLC.Shared.Identity;
-using TPGLLC.Shared.Models;
+using TPGLLC.Data.Entities;
 
 namespace TPGLLC.Data;
 

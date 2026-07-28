@@ -1,5 +1,5 @@
 ﻿using System.Net.Http.Json;
-using TPGLLC.Shared.Models;
+using TPGLLC.Data.Entities;
 
 namespace TPGLLC.Web.Services;
 

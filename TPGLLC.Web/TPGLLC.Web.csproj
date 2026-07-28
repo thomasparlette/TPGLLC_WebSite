@@ -31,8 +31,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Features\Appointments\" />
-    <Folder Include="Features\Vehicles\" />
+    <Content Update="appsettings.Development.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
+    <Content Update="appsettings.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

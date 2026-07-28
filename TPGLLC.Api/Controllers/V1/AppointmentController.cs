@@ -1,8 +1,8 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
-using TPGLLC.Application.Contracts.V1;
-using TPGLLC.Services;
-using TPGLLC.Shared.Models;
+using TPGLLC.Data.Entities;
+using TPGLLC.Application.Appointments;
+using TPGLLC.Services.Scheduling;
 
 namespace TPGLLC.Api.Controllers.V1;
 

@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using TPGLLC.Shared.Models;
+using TPGLLC.Data.Entities;
 
 namespace TPGLLC.Data.Configurations;
 

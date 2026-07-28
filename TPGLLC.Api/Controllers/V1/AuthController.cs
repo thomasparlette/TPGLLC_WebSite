@@ -1,8 +1,8 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TPGLLC.Application.Contracts.V1.Auth;
-using TPGLLC.Services.Security;
+using TPGLLC.Application.Authentication;
+using TPGLLC.Services.Authentication;
 
 namespace TPGLLC.Api.Controllers.V1;
 

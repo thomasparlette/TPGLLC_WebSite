@@ -10,11 +10,13 @@ using Microsoft.OpenApi;
 using Serilog;
 using System.Text;
 using TPGLLC.Api.Middleware;
-using TPGLLC.Application.Validation;
+using TPGLLC.Application.Appointments;
 using TPGLLC.Data;
 using TPGLLC.Data.Stores;
-using TPGLLC.Services;
-using TPGLLC.Services.Security;
+using TPGLLC.Services.Messaging;
+using TPGLLC.Services.Scheduling;
+using TPGLLC.Services.Authentication;
+using TPGLLC.Services.Vehicles;
 using TPGLLC.Shared.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,10 +29,32 @@ builder.Host.UseSerilog((ctx, services, lc) =>
       .Enrich.WithProperty("Application", "TPGLLC.Api");
 });
 
+var configurationRoot = (IConfigurationRoot)builder.Configuration;
+
+Console.WriteLine("========== Configuration ==========");
+Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
+Console.WriteLine($"ContentRoot: {builder.Environment.ContentRootPath}");
+Console.WriteLine();
+
+Console.WriteLine("Providers:");
+foreach (var provider in configurationRoot.Providers)
+{
+    Console.WriteLine($" - {provider}");
+}
+
+Console.WriteLine();
+
+var configConnection = builder.Configuration.GetConnectionString("WebsiteDb");
+var envConnection = Environment.GetEnvironmentVariable("ConnectionStrings__WebsiteDb");
+
+Console.WriteLine($"Config Connection : {configConnection ?? "<null>"}");
+Console.WriteLine($"Env Connection    : {envConnection ?? "<null>"}");
+Console.WriteLine("===================================");
+
 var connectionString =
-    builder.Configuration.GetConnectionString("WebsiteDb")
-    ?? Environment.GetEnvironmentVariable("ConnectionStrings__WebsiteDb")
-    ?? throw new InvalidOperationException("Connection string 'WebsiteDb' was not found.");
+    configConnection
+    ?? envConnection
+    ?? throw new InvalidOperationException("Missing WebsiteDb connection string.");
 
 builder.Services.AddControllers();
 

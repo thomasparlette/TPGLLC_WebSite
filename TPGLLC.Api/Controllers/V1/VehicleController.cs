@@ -1,7 +1,7 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
-using TPGLLC.Application.Contracts.V1.Vehicles;
-using TPGLLC.Services;
+using TPGLLC.Application.Vehicles;
+using TPGLLC.Services.Vehicles;
 
 namespace TPGLLC.Api.Controllers.V1;
 

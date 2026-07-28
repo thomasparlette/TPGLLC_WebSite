@@ -1,4 +1,4 @@
-﻿using TPGLLC.Shared.Models;
+﻿using TPGLLC.Data.Entities;
 
 namespace TPGLLC.Data.Stores;
 

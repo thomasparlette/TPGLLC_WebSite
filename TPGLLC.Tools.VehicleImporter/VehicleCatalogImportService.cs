@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TPGLLC.Data;
-using TPGLLC.Shared.Models;
+using TPGLLC.Data.Entities;
 
 namespace TPGLLC.Tools.VehicleImporter;
 

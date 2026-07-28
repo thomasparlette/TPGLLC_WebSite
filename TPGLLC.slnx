@@ -9,6 +9,7 @@
   <Project Path="TPGLLC.Data/TPGLLC.Data.csproj" Id="2d7d4bbc-0469-42f1-99ab-5f2ba4c0419c" />
   <Project Path="TPGLLC.Services/TPGLLC.Services.csproj" Id="1b01f371-1c4e-4257-86a2-d1a057b57c82" />
   <Project Path="TPGLLC.Shared/TPGLLC.Shared.csproj" Id="84498961-2e9e-44e7-8f41-96c8cb15e3bb" />
+  <Project Path="TPGLLC.Tools.DatabaseBootstrapper/TPGLLC.Tools.DatabaseBootstrapper.csproj" />
   <Project Path="TPGLLC.Tools.VehicleImporter/TPGLLC.Tools.VehicleImporter.csproj" Id="62448fd2-e917-4ddb-8c2f-fd38576daf23" />
   <Project Path="TPGLLC.Web/TPGLLC.Web.csproj" />
 </Solution>
