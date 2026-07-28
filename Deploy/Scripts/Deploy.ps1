@@ -377,7 +377,7 @@ function Invoke-DotNetCommand {
 function Run-Migrations {
     $repoRoot = Get-RepoRoot
     $dataProject = Get-ProjectPath 'TPGLLC.Data\TPGLLC.Data.csproj'
-    $apiStartupProject = Get-ProjectPath 'TPGLLC.Api\TPGLLC.Api.csproj'
+    $apiStartupProject = Get-ProjectPath 'TPGLLC.Web\TPGLLC.Web.csproj'
 
     Push-Location $repoRoot
     try {
