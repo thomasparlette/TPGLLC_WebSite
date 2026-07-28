@@ -17,40 +17,11 @@ public sealed class VehicleCatalogService : IVehicleCatalogService
         _cache = cache;
     }
 
-    public async Task<IReadOnlyList<string>> GetVehicleTypesAsync(CancellationToken cancellationToken = default)
-    {
-        const string key = "vehicle-types";
-
-        if (_cache.TryGetValue(key, out IReadOnlyList<string>? cached) && cached is not null)
-        {
-            return cached;
-        }
-
-        var result = await _db.VehicleCatalogEntries
-            .AsNoTracking()
-            .Select(x => x.VehicleType)
-            .Distinct()
-            .OrderBy(x => x)
-            .ToListAsync(cancellationToken);
-
-        if (result.Count > 0)
-        {
-            _cache.Set(key, result, CacheDuration);
-        }
-
-        return result;
-    }
 
     public async Task<IReadOnlyList<int>> GetYearsAsync(
-        string vehicleType,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(vehicleType))
-        {
-            return [];
-        }
-
-        var key = $"vehicle-years:{vehicleType}";
+       var key = $"vehicle-years";
 
         if (_cache.TryGetValue(key, out IReadOnlyList<int>? cached) && cached is not null)
         {
@@ -59,7 +30,6 @@ public sealed class VehicleCatalogService : IVehicleCatalogService
 
         var result = await _db.VehicleCatalogEntries
             .AsNoTracking()
-            .Where(x => x.VehicleType == vehicleType)
             .Select(x => x.ModelYear)
             .Distinct()
             .OrderByDescending(x => x)
@@ -74,16 +44,11 @@ public sealed class VehicleCatalogService : IVehicleCatalogService
     }
 
     public async Task<IReadOnlyList<string>> GetMakesAsync(
-        string vehicleType,
         int year,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(vehicleType))
-        {
-            return [];
-        }
 
-        var key = $"vehicle-makes:{vehicleType}:{year}";
+        var key = $"vehicle-makes:{year}";
 
         if (_cache.TryGetValue(key, out IReadOnlyList<string>? cached) && cached is not null)
         {
@@ -92,7 +57,7 @@ public sealed class VehicleCatalogService : IVehicleCatalogService
 
         var result = await _db.VehicleCatalogEntries
             .AsNoTracking()
-            .Where(x => x.VehicleType == vehicleType && x.ModelYear == year)
+            .Where(x =>  x.ModelYear == year)
             .Select(x => x.Make)
             .Distinct()
             .OrderBy(x => x)
@@ -107,17 +72,13 @@ public sealed class VehicleCatalogService : IVehicleCatalogService
     }
 
     public async Task<IReadOnlyList<string>> GetModelsAsync(
-        string vehicleType,
         int year,
         string make,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(vehicleType) || string.IsNullOrWhiteSpace(make))
-        {
-            return [];
-        }
+       
 
-        var key = $"vehicle-models:{vehicleType}:{year}:{make}";
+        var key = $"vehicle-models:{year}:{make}";
 
         if (_cache.TryGetValue(key, out IReadOnlyList<string>? cached) && cached is not null)
         {
@@ -127,7 +88,6 @@ public sealed class VehicleCatalogService : IVehicleCatalogService
         var result = await _db.VehicleCatalogEntries
             .AsNoTracking()
             .Where(x =>
-                x.VehicleType == vehicleType &&
                 x.ModelYear == year &&
                 x.Make == make)
             .Select(x => x.Model)

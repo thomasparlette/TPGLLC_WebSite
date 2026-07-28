@@ -11,8 +11,7 @@ public sealed class VehicleApiClient
         _http = http;
     }
 
-    public async Task<IReadOnlyList<string>> GetVehicleTypesAsync(
-    CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> GetVehicleTypesAsync(CancellationToken cancellationToken = default)
     {
         try
         {
@@ -32,18 +31,16 @@ public sealed class VehicleApiClient
         return
         [
             "Automotive",
-        "Motorcycle"
+            "Motorcycle"
         ];
     }
 
-    public async Task<IReadOnlyList<int>> GetYearsAsync(
-    string vehicleType,
-    CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<int>> GetYearsAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             var url =
-                $"api/v1/vehicles/years?vehicleType={Uri.EscapeDataString(vehicleType)}";
+                $"api/v1/vehicles/years";
 
             var result =
                 await _http.GetFromJsonAsync<List<int>>(url, cancellationToken);
@@ -56,15 +53,12 @@ public sealed class VehicleApiClient
         }
     }
 
-    public async Task<IReadOnlyList<string>> GetMakesAsync(
-    string vehicleType,
-    int year,
-    CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> GetMakesAsync(int year,CancellationToken cancellationToken = default)
     {
         try
         {
             var url =
-                $"api/v1/vehicles/makes?vehicleType={Uri.EscapeDataString(vehicleType)}&year={year}";
+                $"api/v1/vehicles/makes?year={year}";
 
             var result =
                 await _http.GetFromJsonAsync<List<string>>(url, cancellationToken);
@@ -77,16 +71,12 @@ public sealed class VehicleApiClient
         }
     }
 
-    public async Task<IReadOnlyList<string>> GetModelsAsync(
-    string vehicleType,
-    int year,
-    string make,
-    CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> GetModelsAsync(int year,string make,CancellationToken cancellationToken = default)
     {
         try
         {
             var url =
-                $"api/v1/vehicles/models?vehicleType={Uri.EscapeDataString(vehicleType)}&year={year}&make={Uri.EscapeDataString(make)}";
+                $"api/v1/vehicles/models?year={year}&make={Uri.EscapeDataString(make)}";
 
             var result =
                 await _http.GetFromJsonAsync<List<string>>(url, cancellationToken);

@@ -255,7 +255,6 @@
                     <h3>Request received</h3>
                     <p>Your appointment request is pending review. We will contact you soon.</p>
                     <p class="request-id">Reference: @_requestId</p>
-                    <p><strong>Vehicle Type:</strong> @_appointment.VehicleType</p>
                     <p><strong>Vehicle:</strong> @GetVehicleSummary()</p>
                     <p><strong>VIN:</strong> @(string.IsNullOrWhiteSpace(_appointment.Vin) ? "Not provided" : _appointment.Vin)</p>
                 </div>
@@ -292,19 +291,6 @@
                         <InputText class="input" type="email" @bind-Value="_appointment.Email" />
                     </div>
 
-                    <div class="form-field full">
-                        <label>Vehicle Type</label>
-                        <select class="input" value="@_appointment.VehicleType" @onchange="OnVehicleTypeChanged" required>
-                            <option value="">Select type</option>
-                            @foreach (var type in _vehicleTypes)
-                            {
-                                <option value="@type">@type</option>
-                            }
-                        </select>
-                    </div>
-
-                    @if (IsCatalogVehicle)
-                    {
                         <div class="form-field">
                             <label>Vehicle Year</label>
                             <select class="input" value="@_appointment.VehicleYear" @onchange="OnVehicleYearChanged" required>
@@ -337,24 +323,6 @@
                                 }
                             </select>
                         </div>
-                    }
-                    else
-                    {
-                        <div class="form-field">
-                            <label>Vehicle Year</label>
-                            <InputText class="input" @bind-Value="_appointment.VehicleYear" placeholder="Enter year" />
-                        </div>
-
-                        <div class="form-field">
-                            <label>Vehicle Make</label>
-                            <InputText class="input" @bind-Value="_appointment.VehicleMake" placeholder="Enter make" />
-                        </div>
-
-                        <div class="form-field">
-                            <label>Vehicle Model</label>
-                            <InputText class="input" @bind-Value="_appointment.VehicleModel" placeholder="Enter model" />
-                        </div>
-                    }
 
                     <div class="form-field full">
                         <label>VIN (optional)</label>
@@ -409,8 +377,6 @@
 
 @code {
     private readonly AppointmentRequest _appointment = new();
-    private List<string> _vehicleTypes = new();
-    private string? _loadError;
     private IReadOnlyList<int> _years = [];
     private IReadOnlyList<string> _makes = [];
     private IReadOnlyList<string> _models = [];
@@ -419,59 +385,38 @@
     private string? _requestId;
     private bool _submitted;
 
-    private bool IsCatalogVehicle =>
-        string.Equals(_appointment.VehicleType, "Automotive", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(_appointment.VehicleType, "Motorcycle", StringComparison.OrdinalIgnoreCase);
-
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            _vehicleTypes = (await VehicleApi.GetVehicleTypesAsync()).ToList();
+            _years = await VehicleApi.GetYearsAsync();
         }
         catch
         {
-            _vehicleTypes = new List<string>
-        {
-            "Automotive",
-            "Motorcycle"
-        };
-        }
-    }
-
-    private async Task OnVehicleTypeChanged(ChangeEventArgs e)
-    {
-        _appointment.VehicleType = e.Value?.ToString();
-        _appointment.VehicleYear = null;
-        _appointment.VehicleMake = null;
-        _appointment.VehicleModel = null;
-
-        _years = [];
-        _makes = [];
-        _models = [];
-
-        if (IsCatalogVehicle && !string.IsNullOrWhiteSpace(_appointment.VehicleType))
-        {
-            _years = await VehicleApi.GetYearsAsync(_appointment.VehicleType);
+            _years = [];
         }
 
-        await InvokeAsync(StateHasChanged);
+        if (_years.Count == 0)
+        {
+            _years = Enumerable.Range(1996, DateTime.UtcNow.Year - 1996 + 1)
+                .Reverse()
+                .ToList();
+        }
     }
 
     private async Task OnVehicleYearChanged(ChangeEventArgs e)
     {
         _appointment.VehicleYear = e.Value?.ToString();
+
         _appointment.VehicleMake = null;
         _appointment.VehicleModel = null;
 
         _makes = [];
         _models = [];
 
-        if (IsCatalogVehicle &&
-            int.TryParse(_appointment.VehicleYear, out var year) &&
-            !string.IsNullOrWhiteSpace(_appointment.VehicleType))
+        if (int.TryParse(_appointment.VehicleYear, out var year))
         {
-            _makes = await VehicleApi.GetMakesAsync(_appointment.VehicleType!, year);
+            _makes = await VehicleApi.GetMakesAsync(year);
         }
 
         await InvokeAsync(StateHasChanged);
@@ -480,16 +425,14 @@
     private async Task OnVehicleMakeChanged(ChangeEventArgs e)
     {
         _appointment.VehicleMake = e.Value?.ToString();
-        _appointment.VehicleModel = null;
 
+        _appointment.VehicleModel = null;
         _models = [];
 
-        if (IsCatalogVehicle &&
-            int.TryParse(_appointment.VehicleYear, out var year) &&
-            !string.IsNullOrWhiteSpace(_appointment.VehicleType) &&
+        if (int.TryParse(_appointment.VehicleYear, out var year) &&
             !string.IsNullOrWhiteSpace(_appointment.VehicleMake))
         {
-            _models = await VehicleApi.GetModelsAsync(_appointment.VehicleType!, year, _appointment.VehicleMake!);
+            _models = await VehicleApi.GetModelsAsync(year, _appointment.VehicleMake!);
         }
 
         await InvokeAsync(StateHasChanged);
@@ -505,9 +448,9 @@
     {
         _submitError = null;
 
-        if (string.IsNullOrWhiteSpace(_appointment.VehicleType))
+        if (string.IsNullOrWhiteSpace(_appointment.VehicleYear))
         {
-            _submitError = "Please select a vehicle type.";
+            _submitError = "Please select a vehicle year.";
             return;
         }
 
@@ -520,26 +463,7 @@
             return;
         }
 
-        if (IsCatalogVehicle &&
-            (string.IsNullOrWhiteSpace(_appointment.VehicleYear) ||
-             string.IsNullOrWhiteSpace(_appointment.VehicleMake) ||
-             string.IsNullOrWhiteSpace(_appointment.VehicleModel)))
-        {
-            _submitError = "Please complete the vehicle details.";
-            return;
-        }
-
-        /*
-        var requestId = await AppointmentApi.SubmitAppointmentAsync(_appointment);
-        if (requestId is null)
-        {
-            _submitError = "The request could not be submitted. Please try again.";
-            return;
-        }
-
-        _requestId = requestId.Value.ToString("N");
-        _submitted = true;
-        */
+       
     }
     
     private void ResetForm()
@@ -547,7 +471,6 @@
         _appointment.Name = null;
         _appointment.Phone = null;
         _appointment.Email = null;
-        _appointment.VehicleType = null;
         _appointment.VehicleYear = null;
         _appointment.VehicleMake = null;
         _appointment.VehicleModel = null;
@@ -559,7 +482,6 @@
         _appointment.Message = null;
         _appointment.Company = null;
 
-        _years = [];
         _makes = [];
         _models = [];
         _submitError = null;

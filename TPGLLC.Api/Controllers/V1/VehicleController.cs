@@ -16,56 +16,40 @@ public sealed class VehicleController : ControllerBase
     {
         _catalog = catalog;
     }
-
-    [HttpGet("types")]
-    public async Task<ActionResult<IReadOnlyList<VehicleTypeDto>>> GetTypes(CancellationToken cancellationToken)
-    {
-        var result = await _catalog.GetVehicleTypesAsync(cancellationToken);
-        return Ok(result);
-    }
-
+ 
     [HttpGet("years")]
-    public async Task<ActionResult<IReadOnlyList<VehicleYearDto>>> GetYears(
-        [FromQuery] string vehicleType,
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<int>>> GetYears(CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(vehicleType))
-        {
-            return BadRequest(new { message = "vehicleType is required." });
-        }
-
-        var result = await _catalog.GetYearsAsync(vehicleType, cancellationToken);
+        var result = await _catalog.GetYearsAsync(cancellationToken);
         return Ok(result);
     }
 
     [HttpGet("makes")]
-    public async Task<ActionResult<IReadOnlyList<VehicleMakeDto>>> GetMakes(
-        [FromQuery] string vehicleType,
+    public async Task<ActionResult<IReadOnlyList<string>>> GetMakes(
         [FromQuery] int year,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(vehicleType))
+        if (year <= 0)
         {
-            return BadRequest(new { message = "vehicleType is required." });
+            return BadRequest(new { message = "year is required." });
         }
 
-        var result = await _catalog.GetMakesAsync(vehicleType, year, cancellationToken);
+        var result = await _catalog.GetMakesAsync(year, cancellationToken);
         return Ok(result);
     }
 
     [HttpGet("models")]
-    public async Task<ActionResult<IReadOnlyList<VehicleModelDto>>> GetModels(
-        [FromQuery] string vehicleType,
+    public async Task<ActionResult<IReadOnlyList<string>>> GetModels(
         [FromQuery] int year,
         [FromQuery] string make,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(vehicleType) || string.IsNullOrWhiteSpace(make))
+        if (year <= 0 || string.IsNullOrWhiteSpace(make))
         {
-            return BadRequest(new { message = "vehicleType and make are required." });
+            return BadRequest(new { message = "year and make are required." });
         }
 
-        var result = await _catalog.GetModelsAsync(vehicleType, year, make, cancellationToken);
+        var result = await _catalog.GetModelsAsync(year, make, cancellationToken);
         return Ok(result);
     }
 }
