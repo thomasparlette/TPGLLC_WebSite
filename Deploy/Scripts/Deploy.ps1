@@ -1,3 +1,4 @@
+[CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
     [string]$WebsitePath,
@@ -17,27 +18,39 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$HealthCheckUrl,
 
-    [Parameter(Mandatory = $true)]
-    [string]$CommitSha,
+    [Parameter(Mandatory = $false)]
+    [string]$CommitSha = "",
 
-    [Parameter(Mandatory = $true)]
-    [string]$BranchName,
+    [Parameter(Mandatory = $false)]
+    [string]$BranchName = "",
 
+    [Parameter(Mandatory = $false)]
     [string]$RunnerName = $env:COMPUTERNAME,
 
-    [string]$SiteName = 'TPGLLC',
-    [string]$AppPoolName = 'TPGLLC',
+    [Parameter(Mandatory = $false)]
+    [string]$SiteName = "TPGLLC",
 
-    [int]$KeepReleases = 10,
-    [int]$LogRetentionDays = 30,
-    [int]$BackupRetentionDays = 30,
-    [int]$HealthCheckMaxAttempts = 12,
-    [int]$HealthCheckDelaySeconds = 5,
-    [int]$FileUnlockTimeoutSeconds = 60
+    [Parameter(Mandatory = $false)]
+    [string]$AppPoolName = "TPGLLC",
+
+    [switch]$RunMigrations,
+    [switch]$RunBootstrapper,
+    [switch]$RunVehicleImporter,
+    [switch]$ForceVehicleImporter,
+    [switch]$RestartIIS = $true,
+    [switch]$SkipHealthCheck
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# -----------------------------
+# Helpers
+# -----------------------------
+
+function New-DeploymentStamp {
+    return (Get-Date).ToString('yyyyMMdd-HHmmss')
+}
 
 function Ensure-Directory {
     param(
@@ -45,34 +58,31 @@ function Ensure-Directory {
         [string]$Path
     )
 
-    New-Item -ItemType Directory -Force -Path $Path | Out-Null
+    if (-not (Test-Path -LiteralPath $Path)) {
+        New-Item -ItemType Directory -Path $Path -Force | Out-Null
+    }
 }
-
-Ensure-Directory -Path $LogRoot
-$LogFile = Join-Path $LogRoot ("Deploy_{0}.log" -f (Get-Date -Format 'yyyy-MM-dd_HHmmss'))
 
 function Write-Log {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Message,
 
-        [ValidateSet('Info', 'Warn', 'Error')]
-        [string]$Level = 'Info'
+        [ValidateSet('INFO', 'WARN', 'ERROR')]
+        [string]$Level = 'INFO'
     )
 
-    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-    $line = "[$timestamp] [$Level] $Message"
+    $timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+    $line = "[{0}] [{1}] {2}" -f $timestamp, $Level, $Message
 
-    switch ($Level) {
-        'Warn'  { Write-Host $line -ForegroundColor Yellow }
-        'Error' { Write-Host $line -ForegroundColor Red }
-        default { Write-Host $line }
+    Write-Host $line
+
+    if ($script:LogFilePath) {
+        Add-Content -Path $script:LogFilePath -Value $line
     }
-
-    Add-Content -Path $LogFile -Value $line
 }
 
-function Invoke-RobocopySafe {
+function Invoke-RobocopyMirror {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Source,
@@ -80,508 +90,518 @@ function Invoke-RobocopySafe {
         [Parameter(Mandatory = $true)]
         [string]$Destination,
 
-        [string[]]$ExcludeFiles = @('app_offline.htm')
-    )
+        [string[]]$ExcludeFiles = @(),
 
-    if (-not (Test-Path $Source)) {
-        throw "Source path does not exist: $Source"
-    }
+        [string]$Description = 'copy'
+    )
 
     Ensure-Directory -Path $Destination
 
     $args = @(
-        $Source,
-        $Destination,
+        "`"$Source`"",
+        "`"$Destination`"",
         '/MIR',
+        '/R:2',
+        '/W:2',
         '/NFL',
         '/NDL',
+        '/NP',
         '/NJH',
         '/NJS',
-        '/NP',
-        '/R:2',
-        '/W:2'
+        '/XJ'
     )
 
-    foreach ($file in $ExcludeFiles) {
-        $args += '/XF'
-        $args += $file
+    foreach ($excludeFile in $ExcludeFiles) {
+        $args += @('/XF', "`"$excludeFile`"")
     }
 
-    Write-Log "Running robocopy from '$Source' to '$Destination'..."
-    & robocopy @args 2>&1 | Tee-Object -FilePath $LogFile -Append | Out-Host
+    Write-Log "Starting robocopy $Description from '$Source' to '$Destination'."
 
-    $code = $LASTEXITCODE
-    if ($code -ge 8) {
-        throw "Robocopy failed with exit code $code"
+    & robocopy @args | Out-Null
+    $exitCode = $LASTEXITCODE
+
+    if ($exitCode -ge 8) {
+        throw "Robocopy $Description failed with exit code $exitCode."
     }
 
-    Write-Log "Robocopy completed with exit code $code"
-}
-
-function Wait-ForFileUnlock {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Path,
-
-        [int]$TimeoutSeconds = 30
-    )
-
-    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
-
-    while ((Get-Date) -lt $deadline) {
-        if (-not (Test-Path $Path)) {
-            return
-        }
-
-        try {
-            $stream = [System.IO.File]::Open(
-                $Path,
-                [System.IO.FileMode]::Open,
-                [System.IO.FileAccess]::ReadWrite,
-                [System.IO.FileShare]::None
-            )
-            $stream.Close()
-            return
-        }
-        catch {
-            Start-Sleep -Seconds 1
-        }
-    }
-
-    throw "Timed out waiting for file unlock: $Path"
+    Write-Log "Robocopy $Description completed with exit code $exitCode."
 }
 
 function Import-WebAdministrationModule {
-    try {
-        Import-Module WebAdministration -ErrorAction Stop
+    if (Get-Module -ListAvailable -Name WebAdministration) {
+        Import-Module WebAdministration -ErrorAction SilentlyContinue
         return $true
     }
-    catch {
-        Write-Log "WebAdministration module unavailable: $($_.Exception.Message)" 'Warn'
-        return $false
-    }
+
+    return $false
 }
 
-function Stop-IisHosting {
+function Stop-IisTarget {
     param(
-        [string]$SiteName,
-        [string]$AppPoolName
+        [string]$TargetSiteName,
+        [string]$TargetAppPoolName,
+        [string]$OfflinePath
     )
 
-    if (-not (Import-WebAdministrationModule)) {
-        return
-    }
+    $hasWebAdmin = Import-WebAdministrationModule
 
-    try {
-        if (Get-Website -Name $SiteName -ErrorAction SilentlyContinue) {
-            Write-Log "Stopping IIS site '$SiteName'..."
-            Stop-Website -Name $SiteName -ErrorAction SilentlyContinue
+    if ($hasWebAdmin) {
+        try {
+            if (Get-Website -Name $TargetSiteName -ErrorAction SilentlyContinue) {
+                Write-Log "Stopping IIS site '$TargetSiteName'."
+                Stop-Website -Name $TargetSiteName -ErrorAction SilentlyContinue
+            }
+        }
+        catch {
+            Write-Log "Failed to stop site '$TargetSiteName': $($_.Exception.Message)" 'WARN'
+        }
+
+        try {
+            if (Get-WebAppPoolState -Name $TargetAppPoolName -ErrorAction SilentlyContinue) {
+                Write-Log "Stopping app pool '$TargetAppPoolName'."
+                Stop-WebAppPool -Name $TargetAppPoolName -ErrorAction SilentlyContinue
+            }
+        }
+        catch {
+            Write-Log "Failed to stop app pool '$TargetAppPoolName': $($_.Exception.Message)" 'WARN'
         }
     }
-    catch {
-        Write-Log "Failed to stop IIS site '$SiteName': $($_.Exception.Message)" 'Warn'
+    else {
+        Write-Log "WebAdministration module not available. Falling back to app_offline.htm only." 'WARN'
     }
 
-    try {
-        if (Get-WebAppPoolState -Name $AppPoolName -ErrorAction SilentlyContinue) {
-            Write-Log "Stopping IIS app pool '$AppPoolName'..."
-            Stop-WebAppPool -Name $AppPoolName -ErrorAction SilentlyContinue
+    $offlineHtml = @"
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Maintenance</title>
+</head>
+<body>
+  <h1>Maintenance in progress</h1>
+  <p>The site is temporarily offline for deployment.</p>
+</body>
+</html>
+"@
+
+    Set-Content -Path $OfflinePath -Value $offlineHtml -Encoding UTF8
+    Write-Log "Wrote app_offline.htm."
+    Start-Sleep -Seconds 2
+}
+
+function Start-IisTarget {
+    param(
+        [string]$TargetSiteName,
+        [string]$TargetAppPoolName,
+        [string]$OfflinePath
+    )
+
+    if (Test-Path -LiteralPath $OfflinePath) {
+        Remove-Item -LiteralPath $OfflinePath -Force -ErrorAction SilentlyContinue
+        Write-Log "Removed app_offline.htm."
+    }
+
+    $hasWebAdmin = Import-WebAdministrationModule
+
+    if ($hasWebAdmin) {
+        try {
+            if (Get-WebAppPoolState -Name $TargetAppPoolName -ErrorAction SilentlyContinue) {
+                Write-Log "Starting app pool '$TargetAppPoolName'."
+                Start-WebAppPool -Name $TargetAppPoolName -ErrorAction SilentlyContinue
+            }
+        }
+        catch {
+            Write-Log "Failed to start app pool '$TargetAppPoolName': $($_.Exception.Message)" 'WARN'
+        }
+
+        try {
+            if (Get-Website -Name $TargetSiteName -ErrorAction SilentlyContinue) {
+                Write-Log "Starting IIS site '$TargetSiteName'."
+                Start-Website -Name $TargetSiteName -ErrorAction SilentlyContinue
+            }
+        }
+        catch {
+            Write-Log "Failed to start site '$TargetSiteName': $($_.Exception.Message)" 'WARN'
         }
     }
-    catch {
-        Write-Log "Failed to stop IIS app pool '$AppPoolName': $($_.Exception.Message)" 'Warn'
-    }
+
+    Write-Log "IIS start sequence complete."
 }
 
-function Start-IisHosting {
+function Write-DeploymentMetadata {
     param(
-        [string]$SiteName,
-        [string]$AppPoolName
+        [Parameter(Mandatory = $true)]
+        [string]$DestinationPath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Stamp
     )
 
-    if (-not (Import-WebAdministrationModule)) {
-        return
+    $metadata = [ordered]@{
+        Version       = $Stamp
+        GitCommit     = $CommitSha
+        Branch        = $BranchName
+        Runner        = $RunnerName
+        DeployedAtUtc = (Get-Date).ToUniversalTime().ToString('o')
+        WebsitePath   = $WebsitePath
+        PublishPath   = $PublishPath
     }
 
-    try {
-        if (Get-WebAppPoolState -Name $AppPoolName -ErrorAction SilentlyContinue) {
-            Write-Log "Starting IIS app pool '$AppPoolName'..."
-            Start-WebAppPool -Name $AppPoolName -ErrorAction SilentlyContinue
+    $json = $metadata | ConvertTo-Json -Depth 5
+    Set-Content -Path (Join-Path $DestinationPath 'version.json') -Value $json -Encoding UTF8
+    Set-Content -Path (Join-Path $DestinationPath 'deployment.json') -Value $json -Encoding UTF8
+
+    Write-Log "Wrote deployment metadata to '$DestinationPath'."
+}
+
+function Test-DeploymentHealth {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Url,
+
+        [int]$MaxAttempts = 12,
+
+        [int]$DelaySeconds = 5
+    )
+
+    Write-Log "Starting health check against '$Url'."
+
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        try {
+            $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 30
+            if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 300) {
+                Write-Log "Health check succeeded on attempt $attempt."
+                return
+            }
+
+            Write-Log "Health check returned status code $($response.StatusCode) on attempt $attempt." 'WARN'
+        }
+        catch {
+            Write-Log "Health check attempt $attempt failed: $($_.Exception.Message)" 'WARN'
+        }
+
+        if ($attempt -lt $MaxAttempts) {
+            Start-Sleep -Seconds $DelaySeconds
         }
     }
-    catch {
-        Write-Log "Failed to start IIS app pool '$AppPoolName': $($_.Exception.Message)" 'Warn'
-    }
 
-    try {
-        if (Get-Website -Name $SiteName -ErrorAction SilentlyContinue) {
-            Write-Log "Starting IIS site '$SiteName'..."
-            Start-Website -Name $SiteName -ErrorAction SilentlyContinue
-        }
-    }
-    catch {
-        Write-Log "Failed to start IIS site '$SiteName': $($_.Exception.Message)" 'Warn'
-    }
+    throw "Health check failed after $MaxAttempts attempts."
 }
 
-function Backup-CurrentWebsite {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$WebsitePath,
-
-        [Parameter(Mandatory = $true)]
-        [string]$BackupRoot,
-
-        [Parameter(Mandatory = $true)]
-        [string]$CommitSha
-    )
-
-    if (-not (Test-Path $WebsitePath)) {
-        Write-Log "Website path does not exist yet. Skipping backup."
-        return $null
-    }
-
-    Ensure-Directory -Path $BackupRoot
-
-    $stamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
-    $shortSha = if ($CommitSha.Length -ge 7) { $CommitSha.Substring(0, 7) } else { $CommitSha }
-    $backupPath = Join-Path $BackupRoot ("{0}_{1}" -f $stamp, $shortSha)
-    Ensure-Directory -Path $backupPath
-
-    Write-Log "Backing up current website to '$backupPath'..."
-    & robocopy $WebsitePath $backupPath /MIR /NFL /NDL /NJH /NJS /NP /R:2 /W:2 2>&1 |
-        Tee-Object -FilePath $LogFile -Append |
-        Out-Host
-
-    $code = $LASTEXITCODE
-    if ($code -ge 8) {
-        throw "Backup failed with exit code $code"
-    }
-
-    Write-Log "Backup created at: $backupPath"
-    return $backupPath
-}
-
-function Copy-ReleaseSnapshot {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$PublishPath,
-
-        [Parameter(Mandatory = $true)]
-        [string]$ReleaseRoot,
-
-        [Parameter(Mandatory = $true)]
-        [string]$CommitSha
-    )
-
-    if (-not (Test-Path $PublishPath)) {
-        throw "Publish path does not exist: $PublishPath"
-    }
-
-    Ensure-Directory -Path $ReleaseRoot
-
-    $stamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
-    $shortSha = if ($CommitSha.Length -ge 7) { $CommitSha.Substring(0, 7) } else { $CommitSha }
-    $releasePath = Join-Path $ReleaseRoot ("{0}_{1}" -f $stamp, $shortSha)
-    Ensure-Directory -Path $releasePath
-
-    Write-Log "Creating release snapshot at '$releasePath'..."
-    & robocopy $PublishPath $releasePath /MIR /XF app_offline.htm /NFL /NDL /NJH /NJS /NP /R:2 /W:2 2>&1 |
-        Tee-Object -FilePath $LogFile -Append |
-        Out-Host
-
-    $code = $LASTEXITCODE
-    if ($code -ge 8) {
-        throw "Release snapshot failed with exit code $code"
-    }
-
-    Write-Log "Release snapshot created at: $releasePath"
-    return $releasePath
-}
-
-function Write-VersionFile {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$WebsitePath,
-
-        [Parameter(Mandatory = $true)]
-        [string]$CommitSha,
-
-        [Parameter(Mandatory = $true)]
-        [string]$BranchName,
-
-        [Parameter(Mandatory = $true)]
-        [string]$RunnerName
-    )
-
-    $shortSha = if ($CommitSha.Length -ge 7) { $CommitSha.Substring(0, 7) } else { $CommitSha }
-    $versionValue = "{0}+{1}" -f (Get-Date -Format 'yyyy.MM.dd.HHmmss'), $shortSha
-
-    $versionInfo = [ordered]@{
-        version  = $versionValue
-        commit   = $CommitSha
-        branch   = $BranchName
-        deployed = (Get-Date).ToString('o')
-        runner   = $RunnerName
-    }
-
-    $versionPath = Join-Path $WebsitePath 'version.json'
-    $versionInfo | ConvertTo-Json -Depth 5 | Set-Content -Path $versionPath -Encoding UTF8
-
-    Write-Log "Version file written: $versionPath"
-}
-
-function Cleanup-OldReleases {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$ReleaseRoot,
-
-        [int]$KeepReleases = 10
-    )
-
-    if (-not (Test-Path $ReleaseRoot)) {
-        return
-    }
-
-    $releases = Get-ChildItem -Path $ReleaseRoot -Directory | Sort-Object Name -Descending
-    $oldReleases = $releases | Select-Object -Skip $KeepReleases
-
-    foreach ($release in $oldReleases) {
-        Write-Log "Removing old release: $($release.FullName)"
-        Remove-Item $release.FullName -Recurse -Force -ErrorAction SilentlyContinue
-    }
-}
-
-function Cleanup-OldLogs {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$LogRoot,
-
-        [int]$RetentionDays = 30
-    )
-
-    if (-not (Test-Path $LogRoot)) {
-        return
-    }
-
-    $cutoff = (Get-Date).AddDays(-$RetentionDays)
-
-    Get-ChildItem -Path $LogRoot -File |
-        Where-Object { $_.LastWriteTime -lt $cutoff } |
-        ForEach-Object {
-            Write-Log "Removing old log: $($_.FullName)"
-            Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
-        }
-}
-
-function Cleanup-OldBackups {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$BackupRoot,
-
-        [int]$RetentionDays = 30
-    )
-
-    if (-not (Test-Path $BackupRoot)) {
-        return
-    }
-
-    $cutoff = (Get-Date).AddDays(-$RetentionDays)
-
-    Get-ChildItem -Path $BackupRoot -Directory |
-        Where-Object { $_.LastWriteTime -lt $cutoff } |
-        ForEach-Object {
-            Write-Log "Removing old backup: $($_.FullName)"
-            Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
-        }
-}
-
-function Test-HealthCheck {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Url
-    )
-
-    Write-Log "Running health check: $Url"
-    $response = Invoke-WebRequest -Uri $Url -TimeoutSec 20 -UseBasicParsing
-
-    if ($response.StatusCode -lt 200 -or $response.StatusCode -ge 300) {
-        throw "Health check returned status code $($response.StatusCode)"
-    }
-
-    Write-Log "Health check passed with status code $($response.StatusCode)"
-}
-
-function Invoke-DeploymentRollback {
+function Restore-Backup {
     param(
         [Parameter(Mandatory = $true)]
         [string]$BackupPath,
 
         [Parameter(Mandatory = $true)]
-        [string]$WebsitePath,
-
-        [Parameter(Mandatory = $true)]
-        [string]$AppOfflinePath,
-
-        [Parameter(Mandatory = $true)]
-        [string]$SiteName,
-
-        [Parameter(Mandatory = $true)]
-        [string]$AppPoolName,
-
-        [int]$WaitSeconds = 30
+        [string]$DestinationPath
     )
 
-    if (-not (Test-Path $BackupPath)) {
-        Write-Log "Rollback skipped; backup path not found: $BackupPath" 'Warn'
+    if (-not (Test-Path -LiteralPath $BackupPath)) {
+        throw "Rollback requested, but backup path '$BackupPath' does not exist."
+    }
+
+    Write-Log "Restoring website from backup '$BackupPath' to '$DestinationPath'."
+    Invoke-RobocopyMirror -Source $BackupPath -Destination $DestinationPath -ExcludeFiles @('app_offline.htm') -Description 'rollback restore'
+}
+
+function Get-RepoRoot {
+    if ($env:GITHUB_WORKSPACE -and (Test-Path -LiteralPath $env:GITHUB_WORKSPACE)) {
+        return (Resolve-Path -LiteralPath $env:GITHUB_WORKSPACE).Path
+    }
+
+    return (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..' '..')).Path
+}
+
+function Get-ProjectPath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RelativePath
+    )
+
+    return (Join-Path (Get-RepoRoot) $RelativePath)
+}
+
+function Invoke-DotNetCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Description,
+
+        [Parameter(Mandatory = $false)]
+        [hashtable]$Environment = @{} ,
+
+        [Parameter(Mandatory = $false)]
+        [string]$WorkingDirectory = (Get-RepoRoot)
+    )
+
+    $savedEnvironment = @{}
+
+    foreach ($key in $Environment.Keys) {
+        $savedEnvironment[$key] = [Environment]::GetEnvironmentVariable($key, 'Process')
+        [Environment]::SetEnvironmentVariable($key, [string]$Environment[$key], 'Process')
+    }
+
+    Push-Location $WorkingDirectory
+    try {
+        Write-Log "Running $Description..."
+        & dotnet @Arguments
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "$Description failed with exit code $LASTEXITCODE."
+        }
+
+        Write-Log "$Description completed successfully."
+    }
+    finally {
+        Pop-Location
+
+        foreach ($key in $Environment.Keys) {
+            [Environment]::SetEnvironmentVariable($key, $savedEnvironment[$key], 'Process')
+        }
+    }
+}
+
+function Run-Migrations {
+    $repoRoot = Get-RepoRoot
+    $dataProject = Get-ProjectPath 'TPGLLC.Data\TPGLLC.Data.csproj'
+    $apiStartupProject = Get-ProjectPath 'TPGLLC.Api\TPGLLC.Api.csproj'
+
+    $environment = @{
+        DOTNET_ENVIRONMENT = 'Production'
+        ASPNETCORE_ENVIRONMENT = 'Production'
+    }
+
+    Invoke-DotNetCommand `
+        -Description 'EF Core database update' `
+        -WorkingDirectory $repoRoot `
+        -Environment $environment `
+        -Arguments @(
+            'ef',
+            'database',
+            'update',
+            '--project', $dataProject,
+            '--startup-project', $apiStartupProject,
+            '--configuration', 'Release'
+        )
+}
+
+function Run-Bootstrapper {
+    $repoRoot = Get-RepoRoot
+    $bootstrapperProject = Get-ProjectPath 'TPGLLC.Tools.DatabaseBootstrapper\TPGLLC.Tools.DatabaseBootstrapper.csproj'
+
+    $environment = @{
+        DOTNET_ENVIRONMENT = 'Production'
+    }
+
+    Invoke-DotNetCommand `
+        -Description 'Database bootstrapper' `
+        -WorkingDirectory $repoRoot `
+        -Environment $environment `
+        -Arguments @(
+            'run',
+            '--project', $bootstrapperProject,
+            '--configuration', 'Release',
+            '--no-launch-profile'
+        )
+}
+
+function Get-VehicleImporterMarkerPath {
+    return (Join-Path $script:StateRoot 'VehicleImporter.completed')
+}
+
+function Test-VehicleImporterCompleted {
+    $markerPath = Get-VehicleImporterMarkerPath
+    return Test-Path -LiteralPath $markerPath
+}
+
+function Clear-VehicleImporterCompleted {
+    $markerPath = Get-VehicleImporterMarkerPath
+
+    if (Test-Path -LiteralPath $markerPath) {
+        Remove-Item -LiteralPath $markerPath -Force -ErrorAction SilentlyContinue
+        Write-Log "Removed vehicle importer completion marker."
+    }
+}
+
+function Set-VehicleImporterCompleted {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Stamp
+    )
+
+    $markerPath = Get-VehicleImporterMarkerPath
+
+    $marker = [ordered]@{
+        CompletedAtUtc = (Get-Date).ToUniversalTime().ToString('o')
+        DeploymentStamp = $Stamp
+        CommitSha = $CommitSha
+        BranchName = $BranchName
+        RunnerName = $RunnerName
+    }
+
+    $markerJson = $marker | ConvertTo-Json -Depth 5
+    Set-Content -Path $markerPath -Value $markerJson -Encoding UTF8
+    Write-Log "Vehicle importer completion marker written to '$markerPath'."
+}
+
+function Run-VehicleImporter {
+    param(
+        [switch]$Force
+    )
+
+    if (-not $Force -and (Test-VehicleImporterCompleted)) {
+        Write-Log "Vehicle importer already completed previously; skipping."
         return
     }
 
-    Write-Log "Preparing rollback from '$BackupPath'..."
-
-    Stop-IisHosting -SiteName $SiteName -AppPoolName $AppPoolName
-
-    $dllPath = Join-Path $WebsitePath 'TPGLLC.Web.dll'
-    if (Test-Path $dllPath) {
-        try {
-            Write-Log "Waiting for application DLL to unlock before rollback..."
-            Wait-ForFileUnlock -Path $dllPath -TimeoutSeconds $WaitSeconds
-        }
-        catch {
-            Write-Log "Timed out waiting for unlock during rollback: $($_.Exception.Message)" 'Warn'
-        }
+    if ($Force) {
+        Write-Log "Force vehicle importer requested."
+        Clear-VehicleImporterCompleted
     }
 
-    if (-not (Test-Path $AppOfflinePath)) {
-        @"
-<html>
-<head><title>Site Offline</title></head>
-<body><h1>Temporarily offline for rollback.</h1></body>
-</html>
-"@ | Set-Content -Path $AppOfflinePath -Encoding UTF8
+    $repoRoot = Get-RepoRoot
+    $importerProject = Get-ProjectPath 'TPGLLC.Tools.VehicleImporter\TPGLLC.Tools.VehicleImporter.csproj'
+
+    $environment = @{
+        DOTNET_ENVIRONMENT = 'Production'
     }
 
-    Write-Log "Restoring website from backup..."
-    & robocopy $BackupPath $WebsitePath /MIR /XF app_offline.htm /NFL /NDL /NJH /NJS /NP /R:2 /W:2 2>&1 |
-        Tee-Object -FilePath $LogFile -Append |
-        Out-Host
+    Invoke-DotNetCommand `
+        -Description 'Vehicle importer' `
+        -WorkingDirectory $repoRoot `
+        -Environment $environment `
+        -Arguments @(
+            'run',
+            '--project', $importerProject,
+            '--configuration', 'Release',
+            '--no-launch-profile'
+        )
 
-    $rollbackCode = $LASTEXITCODE
-    if ($rollbackCode -ge 8) {
-        throw "Rollback failed with exit code $rollbackCode"
-    }
-
-    Remove-Item $AppOfflinePath -Force -ErrorAction SilentlyContinue
-    Start-IisHosting -SiteName $SiteName -AppPoolName $AppPoolName
-
-    $attempt = 1
-    while ($attempt -le $HealthCheckMaxAttempts) {
-        try {
-            Test-HealthCheck -Url $HealthCheckUrl
-            Write-Log "Rollback verification passed."
-            return
-        }
-        catch {
-            Write-Log "Rollback health check attempt $attempt failed: $($_.Exception.Message)" 'Warn'
-            if ($attempt -ge $HealthCheckMaxAttempts) {
-                throw
-            }
-            Start-Sleep -Seconds $HealthCheckDelaySeconds
-            $attempt++
-        }
-    }
+    Set-VehicleImporterCompleted -Stamp $script:DeploymentStamp
 }
 
-$appOfflinePath = Join-Path $WebsitePath 'app_offline.htm'
-$backupPath = $null
-$releasePath = $null
+# -----------------------------
+# Setup
+# -----------------------------
+
+$script:DeploymentStamp = New-DeploymentStamp
+$script:LogFilePath = $null
+
+Ensure-Directory -Path $LogRoot
+Ensure-Directory -Path $BackupRoot
+Ensure-Directory -Path $ReleaseRoot
+Ensure-Directory -Path $WebsitePath
+Ensure-Directory -Path $PublishPath
+
+$script:LogFilePath = Join-Path $LogRoot ("deploy_{0}.log" -f $script:DeploymentStamp)
+
+Write-Log "============================================================"
+Write-Log "TPGLLC Deployment Starting"
+Write-Log "Stamp       : $script:DeploymentStamp"
+Write-Log "Branch      : $BranchName"
+Write-Log "Commit      : $CommitSha"
+Write-Log "Runner      : $RunnerName"
+Write-Log "WebsitePath : $WebsitePath"
+Write-Log "PublishPath  : $PublishPath"
+Write-Log "BackupRoot   : $BackupRoot"
+Write-Log "ReleaseRoot  : $ReleaseRoot"
+Write-Log "LogRoot      : $LogRoot"
+Write-Log "HealthCheck  : $HealthCheckUrl"
+Write-Log "============================================================"
+
+$script:ReleasePath = Join-Path $ReleaseRoot $script:DeploymentStamp
+$script:BackupPath  = Join-Path $BackupRoot $script:DeploymentStamp
+$script:OfflinePath = Join-Path $WebsitePath 'app_offline.htm'
+$script:StateRoot = Join-Path $ReleaseRoot '_state'
+
+Ensure-Directory -Path $script:StateRoot
+Ensure-Directory -Path $script:ReleasePath
+Ensure-Directory -Path $script:BackupPath
+
+$deploymentSucceeded = $false
 
 try {
-    Write-Log "Starting deployment..."
-    Write-Log "Repository branch: $BranchName"
-    Write-Log "Commit SHA: $CommitSha"
-    Write-Log "Runner: $RunnerName"
-    Write-Log "Site name: $SiteName"
-    Write-Log "App pool name: $AppPoolName"
+    # Stop site and app pool, then back up the current website.
+    Stop-IisTarget -TargetSiteName $SiteName -TargetAppPoolName $AppPoolName -OfflinePath $script:OfflinePath
 
-    Ensure-Directory -Path $BackupRoot
-    Ensure-Directory -Path $WebsitePath
-    Ensure-Directory -Path $ReleaseRoot
-
-    Stop-IisHosting -SiteName $SiteName -AppPoolName $AppPoolName
-
-    $dllPath = Join-Path $WebsitePath 'TPGLLC.Web.dll'
-    if (Test-Path $dllPath) {
-        Write-Log "Waiting for application DLL to unlock..."
-        Wait-ForFileUnlock -Path $dllPath -TimeoutSeconds $FileUnlockTimeoutSeconds
+    if (Test-Path -LiteralPath $WebsitePath) {
+        Invoke-RobocopyMirror -Source $WebsitePath -Destination $script:BackupPath -ExcludeFiles @('app_offline.htm') -Description 'backup'
+        Write-Log "Backup completed at '$script:BackupPath'."
+    }
+    else {
+        Write-Log "Website path '$WebsitePath' does not exist yet; skipping backup." 'WARN'
     }
 
-    if (-not (Test-Path $appOfflinePath)) {
-        Write-Log "Placing app_offline.htm..."
-        @"
-<html>
-<head><title>Site Offline</title></head>
-<body><h1>Temporarily offline for deployment.</h1></body>
-</html>
-"@ | Set-Content -Path $appOfflinePath -Encoding UTF8
+    # Snapshot the publish output for traceability.
+    Invoke-RobocopyMirror -Source $PublishPath -Destination $script:ReleasePath -ExcludeFiles @() -Description 'release snapshot'
+    Write-DeploymentMetadata -DestinationPath $script:ReleasePath -Stamp $script:DeploymentStamp
+
+    # Deploy the new build to the website folder.
+    Invoke-RobocopyMirror -Source $PublishPath -Destination $WebsitePath -ExcludeFiles @('app_offline.htm') -Description 'website deploy'
+    Write-DeploymentMetadata -DestinationPath $WebsitePath -Stamp $script:DeploymentStamp
+
+    # Optional maintenance steps (wired in now, implemented in part 2b).
+    if ($RunMigrations) 
+	{
+		Run-Migrations
+	}
+	
+	if ($RunBootstrapper) 
+	{
+		Run-Bootstrapper
+	}
+
+	if ($RunVehicleImporter) 
+	{		
+	Run-VehicleImporter -Force:$ForceVehicleImporter
+	}
+
+    if ($RestartIIS) {
+        Start-IisTarget -TargetSiteName $SiteName -TargetAppPoolName $AppPoolName -OfflinePath $script:OfflinePath
+    }
+    else {
+        Write-Log "RestartIIS is false; leaving IIS offline." 'WARN'
     }
 
-    $backupPath = Backup-CurrentWebsite -WebsitePath $WebsitePath -BackupRoot $BackupRoot -CommitSha $CommitSha
-    $releasePath = Copy-ReleaseSnapshot -PublishPath $PublishPath -ReleaseRoot $ReleaseRoot -CommitSha $CommitSha
-
-    Write-Log "Deploying release '$releasePath' to '$WebsitePath'..."
-    Invoke-RobocopySafe -Source $releasePath -Destination $WebsitePath
-
-    Write-VersionFile -WebsitePath $WebsitePath -CommitSha $CommitSha -BranchName $BranchName -RunnerName $RunnerName
-
-    Remove-Item $appOfflinePath -Force -ErrorAction SilentlyContinue
-    Write-Log "Removed app_offline.htm"
-
-    Start-IisHosting -SiteName $SiteName -AppPoolName $AppPoolName
-
-    $attempt = 1
-    while ($attempt -le $HealthCheckMaxAttempts) {
-        try {
-            Test-HealthCheck -Url $HealthCheckUrl
-            break
-        }
-        catch {
-            Write-Log "Health check attempt $attempt of $HealthCheckMaxAttempts failed: $($_.Exception.Message)" 'Warn'
-            if ($attempt -ge $HealthCheckMaxAttempts) {
-                throw
-            }
-            Start-Sleep -Seconds $HealthCheckDelaySeconds
-            $attempt++
-        }
+    if (-not $SkipHealthCheck) {
+        Test-DeploymentHealth -Url $HealthCheckUrl
+    }
+    else {
+        Write-Log "Health check skipped by request." 'WARN'
     }
 
-    Cleanup-OldReleases -ReleaseRoot $ReleaseRoot -KeepReleases $KeepReleases
-    Cleanup-OldLogs -LogRoot $LogRoot -RetentionDays $LogRetentionDays
-    Cleanup-OldBackups -BackupRoot $BackupRoot -RetentionDays $BackupRetentionDays
-
+    $deploymentSucceeded = $true
     Write-Log "Deployment completed successfully."
-    exit 0
 }
 catch {
-    Write-Log "Deployment failed: $($_.Exception.Message)" 'Error'
+    Write-Log "Deployment failed: $($_.Exception.Message)" 'ERROR'
 
     try {
-        if (Test-Path $appOfflinePath) {
-            Remove-Item $appOfflinePath -Force -ErrorAction SilentlyContinue
+        Write-Log "Starting rollback..." 'WARN'
+        Stop-IisTarget -TargetSiteName $SiteName -TargetAppPoolName $AppPoolName -OfflinePath $script:OfflinePath
+        Restore-Backup -BackupPath $script:BackupPath -DestinationPath $WebsitePath
+        Write-DeploymentMetadata -DestinationPath $WebsitePath -Stamp $script:DeploymentStamp
+
+        if ($RestartIIS) {
+            Start-IisTarget -TargetSiteName $SiteName -TargetAppPoolName $AppPoolName -OfflinePath $script:OfflinePath
         }
+
+        if (-not $SkipHealthCheck) {
+            Test-DeploymentHealth -Url $HealthCheckUrl -MaxAttempts 6 -DelaySeconds 5
+        }
+
+        Write-Log "Rollback completed." 'WARN'
     }
     catch {
-        Write-Log "Failed removing app_offline.htm: $($_.Exception.Message)" 'Warn'
+        Write-Log "Rollback failed: $($_.Exception.Message)" 'ERROR'
+        throw
     }
 
-    if ($backupPath -and (Test-Path $backupPath)) {
-        try {
-            Invoke-DeploymentRollback -BackupPath $backupPath -WebsitePath $WebsitePath -AppOfflinePath $appOfflinePath -SiteName $SiteName -AppPoolName $AppPoolName -WaitSeconds $FileUnlockTimeoutSeconds
-        }
-        catch {
-            Write-Log "Rollback failed: $($_.Exception.Message)" 'Error'
-        }
-    }
-
-    exit 1
+    throw
+}
+finally {
+    Write-Log "Deployment finished. Success = $deploymentSucceeded"
 }
