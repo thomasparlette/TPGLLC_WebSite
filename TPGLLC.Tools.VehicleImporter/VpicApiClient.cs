@@ -36,23 +36,15 @@ public sealed class VpicApiClient : IVpicApiClient
     }
 
     public async Task<IReadOnlyList<VpicModelDto>> GetModelsForMakeIdYearAsync(
-        int makeId,
-        int modelYear,
-        string? vehicleTypeSlug = null,
-        CancellationToken cancellationToken = default)
-    {
-        var url = $"vehicles/GetModelsForMakeIdYear/makeId/{makeId}/modelyear/{modelYear}";
+    int makeId,
+    int modelYear,
+    CancellationToken cancellationToken = default)
+{
+    var url = $"vehicles/GetModelsForMakeIdYear/makeId/{makeId}/modelyear/{modelYear}?format=json";
 
-        if (!string.IsNullOrWhiteSpace(vehicleTypeSlug))
-        {
-            url += $"/vehicletype/{Uri.EscapeDataString(vehicleTypeSlug)}";
-        }
-
-        url += "?format=json";
-
-        var response = await _http.GetFromJsonAsync<VpicResponse<VpicModelDto>>(url, cancellationToken);
-        return response?.Results ?? [];
-    }
+    var response = await _http.GetFromJsonAsync<VpicResponse<VpicModelDto>>(url, cancellationToken);
+    return response?.Results ?? [];
+}
 }
 
 public sealed class VpicResponse<T>
