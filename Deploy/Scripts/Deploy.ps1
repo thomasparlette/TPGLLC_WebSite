@@ -609,6 +609,10 @@ catch {
     catch {
         Write-Log "Rollback failed: $($_.Exception.Message)" 'ERROR'
         throw
+        if ($deploymentSucceeded) {
+            exit 0
+        }
+        exit 1
     }
 
     throw
@@ -616,3 +620,7 @@ catch {
 finally {
     Write-Log "Deployment finished. Success = $deploymentSucceeded"
 }
+if ($deploymentSucceeded) {
+    exit 0
+}
+exit 1
