@@ -14,6 +14,16 @@ public sealed class VehicleCatalogImportService
     private readonly IVpicApiClient _vpic;
     private readonly ILogger<VehicleCatalogImportService> _logger;
 
+    private static readonly HashSet<string> AllowedMakes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Acura","Audi","BMW","Buick","Cadillac","Chevrolet","Chrysler",
+        "Dodge","Ford","GMC","Honda","Hyundai","Infiniti","Jeep","Kia",
+        "Lexus","Lincoln"," Mazda","Mercedes-Benc","Mitsubishi","Nissan",
+        "Ram","Subaru","Toyota","Volkswagen","Volvo",
+
+        "Harley-Davidson","Indian", "Kawasaki", "KTM","Suzuki", "Triumph", "Yamaha"
+    };
+
     private readonly IReadOnlyList<(string VehicleType, string ApiSlug)> _vehicleTypes =
     [
         ("Automotive", "car"),
@@ -56,6 +66,7 @@ public sealed class VehicleCatalogImportService
         {
             try
             {
+                
                 _logger.LogInformation("Loading makes for {VehicleType}.", vehicleType.VehicleType);
 
                 var makes = await _vpic.GetMakesForVehicleTypeAsync(vehicleType.ApiSlug, cancellationToken);
@@ -71,10 +82,15 @@ public sealed class VehicleCatalogImportService
 
                     foreach (var make in makes)
                     {
+                        
+
                         IReadOnlyList<VpicModelDto> models;
 
                         try
                         {
+                            if (!AllowedMakes.Contains(make.MakeName))
+                                continue;
+
                             models = await _vpic.GetModelsForMakeIdYearAsync(
                                 make.MakeId,
                                 year,

@@ -91,6 +91,21 @@ public sealed class AppointmentService : IAppointmentService
 
             return AppointmentSubmissionResult.Ok(requestId);
         }
+        catch (FileNotFoundException ex)
+        {
+            _logger.LogError(ex, "Appointment email template missing.");
+            return AppointmentSubmissionResult.Fail("Email template missing. Check the EmailTemplates Folder");
+        }
+        catch (SmtpException ex)
+        {
+            _logger.LogError(ex, "SMTP failure while sending appointment email.");
+            return AppointmentSubmissionResult.Fail("SMTP login or Gmail app password is not correct.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Appointment validation/configuration failure.");
+            return AppointmentSubmissionResult.Fail(ex.Message);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to submit appointment request.");
@@ -137,6 +152,12 @@ public sealed class AppointmentService : IAppointmentService
 
         if (_options.Port <= 0)
             throw new InvalidOperationException("Gmail:Port is missing or invalid.");
+        
+        if (string.IsNullOrWhiteSpace(_options.Username))
+            throw new InvalidOperationException("Gmail:Username is missing.");
+        
+        if (string.IsNullOrWhiteSpace(_options.Password))
+            throw new InvalidOperationException("Gmail:Password is missing.");
 
         if (string.IsNullOrWhiteSpace(_options.FromAddress))
             throw new InvalidOperationException("Gmail:FromAddress is missing.");
