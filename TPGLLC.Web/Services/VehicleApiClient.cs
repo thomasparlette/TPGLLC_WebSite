@@ -11,39 +11,13 @@ public sealed class VehicleApiClient
         _http = http;
     }
 
-    public async Task<IReadOnlyList<string>> GetVehicleTypesAsync(CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var result = await _http.GetFromJsonAsync<List<string>>(
-                "api/v1/vehicles/types",
-                cancellationToken);
-
-            if (result is { Count: > 0 })
-                return result;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex);
-        }
-
-        // Fallback so production still works
-        return
-        [
-            "Automotive",
-            "Motorcycle"
-        ];
-    }
-
     public async Task<IReadOnlyList<int>> GetYearsAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var url =
-                $"api/v1/vehicles/years";
-
-            var result =
-                await _http.GetFromJsonAsync<List<int>>(url, cancellationToken);
+            var result = await _http.GetFromJsonAsync<List<int>>(
+                "api/v1/vehicles/years",
+                cancellationToken);
 
             return result ?? [];
         }
@@ -53,16 +27,14 @@ public sealed class VehicleApiClient
         }
     }
 
-    public async Task<IReadOnlyList<string>> GetMakesAsync(int year,CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> GetMakesAsync(
+        int year,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            var url =
-                $"api/v1/vehicles/makes?year={year}";
-
-            var result =
-                await _http.GetFromJsonAsync<List<string>>(url, cancellationToken);
-
+            var url = $"api/v1/vehicles/makes?year={year}";
+            var result = await _http.GetFromJsonAsync<List<string>>(url, cancellationToken);
             return result ?? [];
         }
         catch
@@ -71,16 +43,15 @@ public sealed class VehicleApiClient
         }
     }
 
-    public async Task<IReadOnlyList<string>> GetModelsAsync(int year,string make,CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> GetModelsAsync(
+        int year,
+        string make,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            var url =
-                $"api/v1/vehicles/models?year={year}&make={Uri.EscapeDataString(make)}";
-
-            var result =
-                await _http.GetFromJsonAsync<List<string>>(url, cancellationToken);
-
+            var url = $"api/v1/vehicles/models?year={year}&make={Uri.EscapeDataString(make)}";
+            var result = await _http.GetFromJsonAsync<List<string>>(url, cancellationToken);
             return result ?? [];
         }
         catch

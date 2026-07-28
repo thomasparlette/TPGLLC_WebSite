@@ -1,6 +1,5 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
-using TPGLLC.Application.Vehicles;
 using TPGLLC.Services.Vehicles;
 
 namespace TPGLLC.Api.Controllers.V1;
@@ -16,7 +15,7 @@ public sealed class VehicleController : ControllerBase
     {
         _catalog = catalog;
     }
- 
+
     [HttpGet("years")]
     public async Task<ActionResult<IReadOnlyList<int>>> GetYears(CancellationToken cancellationToken)
     {

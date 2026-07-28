@@ -291,9 +291,10 @@
                         <InputText class="input" type="email" @bind-Value="_appointment.Email" />
                     </div>
 
+                    <div class="form-grid">
                         <div class="form-field">
                             <label>Vehicle Year</label>
-                            <select class="input" value="@_appointment.VehicleYear" @onchange="OnVehicleYearChanged" required>
+                            <select class="input" value="@(_selectedYear ?? string.Empty)" @onchange="OnVehicleYearChanged">
                                 <option value="">Select year</option>
                                 @foreach (var year in _years)
                                 {
@@ -304,7 +305,7 @@
 
                         <div class="form-field">
                             <label>Vehicle Make</label>
-                            <select class="input" value="@_appointment.VehicleMake" @onchange="OnVehicleMakeChanged" required>
+                            <select class="input" value="@(_selectedMake ?? string.Empty)" @onchange="OnVehicleMakeChanged" disabled="@(_makes.Count == 0)">
                                 <option value="">Select make</option>
                                 @foreach (var make in _makes)
                                 {
@@ -315,7 +316,7 @@
 
                         <div class="form-field">
                             <label>Vehicle Model</label>
-                            <select class="input" value="@_appointment.VehicleModel" @onchange="OnVehicleModelChanged" required>
+                            <select class="input" value="@(_selectedModel ?? string.Empty)" @onchange="OnVehicleModelChanged" disabled="@(_models.Count == 0)">
                                 <option value="">Select model</option>
                                 @foreach (var model in _models)
                                 {
@@ -323,6 +324,7 @@
                                 }
                             </select>
                         </div>
+                    </div>
 
                     <div class="form-field full">
                         <label>VIN (optional)</label>
@@ -380,6 +382,9 @@
     private IReadOnlyList<int> _years = [];
     private IReadOnlyList<string> _makes = [];
     private IReadOnlyList<string> _models = [];
+    private string? _selectedYear;
+    private string? _selectedMake;
+    private string? _selectedModel;
 
     private string? _submitError;
     private string? _requestId;
@@ -387,14 +392,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        try
-        {
-            _years = await VehicleApi.GetYearsAsync();
-        }
-        catch
-        {
-            _years = [];
-        }
+        _years = await VehicleApi.GetYearsAsync();
 
         if (_years.Count == 0)
         {
@@ -406,15 +404,13 @@
 
     private async Task OnVehicleYearChanged(ChangeEventArgs e)
     {
-        _appointment.VehicleYear = e.Value?.ToString();
-
-        _appointment.VehicleMake = null;
-        _appointment.VehicleModel = null;
-
+        _selectedYear = e.Value?.ToString();
+        _selectedMake = null;
+        _selectedModel = null;
         _makes = [];
         _models = [];
 
-        if (int.TryParse(_appointment.VehicleYear, out var year))
+        if (int.TryParse(_selectedYear, out var year))
         {
             _makes = await VehicleApi.GetMakesAsync(year);
         }
@@ -424,26 +420,23 @@
 
     private async Task OnVehicleMakeChanged(ChangeEventArgs e)
     {
-        _appointment.VehicleMake = e.Value?.ToString();
-
-        _appointment.VehicleModel = null;
+        _selectedMake = e.Value?.ToString();
+        _selectedModel = null;
         _models = [];
 
-        if (int.TryParse(_appointment.VehicleYear, out var year) &&
-            !string.IsNullOrWhiteSpace(_appointment.VehicleMake))
+        if (int.TryParse(_selectedYear, out var year) &&
+            !string.IsNullOrWhiteSpace(_selectedMake))
         {
-            _models = await VehicleApi.GetModelsAsync(year, _appointment.VehicleMake!);
+            _models = await VehicleApi.GetModelsAsync(year, _selectedMake);
         }
 
         await InvokeAsync(StateHasChanged);
     }
-
     private Task OnVehicleModelChanged(ChangeEventArgs e)
     {
-        _appointment.VehicleModel = e.Value?.ToString();
+        _selectedModel = e.Value?.ToString();
         return Task.CompletedTask;
     }
-
     private async Task SubmitAppointment()
     {
         _submitError = null;
