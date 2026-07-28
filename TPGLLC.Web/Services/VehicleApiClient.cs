@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Json;
+using TPGLLC.Data.Entities;
 
 namespace TPGLLC.Web.Services;
 
@@ -58,5 +59,28 @@ public sealed class VehicleApiClient
         {
             return [];
         }
+    }
+
+    public async Task<Guid?> SubmitAppointmentAsync(
+        AppointmentRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _http.PostAsJsonAsync("api/appointments", request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        var payload = await response.Content.ReadFromJsonAsync<AppointmentCreatedResponse>(
+            cancellationToken: cancellationToken);
+
+        return payload?.RequestId;
+    }
+
+    private sealed class AppointmentCreatedResponse
+    {
+        public Guid RequestId { get; set; }
+        public string? Status { get; set; }
+        public DateTimeOffset SubmittedAtUtc { get; set; }
     }
 }
