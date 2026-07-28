@@ -409,7 +409,7 @@
 
 @code {
     private readonly AppointmentRequest _appointment = new();
-    private IReadOnlyList<string> _vehicleTypes = [];
+    private List<string> _vehicleTypes = new();
     private string? _loadError;
     private IReadOnlyList<int> _years = [];
     private IReadOnlyList<string> _makes = [];
@@ -427,12 +427,15 @@
     {
         try
         {
-            _vehicleTypes = await VehicleApi.GetVehicleTypesAsync();
+            _vehicleTypes = (await VehicleApi.GetVehicleTypesAsync()).ToList();
         }
         catch
         {
-            _vehicleTypes = [];
-            _loadError = "Vehicle options are temporarily unavailable.";
+            _vehicleTypes = new List<string>
+        {
+            "Automotive",
+            "Motorcycle"
+        };
         }
     }
 
