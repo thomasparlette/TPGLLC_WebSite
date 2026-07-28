@@ -14,12 +14,6 @@ public sealed class VehicleCatalogImportService
     private readonly IVpicApiClient _vpic;
     private readonly ILogger<VehicleCatalogImportService> _logger;
 
-    private readonly IReadOnlyList<(string VehicleType, string ApiSlug)> _vehicleTypes =
-    [
-        ("Automotive", "car"),
-        ("Motorcycle", "motorcycle")
-    ];
-
     public VehicleCatalogImportService(
         TPGLLCDbContext db,
         IVpicApiClient vpic,
@@ -31,148 +25,135 @@ public sealed class VehicleCatalogImportService
     }
 
     public async Task RunAsync(CancellationToken cancellationToken = default)
+{
+    var endYear = DateTime.UtcNow.Year;
+
+    _logger.LogInformation(
+        "Starting vPIC import for years {StartYear} through {EndYear}",
+        StartYear,
+        endYear);
+
+    await _db.Database.MigrateAsync(cancellationToken);
+
+    var existingKeys = await LoadExistingKeysAsync(cancellationToken);
+    _logger.LogInformation("Loaded {Count} existing catalog keys.", existingKeys.Count);
+
+    var seenThisRun = new HashSet<VehicleCatalogKey>();
+    var pending = new List<VehicleCatalogEntry>(BatchSize);
+
+    var imported = 0;
+    var skippedExisting = 0;
+    var skippedDuplicateSource = 0;
+    var lookupFailures = 0;
+
+    try
     {
-        var endYear = DateTime.UtcNow.Year;
+        _logger.LogInformation("Loading broad make list.");
 
-        _logger.LogInformation(
-            "Starting vPIC import for years {StartYear} through {EndYear}",
-            StartYear,
-            endYear);
+        var makes = await _vpic.GetMakesForVehicleTypeAsync(cancellationToken);
 
-        await _db.Database.MigrateAsync(cancellationToken);
+        _logger.LogInformation("Found {MakeCount} makes.", makes.Count);
 
-        var existingKeys = await LoadExistingKeysAsync(cancellationToken);
-        _logger.LogInformation("Loaded {Count} existing catalog keys.", existingKeys.Count);
-
-        var seenThisRun = new HashSet<VehicleCatalogKey>();
-        var pending = new List<VehicleCatalogEntry>(BatchSize);
-
-        var imported = 0;
-        var skippedExisting = 0;
-        var skippedDuplicateSource = 0;
-        var lookupFailures = 0;
-
-        foreach (var vehicleType in _vehicleTypes)
+        for (var year = StartYear; year <= endYear; year++)
         {
-            try
+            _logger.LogInformation("Importing year {Year}", year);
+
+            foreach (var make in makes)
             {
-                _logger.LogInformation("Loading makes for {VehicleType}.", vehicleType.VehicleType);
+                IReadOnlyList<VpicModelDto> models;
 
-                var makes = await _vpic.GetMakesForVehicleTypeAsync(vehicleType.ApiSlug, cancellationToken);
-
-                _logger.LogInformation(
-                    "Found {MakeCount} makes for {VehicleType}",
-                    makes.Count,
-                    vehicleType.VehicleType);
-
-                for (var year = StartYear; year <= endYear; year++)
+                try
                 {
-                    _logger.LogInformation("Importing {VehicleType} year {Year}", vehicleType.VehicleType, year);
+                    models = await _vpic.GetModelsForMakeIdYearAsync(
+                        make.MakeId,
+                        year,
+                        cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    lookupFailures++;
+                    _logger.LogWarning(
+                        ex,
+                        "Skipping {Year} {MakeName} because model lookup failed",
+                        year,
+                        make.MakeName);
 
-                    foreach (var make in makes)
+                    continue;
+                }
+
+                if (models.Count == 0)
+                {
+                    continue;
+                }
+
+                foreach (var model in models)
+                {
+                    if (string.IsNullOrWhiteSpace(model.ModelName))
                     {
-                        IReadOnlyList<VpicModelDto> models;
+                        continue;
+                    }
 
-                        try
-                        {
-                            models = await _vpic.GetModelsForMakeIdYearAsync(
-                                make.MakeId,
-                                year,
-                                vehicleType.ApiSlug,
-                                cancellationToken);
-                        }
-                        catch (Exception ex)
-                        {
-                            lookupFailures++;
-                            _logger.LogWarning(
-                                ex,
-                                "Skipping {VehicleType} {Year} {MakeName} because model lookup failed",
-                                vehicleType.VehicleType,
-                                year,
-                                make.MakeName);
+                    var key = new VehicleCatalogKey(
+                        year,
+                        model.MakeId,
+                        model.ModelId);
 
-                            continue;
-                        }
+                    if (!seenThisRun.Add(key))
+                    {
+                        skippedDuplicateSource++;
+                        continue;
+                    }
 
-                        if (models.Count == 0)
-                        {
-                            continue;
-                        }
+                    if (existingKeys.Contains(key))
+                    {
+                        skippedExisting++;
+                        continue;
+                    }
 
-                        foreach (var model in models)
-                        {
-                            if (string.IsNullOrWhiteSpace(model.ModelName))
-                            {
-                                continue;
-                            }
+                    pending.Add(new VehicleCatalogEntry
+                    {
+                        VehicleType = Truncate(make.VehicleTypeName, 20),
+                        ModelYear = year,
+                        MakeId = model.MakeId,
+                        ModelId = model.ModelId,
+                        Make = Truncate(model.MakeName, 120),
+                        Model = Truncate(model.ModelName, 120),
+                        SyncedAtUtc = DateTimeOffset.UtcNow
+                    });
 
-                            var key = new VehicleCatalogKey(
-                                vehicleType.VehicleType,
-                                year,
-                                model.MakeId,
-                                model.ModelId);
-
-                            if (!seenThisRun.Add(key))
-                            {
-                                skippedDuplicateSource++;
-                                continue;
-                            }
-
-                            if (existingKeys.Contains(key))
-                            {
-                                skippedExisting++;
-                                continue;
-                            }
-
-                            pending.Add(new VehicleCatalogEntry
-                            {
-                                VehicleType = Truncate(vehicleType.VehicleType, 20),
-                                ModelYear = year,
-                                MakeId = model.MakeId,
-                                ModelId = model.ModelId,
-                                Make = Truncate(model.MakeName, 120),
-                                Model = Truncate(model.ModelName, 120),
-                                SyncedAtUtc = DateTimeOffset.UtcNow
-                            });
-
-                            if (pending.Count >= BatchSize)
-                            {
-                                imported += await FlushAsync(pending, cancellationToken);
-                                pending.Clear();
-                            }
-                        }
+                    if (pending.Count >= BatchSize)
+                    {
+                        imported += await FlushAsync(pending, cancellationToken);
+                        pending.Clear();
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Vehicle type import failed for {VehicleType}",
-                    vehicleType.VehicleType);
-            }
         }
-
-        if (pending.Count > 0)
-        {
-            imported += await FlushAsync(pending, cancellationToken);
-            pending.Clear();
-        }
-
-        _logger.LogInformation(
-            "vPIC import complete. Imported {Imported} new rows. Skipped {SkippedExisting} existing rows. Skipped {SkippedDuplicateSource} duplicate source rows. Lookup failures: {LookupFailures}.",
-            imported,
-            skippedExisting,
-            skippedDuplicateSource,
-            lookupFailures);
     }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Vehicle catalog import failed.");
+    }
+
+    if (pending.Count > 0)
+    {
+        imported += await FlushAsync(pending, cancellationToken);
+        pending.Clear();
+    }
+
+    _logger.LogInformation(
+        "vPIC import complete. Imported {Imported} new rows. Skipped {SkippedExisting} existing rows. Skipped {SkippedDuplicateSource} duplicate source rows. Lookup failures: {LookupFailures}.",
+        imported,
+        skippedExisting,
+        skippedDuplicateSource,
+        lookupFailures);
+}
 
     private async Task<HashSet<VehicleCatalogKey>> LoadExistingKeysAsync(CancellationToken cancellationToken)
     {
         var keys = await _db.VehicleCatalogEntries
             .AsNoTracking()
             .Select(x => new VehicleCatalogKey(
-                x.VehicleType,
                 x.ModelYear,
                 x.MakeId,
                 x.ModelId))
@@ -252,7 +233,6 @@ public sealed class VehicleCatalogImportService
     }
 
     private readonly record struct VehicleCatalogKey(
-        string VehicleType,
         int ModelYear,
         int MakeId,
         int ModelId);
