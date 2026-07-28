@@ -46,10 +46,14 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <None Update="EmailTemplates\CustomerAppointment.htm">
+    <Content Remove="EmailTemplates\CustomerAppointment.html" />
+    <Content Remove="EmailTemplates\InternalAppointment.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="EmailTemplates\CustomerAppointment.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="EmailTemplates\InternalAppointment.htm">
+    <None Update="EmailTemplates\InternalAppointment.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
