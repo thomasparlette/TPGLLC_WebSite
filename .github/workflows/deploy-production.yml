@@ -9,7 +9,7 @@ on:
       run_migrations:
         description: Run EF migrations on the target environment
         type: boolean
-        required: false
+        required: true
         default: false
       run_bootstrapper:
         description: Run the development/production bootstrapper
