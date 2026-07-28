@@ -90,7 +90,10 @@ jobs:
       - name: Restore
         shell: pwsh
         run: |
-          dotnet restore TPGLLC.sln
+          $sln = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Filter *.slnx -Recurse | Select-Object -First 1
+          if (-not $sln) { throw "No solution file found." }
+          Write-Host "Using solution: $($sln.FullName)"
+          dotnet restore $sln.FullName
       
       - name: Restore .NET Tools
         shell: pwsh
