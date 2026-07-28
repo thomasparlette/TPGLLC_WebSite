@@ -278,7 +278,7 @@ function Test-DeploymentHealth {
 
     for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
         try {
-            $response = Invoke-WebRequest -Uri $Url:80 -UseBasicParsing -TimeoutSec 30
+            $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 30
             if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 300) {
                 Write-Log "Health check succeeded on attempt $attempt."
                 return
