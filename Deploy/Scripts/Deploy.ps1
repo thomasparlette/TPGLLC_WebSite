@@ -392,7 +392,7 @@ function Run-Migrations {
             ASPNETCORE_ENVIRONMENT = 'Production'
         }
 		
-		Invode-DotNetCommand `
+		Invoke-DotNetCommand `
 		    -Description 'EF Core Migration Add PendingModelCleanup' `
 			-WorkingDirectory $repoRoot `
             -Environment $environment `
