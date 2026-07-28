@@ -87,6 +87,13 @@ var apiBaseUrl =
     ?? Environment.GetEnvironmentVariable("Api__BaseUrl")
     ?? throw new InvalidOperationException("Missing Api:BaseUrl configuration.");
 
+if (builder.Environment.IsProduction() &&
+    Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out var parsedBaseUrl) &&
+    parsedBaseUrl.Host.Contains("localhost", StringComparison.OrdinalIgnoreCase))
+{
+    apiBaseUrl = "https://api.tomparlettegarage.org/";
+}
+
 builder.Services.AddHttpClient<VehicleApiClient>(client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl, UriKind.Absolute);

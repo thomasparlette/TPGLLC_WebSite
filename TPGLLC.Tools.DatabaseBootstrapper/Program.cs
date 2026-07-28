@@ -12,6 +12,7 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Configuration
     .SetBasePath(AppContext.BaseDirectory)
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
     .AddEnvironmentVariables();
 
 builder.Services.Configure<BootstrapOptions>(builder.Configuration.GetSection("Bootstrap"));

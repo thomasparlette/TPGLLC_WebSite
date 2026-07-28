@@ -410,6 +410,7 @@
 @code {
     private readonly AppointmentRequest _appointment = new();
     private IReadOnlyList<string> _vehicleTypes = [];
+    private string? _loadError;
     private IReadOnlyList<int> _years = [];
     private IReadOnlyList<string> _makes = [];
     private IReadOnlyList<string> _models = [];
@@ -424,7 +425,15 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _vehicleTypes = await VehicleApi.GetVehicleTypesAsync();
+        try
+        {
+            _vehicleTypes = await VehicleApi.GetVehicleTypesAsync();
+        }
+        catch
+        {
+            _vehicleTypes = [];
+            _loadError = "Vehicle options are temporarily unavailable.";
+        }
     }
 
     private async Task OnVehicleTypeChanged(ChangeEventArgs e)
