@@ -86,7 +86,11 @@ jobs:
         shell: pwsh
         run: |
           dotnet restore $env:PROJECT_PATH
-         
+      - name: Restore .NET Tools
+        shell: pwsh
+        run: |
+          dotnet tool restore
+
       - name: Publish Website
         shell: pwsh
         run: |
