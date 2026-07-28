@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using System.Net;
 using System.Net.Mail;
-using System.Text;
 using TPGLLC.Data.Entities;
 using TPGLLC.Web.Services;
 
@@ -10,13 +9,16 @@ namespace TPGLLC.Web.Services.Appointments;
 public sealed class AppointmentService : IAppointmentService
 {
     private readonly AppointmentEmailOptions _options;
+    private readonly IEmailTemplateRenderer _templates;
     private readonly ILogger<AppointmentService> _logger;
 
     public AppointmentService(
         IOptions<AppointmentEmailOptions> options,
+        IEmailTemplateRenderer templates,
         ILogger<AppointmentService> logger)
     {
         _options = options.Value;
+        _templates = templates;
         _logger = logger;
     }
 
@@ -30,6 +32,7 @@ public sealed class AppointmentService : IAppointmentService
             ValidateRequest(request);
 
             var requestId = Guid.NewGuid();
+            var year = DateTime.UtcNow.Year;
 
             var vehicleSummary = string.Join(" ", new[]
             {
@@ -38,29 +41,52 @@ public sealed class AppointmentService : IAppointmentService
                 request.VehicleModel
             }.Where(x => !string.IsNullOrWhiteSpace(x)));
 
-            var subject = $"New Appointment Request - {request.Name} - {vehicleSummary}";
-            var body = BuildHtmlBody(request, requestId);
+            var tokens = new Dictionary<string, string?>
+            {
+                ["ReferenceNumber"] = requestId.ToString("D"),
+                ["CustomerName"] = request.Name,
+                ["CustomerPhone"] = request.Phone,
+                ["CustomerEmail"] = request.Email,
+                ["VehicleSummary"] = vehicleSummary,
+                ["Vin"] = string.IsNullOrWhiteSpace(request.Vin) ? "Not provided" : request.Vin,
+                ["Mileage"] = string.IsNullOrWhiteSpace(request.Mileage) ? "Not provided" : request.Mileage,
+                ["PreferredDate"] = request.PreferredDate,
+                ["PreferredTime"] = request.PreferredTime,
+                ["ServiceNeeded"] = request.ServiceNeeded,
+                ["Company"] = string.IsNullOrWhiteSpace(request.Company) ? "Not provided" : request.Company,
+                ["Message"] = request.Message,
+                ["ShopName"] = _options.ShopName,
+                ["Tagline"] = _options.Tagline,
+                ["WebsiteUrl"] = _options.WebsiteUrl,
+                ["LogoUrl"] = _options.LogoUrl,
+                ["ShopPhone"] = _options.ShopPhone,
+                ["ShopEmail"] = _options.ShopEmail,
+                ["Year"] = year.ToString()
+            };
+
+            var internalSubject = $"New Appointment Request - {request.Name} - {vehicleSummary}";
+            var internalBody = _templates.Render("InternalAppointment.html", tokens);
 
             await SendEmailAsync(
-                toAddress: _options.ToAddress,
-                subject: subject,
-                htmlBody: body,
-                replyTo: request.Email,
-                replyToName: request.Name,
-                cancellationToken: cancellationToken);
+                _options.ToAddress,
+                internalSubject,
+                internalBody,
+                request.Email,
+                request.Name,
+                cancellationToken);
 
             if (!string.IsNullOrWhiteSpace(request.Email))
             {
-                var customerSubject = "We received your appointment request";
-                var customerBody = BuildCustomerConfirmationBody(request, requestId);
+                var customerSubject = $"{_options.ShopName} - Appointment Request Received";
+                var customerBody = _templates.Render("CustomerAppointment.html", tokens);
 
                 await SendEmailAsync(
-                    toAddress: request.Email!,
-                    subject: customerSubject,
-                    htmlBody: customerBody,
-                    replyTo: _options.FromAddress,
-                    replyToName: _options.FromName,
-                    cancellationToken: cancellationToken);
+                    request.Email!,
+                    customerSubject,
+                    customerBody,
+                    _options.FromAddress,
+                    _options.FromName,
+                    cancellationToken);
             }
 
             return AppointmentSubmissionResult.Ok(requestId);
@@ -72,6 +98,38 @@ public sealed class AppointmentService : IAppointmentService
         }
     }
 
+    private async Task SendEmailAsync(
+        string toAddress,
+        string subject,
+        string htmlBody,
+        string? replyTo,
+        string? replyToName,
+        CancellationToken cancellationToken)
+    {
+        using var message = new MailMessage
+        {
+            From = new MailAddress(_options.FromAddress, _options.FromName),
+            Subject = subject,
+            Body = htmlBody,
+            IsBodyHtml = true
+        };
+
+        message.To.Add(new MailAddress(toAddress));
+
+        if (!string.IsNullOrWhiteSpace(replyTo))
+        {
+            message.ReplyToList.Add(new MailAddress(replyTo, string.IsNullOrWhiteSpace(replyToName) ? replyTo : replyToName));
+        }
+
+        using var client = new SmtpClient(_options.Host, _options.Port)
+        {
+            EnableSsl = true,
+            UseDefaultCredentials = false,
+            Credentials = new NetworkCredential(_options.Username, _options.Password)
+        };
+
+        await client.SendMailAsync(message, cancellationToken);
+    }
     private void ValidateOptions()
     {
         if (string.IsNullOrWhiteSpace(_options.Host))
@@ -115,98 +173,5 @@ public sealed class AppointmentService : IAppointmentService
 
         if (string.IsNullOrWhiteSpace(request.Message))
             throw new InvalidOperationException("Message is required.");
-    }
-
-    private async Task SendEmailAsync(
-        string toAddress,
-        string subject,
-        string htmlBody,
-        string? replyTo,
-        string? replyToName,
-        CancellationToken cancellationToken)
-    {
-        using var message = new MailMessage
-        {
-            From = new MailAddress(_options.FromAddress, _options.FromName),
-            Subject = subject,
-            Body = htmlBody,
-            IsBodyHtml = true
-        };
-
-        message.To.Add(new MailAddress(toAddress));
-
-        if (!string.IsNullOrWhiteSpace(replyTo))
-        {
-            message.ReplyToList.Add(new MailAddress(replyTo, string.IsNullOrWhiteSpace(replyToName) ? replyTo : replyToName));
-        }
-
-        using var client = new SmtpClient(_options.Host, _options.Port)
-        {
-            EnableSsl = true,
-            UseDefaultCredentials = false,
-            Credentials = new NetworkCredential(_options.Username, _options.Password)
-        };
-
-        await client.SendMailAsync(message, cancellationToken);
-    }
-
-    private static string BuildHtmlBody(AppointmentRequest request, Guid requestId)
-    {
-        static string E(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
-
-        var vehicleSummary = string.Join(" ", new[]
-        {
-            request.VehicleYear,
-            request.VehicleMake,
-            request.VehicleModel
-        }.Where(x => !string.IsNullOrWhiteSpace(x)));
-
-        var sb = new StringBuilder();
-        sb.AppendLine("<html><body style='font-family:Segoe UI,Arial,sans-serif;'>");
-        sb.AppendLine("<h2>New Appointment Request</h2>");
-        sb.AppendLine("<table cellpadding='6' cellspacing='0' style='border-collapse:collapse;'>");
-        AppendRow(sb, "Request ID", requestId.ToString("D"));
-        AppendRow(sb, "Name", E(request.Name));
-        AppendRow(sb, "Phone", E(request.Phone));
-        AppendRow(sb, "Email", E(request.Email));
-        AppendRow(sb, "Vehicle", E(vehicleSummary));
-        AppendRow(sb, "VIN", E(request.Vin));
-        AppendRow(sb, "Mileage", E(request.Mileage));
-        AppendRow(sb, "Preferred Date", E(request.PreferredDate));
-        AppendRow(sb, "Preferred Time", E(request.PreferredTime));
-        AppendRow(sb, "Service Needed", E(request.ServiceNeeded));
-        AppendRow(sb, "Company", E(request.Company));
-        sb.AppendLine("</table>");
-        sb.AppendLine("<h3>Message</h3>");
-        sb.AppendLine($"<p>{E(request.Message)}</p>");
-        sb.AppendLine("</body></html>");
-        return sb.ToString();
-    }
-
-    private static string BuildCustomerConfirmationBody(AppointmentRequest request, Guid requestId)
-    {
-        static string E(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
-
-        var sb = new StringBuilder();
-        sb.AppendLine("<html><body style='font-family:Segoe UI,Arial,sans-serif;'>");
-        sb.AppendLine("<h2>Appointment Request Received</h2>");
-        sb.AppendLine("<p>Thank you for contacting Tom Parlette Garage LLC. Your request has been received and is pending review.</p>");
-        sb.AppendLine($"<p><strong>Reference:</strong> {requestId:D}</p>");
-        sb.AppendLine("<p><strong>Vehicle:</strong> " + E(string.Join(" ", new[]
-        {
-            request.VehicleYear,
-            request.VehicleMake,
-            request.VehicleModel
-        }.Where(x => !string.IsNullOrWhiteSpace(x)))) + "</p>");
-        sb.AppendLine("</body></html>");
-        return sb.ToString();
-    }
-
-    private static void AppendRow(StringBuilder sb, string label, string value)
-    {
-        sb.AppendLine("<tr>");
-        sb.AppendLine($"<td style='font-weight:bold; border:1px solid #ccc;'>{WebUtility.HtmlEncode(label)}</td>");
-        sb.AppendLine($"<td style='border:1px solid #ccc;'>{WebUtility.HtmlEncode(value)}</td>");
-        sb.AppendLine("</tr>");
     }
 }

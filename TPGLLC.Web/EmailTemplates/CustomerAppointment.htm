@@ -1,0 +1,72 @@
+﻿<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Appointment Request Received</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Segoe UI,Arial,sans-serif;color:#1f2937;">
+    <div style="max-width:720px;margin:0 auto;padding:24px;">
+        <div style="background:#111827;color:#fff;border-radius:16px 16px 0 0;padding:24px 28px;text-align:center;">
+            <img src="{{LogoUrl}}" alt="{{ShopName}} logo" style="max-width:160px;height:auto;display:block;margin:0 auto 14px;">
+            <div style="font-size:26px;font-weight:700;line-height:1.2;">{{ShopName}}</div>
+            <div style="margin-top:6px;font-size:14px;opacity:.9;">{{Tagline}}</div>
+            <div style="margin-top:12px;font-size:13px;opacity:.95;">
+                {{ShopPhone}} &nbsp;•&nbsp; {{ShopEmail}} &nbsp;•&nbsp; <a href="{{WebsiteUrl}}" style="color:#fff;text-decoration:underline;">{{WebsiteUrl}}</a>
+            </div>
+        </div>
+
+        <div style="background:#ffffff;border-radius:0 0 16px 16px;box-shadow:0 8px 24px rgba(0,0,0,.08);padding:28px;">
+            <p style="margin:0 0 12px;font-size:16px;">Hello {{CustomerName}},</p>
+            <p style="margin:0 0 18px;font-size:15px;line-height:1.6;">
+                Thank you for requesting an appointment with {{ShopName}}. Your request has been received and is currently pending review.
+            </p>
+
+            <div style="border:1px solid #e5e7eb;border-radius:12px;padding:16px 18px;margin:18px 0;background:#fafafa;">
+                <div style="font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;">Reference Number</div>
+                <div style="font-size:22px;font-weight:700;margin-top:4px;">{{ReferenceNumber}}</div>
+            </div>
+
+            <h3 style="margin:24px 0 10px;font-size:18px;">Customer Information</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr><td style="padding:8px 0;color:#6b7280;width:180px;">Name</td><td style="padding:8px 0;">{{CustomerName}}</td></tr>
+                <tr><td style="padding:8px 0;color:#6b7280;">Phone</td><td style="padding:8px 0;">{{CustomerPhone}}</td></tr>
+                <tr><td style="padding:8px 0;color:#6b7280;">Email</td><td style="padding:8px 0;">{{CustomerEmail}}</td></tr>
+                <tr><td style="padding:8px 0;color:#6b7280;">Company</td><td style="padding:8px 0;">{{Company}}</td></tr>
+            </table>
+
+            <h3 style="margin:24px 0 10px;font-size:18px;">Vehicle Information</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr><td style="padding:8px 0;color:#6b7280;width:180px;">Vehicle</td><td style="padding:8px 0;">{{VehicleSummary}}</td></tr>
+                <tr><td style="padding:8px 0;color:#6b7280;">VIN</td><td style="padding:8px 0;">{{Vin}}</td></tr>
+                <tr><td style="padding:8px 0;color:#6b7280;">Mileage</td><td style="padding:8px 0;">{{Mileage}}</td></tr>
+            </table>
+
+            <h3 style="margin:24px 0 10px;font-size:18px;">Appointment Details</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr><td style="padding:8px 0;color:#6b7280;width:180px;">Preferred Date</td><td style="padding:8px 0;">{{PreferredDate}}</td></tr>
+                <tr><td style="padding:8px 0;color:#6b7280;">Preferred Time</td><td style="padding:8px 0;">{{PreferredTime}}</td></tr>
+                <tr><td style="padding:8px 0;color:#6b7280;">Service Needed</td><td style="padding:8px 0;">{{ServiceNeeded}}</td></tr>
+            </table>
+
+            <h3 style="margin:24px 0 10px;font-size:18px;">Message</h3>
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;line-height:1.7;white-space:pre-wrap;">{{Message}}</div>
+
+            <div style="margin-top:28px;padding:16px 18px;border-left:4px solid #111827;background:#f9fafb;border-radius:10px;">
+                <div style="font-weight:700;margin-bottom:6px;">What happens next</div>
+                <div style="font-size:14px;line-height:1.6;">
+                    Our service team will review your request and contact you if we need anything else. Once scheduled, we will follow up with confirmation.
+                </div>
+            </div>
+
+            <p style="margin:28px 0 0;font-size:14px;line-height:1.6;color:#6b7280;">
+                Need to make a change? Reply to this email or call {{ShopPhone}}.
+            </p>
+        </div>
+
+        <div style="text-align:center;padding:16px 12px;font-size:12px;color:#6b7280;">
+            © {{Year}} {{ShopName}} • {{WebsiteUrl}}
+        </div>
+    </div>
+</body>
+</html>

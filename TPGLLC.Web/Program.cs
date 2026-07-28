@@ -102,6 +102,7 @@ builder.Services.AddScoped<IVehicleCatalogService, VehicleCatalogService>();
 builder.Services.Configure<AppointmentEmailOptions>(
     builder.Configuration.GetSection("Gmail"));
 
+builder.Services.AddScoped<IEmailTemplateRenderer, FileEmailTemplateRenderer>();
 builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 
 var app = builder.Build();

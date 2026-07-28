@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>New Appointment Request</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Segoe UI,Arial,sans-serif;color:#1f2937;">
+  <div style="max-width:720px;margin:0 auto;padding:24px;">
+    <div style="background:#111827;color:#fff;border-radius:16px 16px 0 0;padding:20px 24px;">
+      <div style="font-size:22px;font-weight:700;">New Appointment Request</div>
+      <div style="margin-top:6px;font-size:13px;opacity:.9;">Reference {{ReferenceNumber}}</div>
+    </div>
+
+    <div style="background:#ffffff;border-radius:0 0 16px 16px;box-shadow:0 8px 24px rgba(0,0,0,.08);padding:24px;">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:8px 0;color:#6b7280;width:180px;">Name</td><td style="padding:8px 0;">{{CustomerName}}</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;">Phone</td><td style="padding:8px 0;">{{CustomerPhone}}</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;">Email</td><td style="padding:8px 0;">{{CustomerEmail}}</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;">Vehicle</td><td style="padding:8px 0;">{{VehicleSummary}}</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;">VIN</td><td style="padding:8px 0;">{{Vin}}</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;">Mileage</td><td style="padding:8px 0;">{{Mileage}}</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;">Preferred Date</td><td style="padding:8px 0;">{{PreferredDate}}</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;">Preferred Time</td><td style="padding:8px 0;">{{PreferredTime}}</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;">Service Needed</td><td style="padding:8px 0;">{{ServiceNeeded}}</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;">Company</td><td style="padding:8px 0;">{{Company}}</td></tr>
+      </table>
+
+      <h3 style="margin:22px 0 10px;font-size:16px;">Message</h3>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px;line-height:1.7;white-space:pre-wrap;">{{Message}}</div>
+    </div>
+  </div>
+</body>
+</html>
