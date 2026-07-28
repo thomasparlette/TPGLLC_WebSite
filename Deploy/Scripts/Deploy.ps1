@@ -402,6 +402,7 @@ function Run-Migrations {
                 '--project', $dataProject,
                 '--startup-project', $apiStartupProject,
                 '--configuration', 'Release'
+			)
 			
         Invoke-DotNetCommand `
             -Description 'EF Core database update' `
