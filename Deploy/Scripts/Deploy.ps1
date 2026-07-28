@@ -392,17 +392,6 @@ function Run-Migrations {
             ASPNETCORE_ENVIRONMENT = 'Production'
         }
 		
-		Invoke-DotNetCommand `
-		    -Description 'EF Core Migration Add PendingModelCleanup' `
-			-WorkingDirectory $repoRoot `
-            -Environment $environment `
-            -Arguments @(
-			    'ef',
-                'migrations add PendingModelCleanup',
-                '--project', $dataProject,
-                '--startup-project', $apiStartupProject,
-                '--configuration', 'Release'
-			)
 			
         Invoke-DotNetCommand `
             -Description 'EF Core database update' `
