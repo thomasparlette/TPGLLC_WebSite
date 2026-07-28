@@ -12,7 +12,6 @@ public interface IVpicApiClient
     Task<IReadOnlyList<VpicModelDto>> GetModelsForMakeIdYearAsync(
         int makeId,
         int modelYear,
-        string? vehicleTypeSlug = null,
         CancellationToken cancellationToken = default);
 }
 
@@ -36,15 +35,15 @@ public sealed class VpicApiClient : IVpicApiClient
     }
 
     public async Task<IReadOnlyList<VpicModelDto>> GetModelsForMakeIdYearAsync(
-    int makeId,
-    int modelYear,
-    CancellationToken cancellationToken = default)
-{
-    var url = $"vehicles/GetModelsForMakeIdYear/makeId/{makeId}/modelyear/{modelYear}?format=json";
+        int makeId,
+        int modelYear,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"vehicles/GetModelsForMakeIdYear/makeId/{makeId}/modelyear/{modelYear}?format=json";
 
-    var response = await _http.GetFromJsonAsync<VpicResponse<VpicModelDto>>(url, cancellationToken);
-    return response?.Results ?? [];
-}
+        var response = await _http.GetFromJsonAsync<VpicResponse<VpicModelDto>>(url, cancellationToken);
+        return response?.Results ?? [];
+    }
 }
 
 public sealed class VpicResponse<T>
