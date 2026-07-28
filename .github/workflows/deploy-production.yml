@@ -82,6 +82,11 @@ jobs:
           New-Item -ItemType Directory -Force -Path $env:PUBLISH_DIR | Out-Null
           Remove-Item -Path (Join-Path $env:PUBLISH_DIR '*') -Recurse -Force -ErrorAction SilentlyContinue
 
+      - name: Find Solution File
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path $env:GITHUB_WORKSPACE -Filter *.slnx -Recurse | Select-Object FullName
+
       - name: Restore
         shell: pwsh
         run: |
