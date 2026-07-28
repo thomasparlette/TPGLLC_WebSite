@@ -102,39 +102,22 @@ jobs:
           RESTART_IIS: ${{ github.event_name == 'workflow_dispatch' && inputs.restart_iis || true }}
           SKIP_HEALTH_CHECK: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_health_check || false }}
         run: |
-          function To-Bool {
-    param([object]$Value)
-
-    if ($null -eq $Value) { return $false }
-
-    if ($Value -is [bool]) { return $Value }
-
-    return [System.Convert]::ToBoolean($Value)
-}
-
-$runMigrations = To-Bool $env:RUN_MIGRATIONS
-$runBootstrapper = To-Bool $env:RUN_BOOTSTRAPPER
-$runVehicleImporter = To-Bool $env:RUN_VEHICLE_IMPORTER
-$forceVehicleImporter = To-Bool $env:FORCE_VEHICLE_IMPORTER
-$restartIis = To-Bool $env:RESTART_IIS
-$skipHealthCheck = To-Bool $env:SKIP_HEALTH_CHECK
-
-& "$env:GITHUB_WORKSPACE\Deploy\Scripts\Deploy.ps1" `
-    -WebsitePath $env:WEBSITE_DIR `
-    -PublishPath $env:PUBLISH_DIR `
-    -BackupRoot $env:BACKUP_DIR `
-    -ReleaseRoot $env:RELEASE_DIR `
-    -LogRoot $env:LOG_DIR `
-    -HealthCheckUrl $env:HEALTHCHECK_URL `
-    -CommitSha $env:COMMIT_SHA `
-    -BranchName $env:BRANCH_NAME `
-    -RunnerName $env:COMPUTERNAME `
-    -RunMigrations:$runMigrations `
-    -RunBootstrapper:$runBootstrapper `
-    -RunVehicleImporter:$runVehicleImporter `
-    -ForceVehicleImporter:$forceVehicleImporter `
-    -RestartIIS:$restartIis `
-    -SkipHealthCheck:$skipHealthCheck
+          & "$env:GITHUB_WORKSPACE\Deploy\Scripts\Deploy.ps1" `
+            -WebsitePath $env:WEBSITE_DIR `
+            -PublishPath $env:PUBLISH_DIR `
+            -BackupRoot $env:BACKUP_DIR `
+            -ReleaseRoot $env:RELEASE_DIR `
+            -LogRoot $env:LOG_DIR `
+            -HealthCheckUrl $env:HEALTHCHECK_URL `
+            -CommitSha $env:COMMIT_SHA `
+            -BranchName $env:BRANCH_NAME `
+            -RunnerName $env:COMPUTERNAME `
+            -RunMigrations:$env:RUN_MIGRATIONS `
+            -RunBootstrapper:$env:RUN_BOOTSTRAPPER `
+            -RunVehicleImporter:$env:RUN_VEHICLE_IMPORTER `
+            -ForceVehicleImporter:$env:FORCE_VEHICLE_IMPORTER `
+            -RestartIIS:$env:RESTART_IIS `
+            -SkipHealthCheck:$env:SKIP_HEALTH_CHECK
 
       - name: Deployment Summary
         if: always()
