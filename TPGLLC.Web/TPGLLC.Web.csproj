@@ -49,7 +49,7 @@
     <None Update="EmailTemplates\CustomerAppointment.htm">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="EmailTemplates\InternalAppointment.hml">
+    <None Update="EmailTemplates\InternalAppointment.htm">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
