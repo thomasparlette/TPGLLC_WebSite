@@ -1,29 +1,19 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using TPGLLC.Shared.Identity;
 
 namespace TPGLLC.Web.Areas.Identity.Pages.Account;
 
-public sealed class RegisterModel : PageModel
+public sealed class RegisterModel(
+    UserManager<ApplicationUser> userManager,
+    SignInManager<ApplicationUser> signInManager,
+    RoleManager<ApplicationRole> roleManager) : PageModel
 {
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly RoleManager<ApplicationRole> _roleManager;
-    private readonly IEmailSender _emailSender;
-
-    public RegisterModel(
-        UserManager<ApplicationUser> userManager,
-        RoleManager<ApplicationRole> roleManager,
-        IEmailSender emailSender)
-    {
-        _userManager = userManager;
-        _roleManager = roleManager;
-        _emailSender = emailSender;
-    }
+    private readonly UserManager<ApplicationUser> _userManager = userManager;
+    private readonly SignInManager<ApplicationUser> _signInManager = signInManager;
+    private readonly RoleManager<ApplicationRole> _roleManager = roleManager;
 
     [BindProperty]
     public InputModel Input { get; set; } = new();
@@ -32,13 +22,11 @@ public sealed class RegisterModel : PageModel
 
     public void OnGet(string? returnUrl = null)
     {
-        Input.ReturnUrl = GetReturnUrl(returnUrl);
+        Input.ReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/portal" : returnUrl;
     }
 
-    public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
+    public async Task<IActionResult> OnPostAsync()
     {
-        Input.ReturnUrl = GetReturnUrl(returnUrl ?? Input.ReturnUrl);
-
         if (!ModelState.IsValid)
         {
             return Page();
@@ -58,7 +46,7 @@ public sealed class RegisterModel : PageModel
             UserName = email,
             Email = email,
             EmailConfirmed = false,
-            DisplayName = string.IsNullOrWhiteSpace(Input.DisplayName) ? null : Input.DisplayName.Trim(),
+            DisplayName = Input.DisplayName.Trim(),
             IsActive = true,
             CreatedUtc = DateTimeOffset.UtcNow
         };
@@ -75,47 +63,25 @@ public sealed class RegisterModel : PageModel
             await _userManager.AddToRoleAsync(user, "Customer");
         }
 
-        var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-        var encodedCode = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-        var callbackUrl = Url.Page(
-            "/Account/ConfirmEmail",
-            pageHandler: null,
-            values: new { area = "Identity", userId = user.Id, code = encodedCode, returnUrl = Input.ReturnUrl },
-            protocol: Request.Scheme);
-
-        if (callbackUrl is null)
-        {
-            ErrorMessage = "Unable to build the confirmation link.";
-            return Page();
-        }
-
-        await _emailSender.SendEmailAsync(
-            user.Email!,
-            "Confirm your email",
-            $"Please confirm your account by <a href=\"{callbackUrl}\">clicking here</a>.");
-
-        return RedirectToPage("./RegisterConfirmation", new
-        {
-            email,
-            returnUrl = Input.ReturnUrl
-        });
+        await _signInManager.SignInAsync(user, isPersistent: true);
+        return LocalRedirect(GetReturnUrl());
     }
 
-    private string GetReturnUrl(string? returnUrl)
+    private string GetReturnUrl()
     {
-        var safeReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/portal" : returnUrl;
-        if (!Url.IsLocalUrl(safeReturnUrl))
+        var returnUrl = Input.ReturnUrl;
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
         {
-            return "/portal";
+            return returnUrl;
         }
 
-        return safeReturnUrl;
+        return "/portal";
     }
 
     public sealed class InputModel
     {
         [Required]
-        public string? DisplayName { get; set; }
+        public string DisplayName { get; set; } = string.Empty;
 
         [Required]
         [EmailAddress]

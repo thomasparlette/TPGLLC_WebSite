@@ -6,11 +6,10 @@ using TPGLLC.Shared.Identity;
 using TPGLLC.Web.Authorization;
 using TPGLLC.Web.Components;
 using TPGLLC.Web.Features.Portal;
-using TPGLLC.Web.Services;
 using TPGLLC.Web.Services.Appointments;
 using TPGLLC.Web.Services.Customers;
-using TPGLLC.Web.Services.Email;
 using TPGLLC.Services.Vehicles;
+using TPGLLC.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -119,34 +118,24 @@ builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 builder.Services.AddScoped<ICurrentCustomerAccessor, CurrentCustomerAccessor>();
 builder.Services.AddScoped<ICustomerProfileService, CustomerProfileService>();
 
-builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
+builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy(
-        PortalPolicies.Customer,
-        policy =>
-        {
-            policy.RequireAuthenticatedUser();
-            policy.RequireRole("Customer");
-        });
-
-    options.AddPolicy(
-        PortalPolicies.Employee,
-        policy =>
-        {
-            policy.RequireAuthenticatedUser();
-            policy.RequireRole("Employee");
-        });
-
-    options.AddPolicy(
-        PortalPolicies.Administrator,
-        policy =>
-        {
-            policy.RequireAuthenticatedUser();
-            policy.RequireRole("Administrator");
-        });
-});
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(PortalPolicies.Customer, policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole("Customer");
+    })
+    .AddPolicy(PortalPolicies.Employee, policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole("Employee");
+    })
+    .AddPolicy(PortalPolicies.Administrator, policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole("Administrator");
+    });
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
