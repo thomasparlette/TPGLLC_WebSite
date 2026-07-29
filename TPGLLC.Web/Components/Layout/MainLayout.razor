@@ -10,9 +10,12 @@
             </div>
         </a>
 
-        <button class="hamburger"
-                @onclick="ToggleMenu">
-            @(_menuOpen ? "X" : "☰")
+        <button type="button"
+                class="hamburger"
+                @onclick="ToggleMenu"
+                aria-label="Toggle navigation"
+                aria-expanded="@_menuOpen">
+            ☰
         </button>
 
         <nav class="site-nav @( _menuOpen ? "open" : "" )">
