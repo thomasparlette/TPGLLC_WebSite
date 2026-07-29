@@ -1,0 +1,291 @@
+@page "/contact"
+@rendermode InteractiveServer
+@layout MainLayout
+@using TPGLLC.Web.Services
+@using TPGLLC.Services.Vehicles
+@using TPGLLC.Web.Services.Appointments
+@inject IVehicleCatalogService VehicleCatalog
+@inject IAppointmentService AppointmentService
+
+<PageTitle>Contact - Tom Parlette Garage LLC</PageTitle>
+
+<section id="appointment" class="section contact-section">
+    <div>
+        <p class="section-kicker">Contact</p>
+        <h2>Request an appointment.</h2>
+        <p>
+            Tell us what your vehicle needs and we will review your request.
+        </p>
+    </div>
+
+    <div class="quote-card contact-form-card animate-card">
+        @if (_submitted)
+        {
+            <div class="success-card">
+                <div class="success-icon">✓</div>
+                <div>
+                    <h3>Request received</h3>
+                    <p>Your appointment request is pending review. We will contact you soon.</p>
+                    <p class="request-id">Reference: @_requestId</p>
+                    <p><strong>Vehicle:</strong> @GetVehicleSummary()</p>
+                    <p><strong>VIN:</strong> @(string.IsNullOrWhiteSpace(_appointment.Vin) ? "Not provided" : _appointment.Vin)</p>
+                </div>
+            </div>
+
+            <div class="hero-actions" style="margin-top:1rem;">
+                <button type="button" class="btn btn-tertiary" @onclick="ResetForm">Submit Another Request</button>
+            </div>
+        }
+        else
+        {
+            <EditForm Model="_appointment" OnValidSubmit="SubmitAppointment">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                @if (!string.IsNullOrWhiteSpace(_submitError))
+                {
+                    <div class="form-status warning">@_submitError</div>
+                }
+
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label>Name</label>
+                        <InputText class="input" @bind-Value="_appointment.Name" />
+                    </div>
+
+                    <div class="form-field">
+                        <label>Phone</label>
+                        <InputText class="input" @bind-Value="_appointment.Phone" />
+                    </div>
+
+                    <div class="form-field full">
+                        <label>Email</label>
+                        <InputText class="input" type="email" @bind-Value="_appointment.Email" />
+                    </div>
+
+                    <div class="form-grid vehicle-grid">
+                        <div class="form-field">
+                            <label>Vehicle Year</label>
+                            <select class="input" @bind="_appointment.VehicleYear" @bind:after="OnVehicleYearChanged">
+                                <option value="">Select year</option>
+                                @foreach (var year in _years)
+                                {
+                                    <option value="@year">@year</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="form-field">
+                            <label>Vehicle Make</label>
+                            <select class="input" @bind="_appointment.VehicleMake" @bind:after="OnVehicleMakeChanged" disabled="@(_makes.Count == 0)">
+                                <option value="">Select make</option>
+                                @foreach (var make in _makes)
+                                {
+                                    <option value="@make">@make</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="form-field">
+                            <label>Vehicle Model</label>
+                            <select class="input" @bind="_appointment.VehicleModel" @bind:after="OnVehicleModelChanged" disabled="@(_models.Count == 0)">
+                                <option value="">Select model</option>
+                                @foreach (var model in _models)
+                                {
+                                    <option value="@model">@model</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-field full">
+                        <label>VIN (optional)</label>
+                        <InputText class="input" @bind-Value="_appointment.Vin" maxlength="17" placeholder="17-character VIN" />
+                    </div>
+
+                    <div class="form-field">
+                        <label>Mileage</label>
+                        <InputText class="input" @bind-Value="_appointment.Mileage" />
+                    </div>
+
+                    <div class="form-field">
+                        <label>Preferred Date</label>
+                        <InputText class="input" type="date" @bind-Value="_appointment.PreferredDate" />
+                    </div>
+
+                    <div class="form-field full">
+                        <label>Preferred Time</label>
+                        <InputText class="input" type="time" @bind-Value="_appointment.PreferredTime" />
+                    </div>
+
+                    <div class="form-field full">
+                        <label>Service Needed</label>
+                        <InputSelect class="input" @bind-Value="_appointment.ServiceNeeded">
+                            <option value="">Select a service</option>
+                            <option>Diagnostics</option>
+                            <option>Brake Repair</option>
+                            <option>Suspension &amp; Steering</option>
+                            <option>Maintenance</option>
+                            <option>Electrical Systems</option>
+                            <option>Engine Repair</option>
+                            <option>Motorcycle Service</option>
+                        </InputSelect>
+                    </div>
+
+                    <div class="form-field full" style="display:none;">
+                        <label>Company</label>
+                        <InputText class="input" @bind-Value="_appointment.Company" autocomplete="off" />
+                    </div>
+
+                    <div class="form-field full">
+                        <label>Message</label>
+                        <InputTextArea class="input textarea" @bind-Value="_appointment.Message" rows="6" />
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary full-width">Request Appointment</button>
+            </EditForm>
+        }
+    </div>
+</section>
+
+@code {
+    private readonly AppointmentRequest _appointment = new();
+    private IReadOnlyList<int> _years = [];
+    private IReadOnlyList<string> _makes = [];
+    private IReadOnlyList<string> _models = [];
+
+    private string? _submitError;
+    private string? _requestId;
+    private bool _submitted;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _years = await VehicleCatalog.GetYearsAsync();
+
+        if (_years.Count == 0)
+        {
+            _years = Enumerable.Range(1996, DateTime.UtcNow.Year - 1996 + 1)
+                .Reverse()
+                .ToList();
+        }
+    }
+
+    private async Task OnVehicleYearChanged()
+    {
+        _appointment.VehicleMake = null;
+        _appointment.VehicleModel = null;
+
+        _makes = [];
+        _models = [];
+
+        if (int.TryParse(_appointment.VehicleYear, out var year))
+        {
+            _makes = await VehicleCatalog.GetMakesAsync(year);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnVehicleMakeChanged()
+    {
+        _appointment.VehicleModel = null;
+        _models = [];
+
+        if (int.TryParse(_appointment.VehicleYear, out var year) &&
+            !string.IsNullOrWhiteSpace(_appointment.VehicleMake))
+        {
+            _models = await VehicleCatalog.GetModelsAsync(year, _appointment.VehicleMake);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnVehicleModelChanged()
+    {
+        return Task.CompletedTask;
+    }
+
+    private async Task SubmitAppointment()
+    {
+        _submitError = null;
+
+        if (string.IsNullOrWhiteSpace(_appointment.VehicleYear))
+        {
+            _submitError = "Please select a vehicle year.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_appointment.PreferredDate) ||
+            string.IsNullOrWhiteSpace(_appointment.PreferredTime) ||
+            string.IsNullOrWhiteSpace(_appointment.ServiceNeeded) ||
+            string.IsNullOrWhiteSpace(_appointment.Message))
+        {
+            _submitError = "Please complete the required fields.";
+            return;
+        }
+
+        try
+        {
+            var result = await AppointmentService.SubmitAsync(_appointment);
+
+            if (!result.Success)
+            {
+                _submitError = result.ErrorMessage ?? "Unable to submit the appointment request.";
+                return;
+            }
+
+            _requestId = result.RequestId.ToString("D");
+            _submitted = true;
+        }
+        catch (Exception ex)
+        {
+            _submitError = ex.Message;
+        }
+    }
+
+    private void ResetForm()
+    {
+        _appointment.Name = null;
+        _appointment.Phone = null;
+        _appointment.Email = null;
+        _appointment.VehicleYear = null;
+        _appointment.VehicleMake = null;
+        _appointment.VehicleModel = null;
+        _appointment.Vin = null;
+        _appointment.Mileage = null;
+        _appointment.PreferredDate = null;
+        _appointment.PreferredTime = null;
+        _appointment.ServiceNeeded = null;
+        _appointment.Message = null;
+        _appointment.Company = null;
+
+        _makes = [];
+        _models = [];
+        _submitError = null;
+        _requestId = null;
+        _submitted = false;
+    }
+
+    private string GetVehicleSummary()
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(_appointment.VehicleYear))
+        {
+            parts.Add(_appointment.VehicleYear!);
+        }
+
+        if (!string.IsNullOrWhiteSpace(_appointment.VehicleMake))
+        {
+            parts.Add(_appointment.VehicleMake!);
+        }
+
+        if (!string.IsNullOrWhiteSpace(_appointment.VehicleModel))
+        {
+            parts.Add(_appointment.VehicleModel!);
+        }
+
+        return parts.Count == 0 ? "Not provided" : string.Join(" ", parts);
+    }
+}
