@@ -1,8 +1,10 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager Navigation
 
 <div class="app-shell">
     <header class="site-header">
-        <a class="brand" href="/">
+        <a class="brand" href="/" @onclick="CloseMenu">
             <img src="/images/logo.jpeg" alt="TPG LLC" class="brand-logo" />
             <div class="brand-copy">
                 <div class="brand-name">TPG LLC</div>
@@ -11,15 +13,18 @@
         </a>
 
         <button type="button"
-                class="hamburger"
+                class="hamburger @(_menuOpen ? "open" : "")"
                 @onclick="ToggleMenu"
                 aria-label="Toggle navigation"
-                aria-expanded="@_menuOpen">
-            ☰
+                aria-expanded="@_menuOpen"
+                aria-controls="site-nav">
+            <span></span>
+            <span></span>
+            <span></span>
         </button>
 
-        <nav class="site-nav @( _menuOpen ? "open" : "" )">
-            <SidebarNavigation />
+        <nav id="site-nav" class="site-nav @(_menuOpen ? "open" : "")">
+            <SidebarNavigation OnNavigate="CloseMenu" />
         </nav>
     </header>
 
@@ -56,8 +61,33 @@
 @code {
     private bool _menuOpen;
 
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
     private void ToggleMenu()
     {
         _menuOpen = !_menuOpen;
+    }
+
+    private void CloseMenu()
+    {
+        if (_menuOpen)
+        {
+            _menuOpen = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        _menuOpen = false;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 }
