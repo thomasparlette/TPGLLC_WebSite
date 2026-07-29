@@ -1,35 +1,38 @@
-﻿@using Microsoft.AspNetCore.Components.Routing
+﻿@using Microsoft.AspNetCore.Components.Authorization
 
-<nav class="portal-nav" aria-label="Customer portal navigation">
-    <NavLink class="portal-nav-link" href="/customer/dashboard" Match="NavLinkMatch.All">
-        Dashboard
-    </NavLink>
+<AuthorizeView>
+    <Authorized>
+        <div class="nav-section">
+            <div class="nav-heading">Main</div>
+            <NavLink href="/" Match="NavLinkMatch.All" class="nav-link">Home</NavLink>
+            <NavLink href="/portal" class="nav-link">Customer Portal</NavLink>
+            <NavLink href="/portal/dashboard" class="nav-link">Dashboard</NavLink>
+            <NavLink href="/portal/vehicles" class="nav-link">Vehicles</NavLink>
+            <NavLink href="/portal/appointments" class="nav-link">Appointments</NavLink>
+            <NavLink href="/portal/history" class="nav-link">History</NavLink>
+            <NavLink href="/portal/invoices" class="nav-link">Invoices</NavLink>
+            <NavLink href="/portal/profile" class="nav-link">Profile</NavLink>
+        </div>
 
-    <NavLink class="portal-nav-link" href="/customer/vehicles">
-        Vehicles
-    </NavLink>
+        <div class="nav-section">
+            <div class="nav-heading">Account</div>
+            <a class="nav-link" href="/Identity/Account/Logout">Logout</a>
+        </div>
+    </Authorized>
 
-    <NavLink class="portal-nav-link" href="/customer/vehicles/add">
-        Add Vehicle
-    </NavLink>
+    <NotAuthorized>
+        <div class="nav-section">
+            <div class="nav-heading">Main</div>
+            <NavLink href="/" Match="NavLinkMatch.All" class="nav-link">Home</NavLink>
+            <NavLink href="/services" class="nav-link">Services</NavLink>
+            <NavLink href="/contact" class="nav-link">Contact</NavLink>
+            <NavLink href="/portal" class="nav-link">Customer Portal</NavLink>
+        </div>
 
-    <NavLink class="portal-nav-link" href="/customer/appointments">
-        Appointments
-    </NavLink>
-
-    <NavLink class="portal-nav-link" href="/customer/history">
-        History
-    </NavLink>
-
-    <NavLink class="portal-nav-link" href="/customer/invoices">
-        Invoices
-    </NavLink>
-
-    <NavLink class="portal-nav-link" href="/customer/profile">
-        Profile
-    </NavLink>
-
-    <a class="portal-nav-link danger" href="/Identity/Account/Logout">
-        Sign Out
-    </a>
-</nav>
+        <div class="nav-section">
+            <div class="nav-heading">Account</div>
+            <a class="nav-link" href="/Identity/Account/Login">Login</a>
+            <a class="nav-link" href="/Identity/Account/Register">Register</a>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>

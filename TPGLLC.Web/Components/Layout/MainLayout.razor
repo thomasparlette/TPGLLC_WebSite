@@ -1,53 +1,26 @@
 ﻿@inherits LayoutComponentBase
-@using Microsoft.AspNetCore.Components.Authorization
 
 <div class="app-shell">
     <header class="site-header">
-        <a class="brand" href="/" @onclick="CloseMenu">
-            <img class="brand-logo" src="/images/logo.jpeg" alt="Tom Parlette Garage LLC logo" />
+        <a class="brand" href="/">
+            <img src="/images/logo.jpeg" alt="TPG LLC" class="brand-logo" />
             <div class="brand-copy">
-                <span class="brand-name">Tom Parlette Garage LLC</span>
-                <span class="brand-tagline">Built on Trust. Driven by Results.</span>
+                <div class="brand-name">TPG LLC</div>
+                <div class="brand-tagline">Professional service and customer portal</div>
             </div>
         </a>
 
-        <button class="hamburger" type="button" @onclick="ToggleMenu" aria-label="Toggle navigation menu" aria-expanded="@_menuOpen">
+        <button type="button"
+                class="hamburger"
+                @onclick="ToggleMenu"
+                aria-label="Toggle navigation"
+                aria-expanded="@_menuOpen">
             ☰
         </button>
 
-        <nav class="@NavCss" aria-label="Primary navigation">
-            <a href="/" @onclick="CloseMenu">Home</a>
-            <a href="/#services" @onclick="CloseMenu">Services</a>
-            <a href="/#about" @onclick="CloseMenu">About</a>
-            <a href="/#process" @onclick="CloseMenu">Our Process</a>
-            <a href="/#faq" @onclick="CloseMenu">FAQ</a>
-            <a href="/#appointment" @onclick="CloseMenu">Request Appointment</a>
-
-            <AuthorizeView>
-                <Authorized>
-                    <a href="/customer/dashboard" @onclick="CloseMenu">Customer Portal</a>
-                    <a href="/Identity/Account/Logout" @onclick="CloseMenu">Sign Out</a>
-                </Authorized>
-                <NotAuthorized>
-                    <a href="/Identity/Account/Login" @onclick="CloseMenu">Sign In</a>
-                    <a href="/Identity/Account/Register" @onclick="CloseMenu">Create Account</a>
-                </NotAuthorized>
-            </AuthorizeView>
-
-            <div class="mobile-buttons">
-                <a class="btn btn-primary" href="tel:+17653463354">Call Now</a>
-                <a class="btn btn-secondary" href="/#appointment" @onclick="CloseMenu">Request Appointment</a>
-            </div>
+        <nav class="site-nav @(_menuOpen ? "open" : "")">
+            <SidebarNavigation />
         </nav>
-
-        <AuthorizeView>
-            <Authorized>
-                <a class="btn btn-primary header-cta" href="/customer/dashboard">Portal</a>
-            </Authorized>
-            <NotAuthorized>
-                <a class="btn btn-primary header-cta" href="/Identity/Account/Login">Sign In</a>
-            </NotAuthorized>
-        </AuthorizeView>
     </header>
 
     <main class="page-content">
@@ -57,28 +30,25 @@
     <footer class="site-footer">
         <div class="footer-grid">
             <div>
-                <div class="footer-brand">Tom Parlette Garage LLC</div>
-                <p>Complete automotive and motorcycle repair with honest communication and dependable work.</p>
+                <div class="footer-brand">TPG LLC</div>
+                <p>Reliable automotive service and customer support.</p>
             </div>
-
-            <div>
-                <div class="footer-heading">Contact</div>
-                <p><a href="tel:+17653453354">(765) 346-3354</a></p>
-                <p><a href="mailto:tomparlette@tomparlettegarage.org">tomparlette@tomparlettegarage.org</a></p>
-            </div>
-
             <div>
                 <div class="footer-heading">Quick Links</div>
-                <p><a href="/#services">Services</a></p>
-                <p><a href="/#appointment">Request Appointment</a></p>
-                <p><a href="/#faq">FAQ</a></p>
-                <p><a href="/Identity/Account/Login">Customer Login</a></p>
+                <a href="/">Home</a><br />
+                <a href="/services">Services</a><br />
+                <a href="/contact">Contact</a>
+            </div>
+            <div>
+                <div class="footer-heading">Account</div>
+                <a href="/Identity/Account/Login">Login</a><br />
+                <a href="/Identity/Account/Register">Register</a><br />
+                <a href="/Identity/Account/Logout">Logout</a>
             </div>
         </div>
-
         <div class="footer-bottom">
-            <span>&copy; @DateTime.Now.Year Tom Parlette Garage LLC</span>
-            <span>Honest service • Quality work • Trusted locally</span>
+            <span>© @DateTime.Now.Year TPG LLC</span>
+            <span>All rights reserved</span>
         </div>
     </footer>
 </div>
@@ -86,9 +56,8 @@
 @code {
     private bool _menuOpen;
 
-    private string NavCss => _menuOpen ? "site-nav open" : "site-nav";
-
-    private void ToggleMenu() => _menuOpen = !_menuOpen;
-
-    private void CloseMenu() => _menuOpen = false;
+    private void ToggleMenu()
+    {
+        _menuOpen = !_menuOpen;
+    }
 }
