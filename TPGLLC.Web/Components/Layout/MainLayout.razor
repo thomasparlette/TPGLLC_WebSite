@@ -10,15 +10,12 @@
             </div>
         </a>
 
-        <button type="button"
-                class="hamburger"
-                @onclick="ToggleMenu"
-                aria-label="Toggle navigation"
-                aria-expanded="@_menuOpen">
-            ☰
+        <button class="hamburger"
+                @onclick="ToggleMenu">
+            @(_menuOpen ? "X" : "☰")
         </button>
 
-        <nav class="site-nav @(_menuOpen ? "open" : "")">
+        <nav class="site-nav @( _menuOpen ? "open" : "" )">
             <SidebarNavigation />
         </nav>
     </header>
