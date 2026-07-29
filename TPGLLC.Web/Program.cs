@@ -1,4 +1,3 @@
-
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using TPGLLC.Data;
@@ -8,6 +7,8 @@ using TPGLLC.Web.Features.Portal;
 using TPGLLC.Web.Services;
 using TPGLLC.Services.Vehicles;
 using TPGLLC.Web.Services.Appointments;
+using TPGLLC.Web.Authorization;
+using TPGLLC.Web.Services.Customers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,8 +48,6 @@ builder.Services.AddDbContext<TPGLLCDbContext>(options =>
     options.UseSqlServer(connectionString,
         sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)));
 
-builder.Services.AddHttpContextAccessor();
-
 builder.Services
     .AddIdentity<ApplicationUser, ApplicationRole>(options =>
     {
@@ -67,36 +66,11 @@ builder.Services
     .AddEntityFrameworkStores<TPGLLCDbContext>()
     .AddDefaultTokenProviders();
 
-builder.Services.ConfigureApplicationCookie(options =>
-{
-    options.LoginPath = "/Identity/Account/Login";
-    options.LogoutPath = "/Identity/Account/Logout";
-    options.AccessDeniedPath = "/Identity/Account/Login";
-    options.SlidingExpiration = true;
-    options.Cookie.HttpOnly = true;
-});
-
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddAuthorization();
-
-var apiBaseUrl =
-    builder.Configuration["Api:BaseUrl"]
-    ?? Environment.GetEnvironmentVariable("Api__BaseUrl")
-    ?? throw new InvalidOperationException("Missing Api:BaseUrl configuration.");
-
-if (builder.Environment.IsProduction() &&
-    Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out var parsedBaseUrl) &&
-    parsedBaseUrl.Host.Contains("localhost", StringComparison.OrdinalIgnoreCase))
-{
-    apiBaseUrl = "https://api.tomparlettegarage.org/";
-}
-
-builder.Services.AddScoped<CustomerPortalStore>();
-
-
-
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
 
+builder.Services.AddScoped<CustomerPortalStore>();
 builder.Services.AddScoped<IVehicleCatalogService, VehicleCatalogService>();
 
 builder.Services.Configure<AppointmentEmailOptions>(
@@ -104,6 +78,48 @@ builder.Services.Configure<AppointmentEmailOptions>(
 
 builder.Services.AddScoped<IEmailTemplateRenderer, FileEmailTemplateRenderer>();
 builder.Services.AddScoped<IAppointmentService, AppointmentService>();
+
+builder.Services.AddScoped<ICurrentCustomerAccessor, CurrentCustomerAccessor>();
+builder.Services.AddScoped<ICustomerProfileService, CustomerProfileService>();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(
+        PortalPolicies.Customer,
+        policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.RequireRole("Customer");
+        });
+
+    options.AddPolicy(
+        PortalPolicies.Employee,
+        policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.RequireRole("Employee");
+        });
+
+    options.AddPolicy(
+        PortalPolicies.Administrator,
+        policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.RequireRole("Administrator");
+        });
+});
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Identity/Account/Login";
+    options.AccessDeniedPath = "/Identity/Account/AccessDenied";
+    options.LogoutPath = "/Identity/Account/Logout";
+
+    options.SlidingExpiration = true;
+    options.Cookie.HttpOnly = true;
+    options.ExpireTimeSpan = TimeSpan.FromDays(30);
+    options.Cookie.Name = "TPGLLC.Identity";
+});
 
 var app = builder.Build();
 
@@ -114,6 +130,8 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseRouting();
+
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 
 app.UseAuthentication();
@@ -122,15 +140,20 @@ app.UseAntiforgery();
 
 app.MapRazorPages();
 app.MapStaticAssets();
+
 app.MapRazorComponents<App>()
    .AddInteractiveServerRenderMode();
 
-app.MapGet("/health", () => Results.Text("OK", "text/plain"));
+app.MapGet("/health", () => Results.Text("OK", "text/plain"))
+   .AllowAnonymous();
+
 app.MapGet("/version", (IWebHostEnvironment env) =>
 {
     var versionPath = Path.Combine(env.ContentRootPath, "version.json");
     return File.Exists(versionPath)
         ? Results.File(versionPath, "application/json")
         : Results.NotFound();
-});
+})
+.AllowAnonymous();
+
 app.Run();

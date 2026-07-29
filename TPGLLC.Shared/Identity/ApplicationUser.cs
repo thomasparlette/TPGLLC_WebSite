@@ -4,7 +4,11 @@ namespace TPGLLC.Shared.Identity;
 
 public sealed class ApplicationUser : IdentityUser
 {
-    public string? DisplayName { get; set; }
+    public string FirstName { get; set; } = string.Empty;
+
+    public string LastName { get; set; } = string.Empty;
+
+    public string DisplayName { get; set; } = string.Empty;
 
     public bool IsActive { get; set; } = true;
 

@@ -9,6 +9,8 @@ namespace TPGLLC.Data;
 public sealed class TPGLLCDbContext
     : IdentityDbContext<ApplicationUser, ApplicationRole, string>
 {
+    public DbSet<CustomerProfile> CustomerProfiles => Set<CustomerProfile>();
+
     public TPGLLCDbContext(DbContextOptions<TPGLLCDbContext> options)
         : base(options)
     {
@@ -23,6 +25,9 @@ public sealed class TPGLLCDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.ApplyConfiguration(new ApplicationUserConfiguration());
+        modelBuilder.ApplyConfiguration(new CustomerProfileConfiguration());
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(TPGLLCDbContext).Assembly);
 

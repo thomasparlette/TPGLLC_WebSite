@@ -168,3 +168,80 @@ a {
     font-size: 0.85rem;
     gap: 1rem;
 }
+
+/* ==========================================
+   PORTAL NAVIGATION
+========================================== */
+
+.portal-shell .site-header {
+    gap: 1.25rem;
+}
+
+.portal-user {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.customer-shell {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.customer-sidebar {
+    position: sticky;
+    top: 1rem;
+    padding: 1rem;
+}
+
+.sidebar-heading {
+    margin-bottom: 1rem;
+}
+
+.portal-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.portal-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.8rem 1rem;
+    border-radius: 14px;
+    font-weight: 700;
+    color: #0d2a63;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+    .portal-nav-link:hover {
+        background: #eef3fb;
+        color: #d71920;
+    }
+
+    .portal-nav-link.active {
+        background: #0d2a63;
+        color: #ffffff;
+    }
+
+        .portal-nav-link.active:hover {
+            color: #ffffff;
+        }
+
+    .portal-nav-link.danger {
+        color: #b91c1c;
+    }
+
+        .portal-nav-link.danger:hover {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+.customer-content {
+    min-width: 0;
+}

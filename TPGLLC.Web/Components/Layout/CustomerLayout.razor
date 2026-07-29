@@ -2,7 +2,7 @@
 @using TPGLLC.Web.Features.Portal
 @inject CustomerPortalStore PortalStore
 
-<div class="app-shell">
+<div class="app-shell portal-shell">
     <header class="site-header">
         <a class="brand" href="/customer/dashboard">
             <img class="brand-logo" src="/images/logo.jpeg" alt="Tom Parlette Garage LLC logo" />
@@ -12,19 +12,24 @@
             </div>
         </a>
 
-        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-            <div class="brand-tagline">Welcome, @PortalStore.Profile.DisplayName</div>
+        <div class="portal-user">
+            <div class="brand-tagline">Welcome, @((PortalStore.Profile?.DisplayName) ?? "Customer")</div>
             <a class="btn btn-secondary" href="/Identity/Account/Logout">Sign Out</a>
         </div>
     </header>
 
     <main class="page-content">
-        <div style="display:grid;grid-template-columns:280px minmax(0,1fr);gap:1.5rem;align-items:start;">
-            <aside class="quote-card" style="position:sticky;top:1rem;">
+        <div class="customer-shell">
+            <aside class="quote-card customer-sidebar">
+                <div class="sidebar-heading">
+                    <p class="section-kicker">Customer Portal</p>
+                    <h3>Navigation</h3>
+                </div>
+
                 <SidebarNavigation />
             </aside>
 
-            <section>
+            <section class="customer-content">
                 @Body
             </section>
         </div>

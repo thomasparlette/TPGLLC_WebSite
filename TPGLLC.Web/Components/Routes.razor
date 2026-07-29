@@ -3,9 +3,10 @@
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
                 <NotAuthorized>
-                    <RedirectToLogin />
+                    <p>You are not authorized. <a href="/Identity/Account/Login">Log in</a>.</p>
                 </NotAuthorized>
             </AuthorizeRouteView>
+            
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />
         </Found>
     </Router>

@@ -176,7 +176,7 @@
     .success-card {
         flex-direction: column;
     }
-    @media screen and (max-width: 768px) {
+    
         .account-feature-list {
             grid-template-columns: 1fr;
         }
@@ -188,5 +188,20 @@
         .account-actions .btn {
             width: 100%;
         }
+    .customer-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .customer-sidebar {
+        position: static;
+    }
+
+    .portal-user {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .portal-nav-link {
+        padding: 1rem;
     }
 }
