@@ -21,12 +21,6 @@ public sealed class LogoutModel : PageModel
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
         await _signInManager.SignOutAsync();
-
-        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
-        {
-            return LocalRedirect(returnUrl);
-        }
-
-        return LocalRedirect("/");
+        return LocalRedirect(string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl);
     }
 }

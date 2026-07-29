@@ -1,72 +1,66 @@
 ﻿@page
 @model TPGLLC.Web.Areas.Identity.Pages.Account.LoginModel
 @{
-    ViewData["Title"] = "Log in";
+    ViewData["Title"] = "Sign in";
 }
 
-<div class="auth-page">
-    <div class="auth-card">
-        <h1>Log in</h1>
-        <p>Use your email or continue with Microsoft or Google.</p>
+<div class="auth-card">
+    <h1>Sign in</h1>
 
-        @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
-        {
-            <div class="form-status warning">@Model.ErrorMessage</div>
-        }
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="auth-alert">@Model.ErrorMessage</div>
+    }
 
-        <div class="external-login-row">
-            @if (Model.ExternalLogins.Count > 0)
-            {
-                @foreach (var provider in Model.ExternalLogins)
-                {
-                    <form method="post" asp-page-handler="ExternalLogin" class="external-login-form">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="provider" value="@provider.Name" />
-                        <input type="hidden" name="returnUrl" value="@Model.Input.ReturnUrl" />
-                        <button class="btn btn-outline-primary full-width" type="submit">
-                            Continue with @(string.IsNullOrWhiteSpace(provider.DisplayName) ? provider.Name : provider.DisplayName)
-                        </button>
-                    </form>
-                }
-            }
-            else
-            {
-                <div class="form-status">External sign-in providers are not configured yet.</div>
-            }
+    <form method="post" class="auth-form">
+        <input type="hidden" asp-for="Input.ReturnUrl" />
+
+        <div class="form-field">
+            <label asp-for="Input.Email"></label>
+            <input asp-for="Input.Email" />
+            <span asp-validation-for="Input.Email"></span>
         </div>
 
-        <div class="auth-divider">
-            <span>or</span>
+        <div class="form-field">
+            <label asp-for="Input.Password"></label>
+            <input asp-for="Input.Password" type="password" />
+            <span asp-validation-for="Input.Password"></span>
         </div>
 
-        <form method="post">
-            @Html.AntiForgeryToken()
-            <div asp-validation-summary="ModelOnly" class="validation-errors"></div>
+        <div class="form-check">
+            <input asp-for="Input.RememberMe" />
+            <label asp-for="Input.RememberMe"></label>
+        </div>
 
-            <div class="form-field full">
-                <label asp-for="Input.Email"></label>
-                <input asp-for="Input.Email" class="input" autocomplete="email" />
-                <span asp-validation-for="Input.Email" class="validation-message"></span>
-            </div>
+        <button type="submit" class="primary-button">Sign in</button>
+    </form>
 
-            <div class="form-field full">
-                <label asp-for="Input.Password"></label>
-                <input asp-for="Input.Password" class="input" type="password" autocomplete="current-password" />
-                <span asp-validation-for="Input.Password" class="validation-message"></span>
-            </div>
-
-            <div class="form-field full checkbox-row">
-                <input asp-for="Input.RememberMe" />
-                <label asp-for="Input.RememberMe">Remember me</label>
-            </div>
-
-            <input asp-for="Input.ReturnUrl" type="hidden" />
-
-            <button class="btn btn-primary full-width" type="submit">Log in</button>
-        </form>
-
-        <p style="margin-top:1rem;">
-            Need an account? <a href="/Identity/Account/Register">Register</a>
-        </p>
+    <div class="auth-links">
+        <a href="/Identity/Account/ForgotPassword">Forgot your password?</a>
+        <a href="/Identity/Account/Register">Create an account</a>
     </div>
+
+    @if (Model.GoogleEnabled || Model.MicrosoftEnabled)
+    {
+        <div class="auth-divider">or continue with</div>
+        <div class="external-login-grid">
+            @if (Model.GoogleEnabled)
+            {
+                <form method="post" asp-page-handler="ExternalLogin" class="external-login-form">
+                    <input type="hidden" name="provider" value="Google" />
+                    <input type="hidden" name="returnUrl" value="@Model.Input.ReturnUrl" />
+                    <button type="submit" class="secondary-button">Google</button>
+                </form>
+            }
+
+            @if (Model.MicrosoftEnabled)
+            {
+                <form method="post" asp-page-handler="ExternalLogin" class="external-login-form">
+                    <input type="hidden" name="provider" value="Microsoft" />
+                    <input type="hidden" name="returnUrl" value="@Model.Input.ReturnUrl" />
+                    <button type="submit" class="secondary-button">Microsoft</button>
+                </form>
+            }
+        </div>
+    }
 </div>

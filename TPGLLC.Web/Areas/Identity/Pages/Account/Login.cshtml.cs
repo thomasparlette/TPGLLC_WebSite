@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -13,15 +12,18 @@ public sealed class LoginModel : PageModel
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<ApplicationRole> _roleManager;
+    private readonly IConfiguration _configuration;
 
     public LoginModel(
         SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager,
-        RoleManager<ApplicationRole> roleManager)
+        RoleManager<ApplicationRole> roleManager,
+        IConfiguration configuration)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _roleManager = roleManager;
+        _configuration = configuration;
     }
 
     [BindProperty]
@@ -29,17 +31,17 @@ public sealed class LoginModel : PageModel
 
     public string? ErrorMessage { get; set; }
 
-    public IList<AuthenticationScheme> ExternalLogins { get; private set; } = [];
+    public bool GoogleEnabled => IsConfigured("Authentication:Google:ClientId", "Authentication__Google__ClientId");
+    public bool MicrosoftEnabled => IsConfigured("Authentication:Microsoft:ClientId", "Authentication__Microsoft__ClientId");
 
-    public async Task OnGetAsync(string? returnUrl = null)
+    public void OnGet(string? returnUrl = null)
     {
-        Input.ReturnUrl = NormalizeReturnUrl(returnUrl);
-        await LoadExternalProvidersAsync();
+        Input.ReturnUrl = GetReturnUrl(returnUrl);
     }
 
-    public async Task<IActionResult> OnPostAsync()
+    public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
-        await LoadExternalProvidersAsync();
+        Input.ReturnUrl = GetReturnUrl(returnUrl ?? Input.ReturnUrl);
 
         if (!ModelState.IsValid)
         {
@@ -54,7 +56,16 @@ public sealed class LoginModel : PageModel
 
         if (result.Succeeded)
         {
-            return LocalRedirect(GetReturnUrl());
+            return LocalRedirect(Input.ReturnUrl!);
+        }
+
+        if (result.RequiresTwoFactor)
+        {
+            return RedirectToPage("./LoginWith2fa", new
+            {
+                ReturnUrl = Input.ReturnUrl,
+                RememberMe = Input.RememberMe
+            });
         }
 
         if (result.IsLockedOut)
@@ -69,70 +80,74 @@ public sealed class LoginModel : PageModel
 
     public IActionResult OnPostExternalLogin(string provider, string? returnUrl = null)
     {
-        var destination = NormalizeReturnUrl(returnUrl ?? Input.ReturnUrl);
-        var redirectUrl = Url.Page(
-            "/Identity/Account/Login",
-            pageHandler: "ExternalLoginCallback",
-            values: new { returnUrl = destination });
+        var callbackUrl = Url.Page("./Login", pageHandler: "Callback", values: new
+        {
+            returnUrl = GetReturnUrl(returnUrl)
+        });
 
-        var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
+        var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, callbackUrl!);
         return Challenge(properties, provider);
     }
 
-    public async Task<IActionResult> OnGetExternalLoginCallbackAsync(string? returnUrl = null, string? remoteError = null)
+    public async Task<IActionResult> OnGetCallbackAsync(string? returnUrl = null, string? remoteError = null)
     {
-        await LoadExternalProvidersAsync();
-
-        var destination = NormalizeReturnUrl(returnUrl);
-        Input.ReturnUrl = destination;
+        var safeReturnUrl = GetReturnUrl(returnUrl);
 
         if (!string.IsNullOrWhiteSpace(remoteError))
         {
-            ErrorMessage = $"External sign-in failed: {remoteError}";
+            ErrorMessage = remoteError;
+            Input.ReturnUrl = safeReturnUrl;
             return Page();
         }
 
         var info = await _signInManager.GetExternalLoginInfoAsync();
         if (info is null)
         {
-            ErrorMessage = "Unable to load external login information.";
+            ErrorMessage = "External login information was not available.";
+            Input.ReturnUrl = safeReturnUrl;
             return Page();
         }
 
-        var signInResult = await _signInManager.ExternalLoginSignInAsync(
+        var externalSignIn = await _signInManager.ExternalLoginSignInAsync(
             info.LoginProvider,
             info.ProviderKey,
             isPersistent: true,
             bypassTwoFactor: true);
 
-        if (signInResult.Succeeded)
+        if (externalSignIn.Succeeded)
         {
-            return LocalRedirect(destination);
+            return LocalRedirect(safeReturnUrl);
         }
 
-        var email = info.Principal.FindFirstValue(ClaimTypes.Email)
-            ?? info.Principal.FindFirstValue("email");
-
-        if (string.IsNullOrWhiteSpace(email))
+        if (externalSignIn.IsLockedOut)
         {
-            ErrorMessage = "The external provider did not return an email address.";
+            ErrorMessage = "This account is locked. Please try again later.";
+            Input.ReturnUrl = safeReturnUrl;
             return Page();
         }
 
-        var displayName = info.Principal.FindFirstValue(ClaimTypes.Name)
-            ?? info.Principal.FindFirstValue("name")
-            ?? email;
+        var email = info.Principal.FindFirstValue(ClaimTypes.Email)
+            ?? info.Principal.FindFirstValue("email")
+            ?? info.Principal.FindFirstValue(ClaimTypes.Upn);
 
-        var user = await _userManager.FindByEmailAsync(email.Trim());
-        var isNewUser = user is null;
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            ErrorMessage = "The external provider did not supply an email address.";
+            Input.ReturnUrl = safeReturnUrl;
+            return Page();
+        }
 
+        var user = await _userManager.FindByEmailAsync(email);
         if (user is null)
         {
             user = new ApplicationUser
             {
-                UserName = email.Trim(),
-                Email = email.Trim(),
-                DisplayName = displayName.Trim(),
+                UserName = email,
+                Email = email,
+                EmailConfirmed = true,
+                DisplayName = info.Principal.FindFirstValue(ClaimTypes.GivenName)
+                    ?? info.Principal.FindFirstValue(ClaimTypes.Name)
+                    ?? email,
                 IsActive = true,
                 CreatedUtc = DateTimeOffset.UtcNow
             };
@@ -141,42 +156,41 @@ public sealed class LoginModel : PageModel
             if (!createResult.Succeeded)
             {
                 ErrorMessage = string.Join(" ", createResult.Errors.Select(x => x.Description));
+                Input.ReturnUrl = safeReturnUrl;
                 return Page();
+            }
+
+            if (await _roleManager.RoleExistsAsync("Customer"))
+            {
+                await _userManager.AddToRoleAsync(user, "Customer");
             }
         }
 
         var addLoginResult = await _userManager.AddLoginAsync(user, info);
-        if (!addLoginResult.Succeeded)
+        if (!addLoginResult.Succeeded && !addLoginResult.Errors.Any(x => x.Code == "LoginAlreadyAssociated"))
         {
             ErrorMessage = string.Join(" ", addLoginResult.Errors.Select(x => x.Description));
+            Input.ReturnUrl = safeReturnUrl;
             return Page();
         }
 
-        if (isNewUser && await _roleManager.RoleExistsAsync("Customer"))
-        {
-            await _userManager.AddToRoleAsync(user, "Customer");
-        }
-
         await _signInManager.SignInAsync(user, isPersistent: true);
-        return LocalRedirect(destination);
+        return LocalRedirect(safeReturnUrl);
     }
 
-    private async Task LoadExternalProvidersAsync()
+    private string GetReturnUrl(string? returnUrl)
     {
-        ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
-    }
-
-    private string NormalizeReturnUrl(string? returnUrl)
-    {
-        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+        var safeReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/portal" : returnUrl;
+        if (!Url.IsLocalUrl(safeReturnUrl))
         {
-            return returnUrl;
+            return "/portal";
         }
 
-        return "/portal";
+        return safeReturnUrl;
     }
 
-    private string GetReturnUrl() => NormalizeReturnUrl(Input.ReturnUrl);
+    private bool IsConfigured(params string[] keys)
+        => keys.Any(key => !string.IsNullOrWhiteSpace(_configuration[key]));
 
     public sealed class InputModel
     {

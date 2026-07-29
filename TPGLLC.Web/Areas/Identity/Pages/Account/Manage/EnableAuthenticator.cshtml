@@ -1,0 +1,46 @@
+﻿@page
+@model TPGLLC.Web.Areas.Identity.Pages.Account.Manage.EnableAuthenticatorModel
+@{
+    ViewData["Title"] = "Enable authenticator";
+    var recoveryCodes = ViewData["RecoveryCodes"] as IEnumerable<string>;
+}
+
+<div class="auth-card">
+    <h1>Enable authenticator</h1>
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="auth-alert">@Model.ErrorMessage</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="auth-success">@Model.StatusMessage</div>
+    }
+
+    <p>Scan the secret in your authenticator app, or enter it manually:</p>
+    <pre>@Model.SharedKey</pre>
+    <p><small>@Model.AuthenticatorUri</small></p>
+
+    <form method="post" class="auth-form">
+        <div class="form-field">
+            <label asp-for="Input.Code"></label>
+            <input asp-for="Input.Code" autocomplete="one-time-code" />
+            <span asp-validation-for="Input.Code"></span>
+        </div>
+        <button type="submit" class="primary-button">Verify and enable</button>
+    </form>
+
+    @if (recoveryCodes is not null)
+    {
+        <div class="auth-success">
+            <p>Recovery codes:</p>
+            <ul>
+                @foreach (var code in recoveryCodes)
+                {
+                    <li>@code</li>
+                }
+            </ul>
+        </div>
+    }
+</div>

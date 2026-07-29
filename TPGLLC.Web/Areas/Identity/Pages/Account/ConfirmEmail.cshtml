@@ -1,0 +1,11 @@
+﻿@page
+@model TPGLLC.Web.Areas.Identity.Pages.Account.ConfirmEmailModel
+@{
+    ViewData["Title"] = "Confirm email";
+}
+
+<div class="auth-card">
+    <h1>Email confirmation</h1>
+    <p>@Model.StatusMessage</p>
+    <a class="primary-button" href="/Identity/Account/Login">Sign in</a>
+</div>

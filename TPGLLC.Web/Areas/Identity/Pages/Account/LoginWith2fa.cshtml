@@ -1,0 +1,44 @@
+﻿@page
+@model TPGLLC.Web.Areas.Identity.Pages.Account.LoginWith2faModel
+@{
+    ViewData["Title"] = "Two-factor sign in";
+}
+
+<div class="auth-card">
+    <h1>Two-factor sign in</h1>
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="auth-alert">@Model.ErrorMessage</div>
+    }
+
+    <form method="post" class="auth-form">
+        <input type="hidden" asp-for="Input.ReturnUrl" />
+        <input type="hidden" asp-for="Input.RememberMe" />
+
+        <div class="form-field">
+            <label asp-for="Input.TwoFactorCode"></label>
+            <input asp-for="Input.TwoFactorCode" autocomplete="one-time-code" />
+            <span asp-validation-for="Input.TwoFactorCode"></span>
+        </div>
+
+        <div class="form-check">
+            <input asp-for="Input.RememberMachine" />
+            <label asp-for="Input.RememberMachine">Remember this device</label>
+        </div>
+
+        <button type="submit" class="primary-button">Sign in</button>
+    </form>
+
+    <form method="post" asp-page-handler="RecoveryCode" class="auth-form" style="margin-top: 1rem;">
+        <input type="hidden" asp-for="Input.ReturnUrl" />
+        <input type="hidden" asp-for="Input.RememberMe" />
+        <input type="hidden" asp-for="Input.RememberMachine" />
+        <div class="form-field">
+            <label asp-for="Input.RecoveryCode"></label>
+            <input asp-for="Input.RecoveryCode" />
+            <span asp-validation-for="Input.RecoveryCode"></span>
+        </div>
+        <button type="submit" class="secondary-button">Use recovery code</button>
+    </form>
+</div>

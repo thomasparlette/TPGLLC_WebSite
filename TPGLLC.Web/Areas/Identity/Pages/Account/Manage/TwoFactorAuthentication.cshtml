@@ -1,0 +1,15 @@
+﻿@page
+@model TPGLLC.Web.Areas.Identity.Pages.Account.Manage.TwoFactorAuthenticationModel
+@{
+    ViewData["Title"] = "Two-factor authentication";
+}
+
+<div class="auth-card">
+    <h1>Two-factor authentication</h1>
+    <p>Status: @(Model.Is2FaEnabled ? "Enabled" : "Disabled")</p>
+    <p>Authenticator app configured: @(Model.HasAuthenticator ? "Yes" : "No")</p>
+    <div class="auth-links">
+        <a href="/Identity/Account/Manage/EnableAuthenticator">Set up authenticator app</a>
+        <a href="/Identity/Account/Manage/Disable2fa">Disable 2FA</a>
+    </div>
+</div>

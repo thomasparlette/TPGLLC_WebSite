@@ -1,14 +1,16 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using TPGLLC.Data;
 using TPGLLC.Shared.Identity;
+using TPGLLC.Web.Authorization;
 using TPGLLC.Web.Components;
 using TPGLLC.Web.Features.Portal;
 using TPGLLC.Web.Services;
-using TPGLLC.Services.Vehicles;
 using TPGLLC.Web.Services.Appointments;
-using TPGLLC.Web.Authorization;
 using TPGLLC.Web.Services.Customers;
+using TPGLLC.Web.Services.Email;
+using TPGLLC.Services.Vehicles;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,6 +55,8 @@ builder.Services
     {
         options.User.RequireUniqueEmail = true;
 
+        options.SignIn.RequireConfirmedAccount = true;
+
         options.Password.RequiredLength = 10;
         options.Password.RequireDigit = true;
         options.Password.RequireLowercase = true;
@@ -66,17 +70,38 @@ builder.Services
     .AddEntityFrameworkStores<TPGLLCDbContext>()
     .AddDefaultTokenProviders();
 
-builder.Services.AddAuthentication()
-    .AddGoogle(options =>
+builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
+{
+    options.TokenLifespan = TimeSpan.FromHours(24);
+});
+
+var externalAuth = builder.Services.AddAuthentication();
+
+var googleClientId = builder.Configuration["Authentication:Google:ClientId"]
+    ?? Environment.GetEnvironmentVariable("Authentication__Google__ClientId");
+var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]
+    ?? Environment.GetEnvironmentVariable("Authentication__Google__ClientSecret");
+if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+{
+    externalAuth.AddGoogle(options =>
     {
-        options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? string.Empty;
-        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? string.Empty;
-    })
-    .AddMicrosoftAccount(options =>
-    {
-        options.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"] ?? string.Empty;
-        options.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"] ?? string.Empty;
+        options.ClientId = googleClientId;
+        options.ClientSecret = googleClientSecret;
     });
+}
+
+var microsoftClientId = builder.Configuration["Authentication:Microsoft:ClientId"]
+    ?? Environment.GetEnvironmentVariable("Authentication__Microsoft__ClientId");
+var microsoftClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"]
+    ?? Environment.GetEnvironmentVariable("Authentication__Microsoft__ClientSecret");
+if (!string.IsNullOrWhiteSpace(microsoftClientId) && !string.IsNullOrWhiteSpace(microsoftClientSecret))
+{
+    externalAuth.AddMicrosoftAccount(options =>
+    {
+        options.ClientId = microsoftClientId;
+        options.ClientSecret = microsoftClientSecret;
+    });
+}
 
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
@@ -93,6 +118,8 @@ builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 
 builder.Services.AddScoped<ICurrentCustomerAccessor, CurrentCustomerAccessor>();
 builder.Services.AddScoped<ICustomerProfileService, CustomerProfileService>();
+
+builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 
 builder.Services.AddAuthorization(options =>
 {
