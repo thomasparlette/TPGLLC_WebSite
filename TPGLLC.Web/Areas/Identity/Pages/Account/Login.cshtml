@@ -7,12 +7,37 @@
 <div class="auth-page">
     <div class="auth-card">
         <h1>Log in</h1>
-        <p>Sign in to access your customer portal.</p>
+        <p>Use your email or continue with Microsoft or Google.</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
         {
             <div class="form-status warning">@Model.ErrorMessage</div>
         }
+
+        <div class="external-login-row">
+            @if (Model.ExternalLogins.Count > 0)
+            {
+                @foreach (var provider in Model.ExternalLogins)
+                {
+                    <form method="post" asp-page-handler="ExternalLogin" class="external-login-form">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="provider" value="@provider.Name" />
+                        <input type="hidden" name="returnUrl" value="@Model.Input.ReturnUrl" />
+                        <button class="btn btn-outline-primary full-width" type="submit">
+                            Continue with @(string.IsNullOrWhiteSpace(provider.DisplayName) ? provider.Name : provider.DisplayName)
+                        </button>
+                    </form>
+                }
+            }
+            else
+            {
+                <div class="form-status">External sign-in providers are not configured yet.</div>
+            }
+        </div>
+
+        <div class="auth-divider">
+            <span>or</span>
+        </div>
 
         <form method="post">
             @Html.AntiForgeryToken()
@@ -20,7 +45,7 @@
 
             <div class="form-field full">
                 <label asp-for="Input.Email"></label>
-                <input asp-for="Input.Email" class="input" autocomplete="username" />
+                <input asp-for="Input.Email" class="input" autocomplete="email" />
                 <span asp-validation-for="Input.Email" class="validation-message"></span>
             </div>
 
@@ -31,10 +56,8 @@
             </div>
 
             <div class="form-field full checkbox-row">
-                <label class="checkbox-label">
-                    <input asp-for="Input.RememberMe" />
-                    <span>Remember me</span>
-                </label>
+                <input asp-for="Input.RememberMe" />
+                <label asp-for="Input.RememberMe">Remember me</label>
             </div>
 
             <input asp-for="Input.ReturnUrl" type="hidden" />
@@ -43,7 +66,7 @@
         </form>
 
         <p style="margin-top:1rem;">
-            Need an account? <a href="/Identity/Account/Register">Create one</a>
+            Need an account? <a href="/Identity/Account/Register">Register</a>
         </p>
     </div>
 </div>
