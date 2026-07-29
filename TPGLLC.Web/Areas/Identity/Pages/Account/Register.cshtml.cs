@@ -29,7 +29,7 @@ public sealed class RegisterModel : PageModel
 
     public void OnGet(string? returnUrl = null)
     {
-        Input.ReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/account" : returnUrl;
+        Input.ReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/portal" : returnUrl;
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -81,7 +81,7 @@ public sealed class RegisterModel : PageModel
             return returnUrl;
         }
 
-        return "/account";
+        return "/portal";
     }
 
     public sealed class InputModel

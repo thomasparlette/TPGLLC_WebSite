@@ -27,13 +27,13 @@
             <div class="form-grid">
                 <div class="form-field full">
                     <label>Vehicle</label>
-                    <select class="input" value="@_model.VehicleName" @onchange="OnVehicleChanged">
+                    <InputSelect class="input" @bind-Value="_model.VehicleName">
                         <option value="">Select vehicle</option>
                         @foreach (var vehicle in PortalStore.Vehicles)
                         {
                             <option value="@vehicle.DisplayName">@vehicle.DisplayName</option>
                         }
-                    </select>
+                    </InputSelect>
                 </div>
 
                 <div class="form-field full">
@@ -58,8 +58,13 @@
             </div>
 
             <div class="hero-actions" style="margin-top:1rem;">
-                <button class="btn btn-primary" type="submit">Request Appointment</button>
+                <button class="btn btn-primary" type="submit" disabled="@(!PortalStore.Vehicles.Any())">Request Appointment</button>
             </div>
+
+            @if (!PortalStore.Vehicles.Any())
+            {
+                <p style="margin-top:.75rem;">Add a vehicle first so we know which vehicle needs service.</p>
+            }
         </EditForm>
     </section>
 
@@ -91,15 +96,15 @@
     private readonly AppointmentModel _model = new();
     private string? _message;
 
-    private Task OnVehicleChanged(ChangeEventArgs e)
-    {
-        _model.VehicleName = e.Value?.ToString() ?? string.Empty;
-        return Task.CompletedTask;
-    }
-
     private Task SubmitAsync()
     {
         _message = null;
+
+        if (!PortalStore.Vehicles.Any())
+        {
+            _message = "Please add a vehicle before requesting an appointment.";
+            return Task.CompletedTask;
+        }
 
         if (string.IsNullOrWhiteSpace(_model.VehicleName) ||
             string.IsNullOrWhiteSpace(_model.Service) ||
@@ -123,6 +128,7 @@
             Notes: string.IsNullOrWhiteSpace(_model.Notes) ? string.Empty : _model.Notes));
 
         _message = "Your appointment request has been added.";
+        _model.VehicleName = string.Empty;
         _model.Service = string.Empty;
         _model.Date = string.Empty;
         _model.Time = string.Empty;

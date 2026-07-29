@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @using TPGLLC.Web.Features.Portal
+
 @inject CustomerPortalStore PortalStore
 
 <div class="app-shell portal-shell">
@@ -13,7 +14,9 @@
         </a>
 
         <div class="portal-user">
-            <div class="brand-tagline">Welcome, @((PortalStore.Profile?.DisplayName) ?? "Customer")</div>
+            <div class="brand-tagline">
+                Welcome, @(PortalStore.Profile?.DisplayName ?? "Customer")
+            </div>
             <a class="btn btn-secondary" href="/Identity/Account/Logout">Sign Out</a>
         </div>
     </header>

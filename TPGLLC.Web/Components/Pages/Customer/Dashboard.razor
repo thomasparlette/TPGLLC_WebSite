@@ -8,7 +8,7 @@
 
 <div class="quote-card" style="margin-bottom:1.5rem;">
     <p class="section-kicker">Dashboard</p>
-    <h1 style="margin-top:0;">Welcome back, @PortalStore.Profile.DisplayName</h1>
+    <h1 style="margin-top:0;">Welcome back, @(PortalStore.Profile?.DisplayName ?? "Customer")</h1>
     <p style="margin-bottom:0;">
         Manage your vehicles, appointments, service history, and invoices in one place.
     </p>
@@ -49,16 +49,23 @@
         <p class="section-kicker">Recent Activity</p>
         <h2 style="margin-top:0;">Latest service updates</h2>
 
-        <div style="display:flex;flex-direction:column;gap:.75rem;">
-            @foreach (var entry in PortalStore.History.Take(3))
-            {
-                <div style="padding:.9rem 1rem;border-radius:1rem;background:rgba(255,255,255,.04);">
-                    <strong>@entry.Service</strong>
-                    <div>@entry.VehicleName</div>
-                    <div>@entry.Date.ToString("MMM d, yyyy") • @entry.Status</div>
-                </div>
-            }
-        </div>
+        @if (PortalStore.History.Count == 0)
+        {
+            <p>No completed service history yet.</p>
+        }
+        else
+        {
+            <div style="display:flex;flex-direction:column;gap:.75rem;">
+                @foreach (var entry in PortalStore.History.Take(3))
+                {
+                    <div style="padding:.9rem 1rem;border-radius:1rem;background:rgba(255,255,255,.04);">
+                        <strong>@entry.Service</strong>
+                        <div>@entry.VehicleName</div>
+                        <div>@entry.Date.ToString("MMM d, yyyy") • @entry.Status</div>
+                    </div>
+                }
+            </div>
+        }
     </section>
 
     <section class="quote-card">

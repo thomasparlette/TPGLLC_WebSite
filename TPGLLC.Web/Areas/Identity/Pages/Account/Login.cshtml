@@ -1,13 +1,13 @@
 ﻿@page
 @model TPGLLC.Web.Areas.Identity.Pages.Account.LoginModel
 @{
-    ViewData["Title"] = "Sign in";
+    ViewData["Title"] = "Log in";
 }
 
 <div class="auth-page">
     <div class="auth-card">
-        <h1>Sign in</h1>
-        <p>Use your account to manage appointments and vehicles.</p>
+        <h1>Log in</h1>
+        <p>Sign in to access your customer portal.</p>
 
         @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
         {
@@ -20,20 +20,20 @@
 
             <div class="form-field full">
                 <label asp-for="Input.Email"></label>
-                <input asp-for="Input.Email" class="input" />
+                <input asp-for="Input.Email" class="input" autocomplete="username" />
                 <span asp-validation-for="Input.Email" class="validation-message"></span>
             </div>
 
             <div class="form-field full">
                 <label asp-for="Input.Password"></label>
-                <input asp-for="Input.Password" class="input" type="password" />
+                <input asp-for="Input.Password" class="input" type="password" autocomplete="current-password" />
                 <span asp-validation-for="Input.Password" class="validation-message"></span>
             </div>
 
-            <div class="form-field full">
-                <label>
+            <div class="form-field full checkbox-row">
+                <label class="checkbox-label">
                     <input asp-for="Input.RememberMe" />
-                    Remember me
+                    <span>Remember me</span>
                 </label>
             </div>
 
@@ -43,7 +43,7 @@
         </form>
 
         <p style="margin-top:1rem;">
-            Need an account? <a href="/Identity/Account/Register">Register</a>
+            Need an account? <a href="/Identity/Account/Register">Create one</a>
         </p>
     </div>
 </div>
