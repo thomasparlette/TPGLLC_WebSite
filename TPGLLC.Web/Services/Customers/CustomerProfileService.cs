@@ -4,18 +4,16 @@ using TPGLLC.Data.Entities;
 
 namespace TPGLLC.Web.Services.Customers;
 
-public sealed class CustomerProfileService
-    : ICustomerProfileService
+public sealed class CustomerProfileService : ICustomerProfileService
 {
-    private readonly TPGLLCDbContext _db;
-
+    private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
     private readonly ICurrentCustomerAccessor _current;
 
     public CustomerProfileService(
-        TPGLLCDbContext db,
+        IDbContextFactory<TPGLLCDbContext> dbFactory,
         ICurrentCustomerAccessor current)
     {
-        _db = db;
+        _dbFactory = dbFactory;
         _current = current;
     }
 
@@ -24,54 +22,59 @@ public sealed class CustomerProfileService
         var current = _current.GetCurrentCustomer();
 
         if (!current.IsAuthenticated)
+        {
             return null;
+        }
 
         return await GetAsync(current.UserId);
     }
 
     public async Task<CustomerProfile?> GetAsync(string userId)
     {
-        return await _db.CustomerProfiles
-            .FirstOrDefaultAsync(x =>
-                x.ApplicationUserId == userId);
+        await using var db = await _dbFactory.CreateDbContextAsync();
+
+        return await db.CustomerProfiles
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ApplicationUserId == userId);
     }
 
     public async Task<CustomerProfile> CreateAsync(string userId)
     {
-        var existing = await GetAsync(userId);
+        await using var db = await _dbFactory.CreateDbContextAsync();
 
-        if (existing != null)
+        var existing = await db.CustomerProfiles
+            .FirstOrDefaultAsync(x => x.ApplicationUserId == userId);
+
+        if (existing is not null)
+        {
             return existing;
+        }
 
         var profile = new CustomerProfile
         {
-            ApplicationUserId = userId
+            ApplicationUserId = userId,
+            ReceiveEmail = true,
+            CreatedUtc = DateTimeOffset.UtcNow
         };
 
-        _db.CustomerProfiles.Add(profile);
-
-        await _db.SaveChangesAsync();
+        db.CustomerProfiles.Add(profile);
+        await db.SaveChangesAsync();
 
         return profile;
     }
 
-    public async Task UpdateAsync(CustomerProfile profile)
-    {
-        profile.UpdatedUtc = DateTimeOffset.UtcNow;
-
-        _db.Update(profile);
-
-        await _db.SaveChangesAsync();
-    }
     public async Task<CustomerProfile> SaveAsync(CustomerProfile profile)
     {
-        var existing = await GetAsync(profile.ApplicationUserId);
+        await using var db = await _dbFactory.CreateDbContextAsync();
+
+        var existing = await db.CustomerProfiles
+            .FirstOrDefaultAsync(x => x.ApplicationUserId == profile.ApplicationUserId);
 
         if (existing is null)
         {
             profile.CreatedUtc = DateTimeOffset.UtcNow;
-            _db.CustomerProfiles.Add(profile);
-            await _db.SaveChangesAsync();
+            db.CustomerProfiles.Add(profile);
+            await db.SaveChangesAsync();
             return profile;
         }
 
@@ -90,7 +93,17 @@ public sealed class CustomerProfileService
         existing.ReceiveSms = profile.ReceiveSms;
         existing.UpdatedUtc = DateTimeOffset.UtcNow;
 
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
         return existing;
+    }
+
+    public async Task UpdateAsync(CustomerProfile profile)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync();
+
+        profile.UpdatedUtc = DateTimeOffset.UtcNow;
+        db.CustomerProfiles.Update(profile);
+
+        await db.SaveChangesAsync();
     }
 }

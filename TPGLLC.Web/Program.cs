@@ -55,6 +55,10 @@ builder.Services.AddDbContext<TPGLLCDbContext>(options =>
     options.UseSqlServer(connectionString,
         sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)));
 
+builder.Services.AddDbContextFactory<TPGLLCDbContext>(options =>
+    options.UseSqlServer(connectionString,
+        sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)));
+
 builder.Services
     .AddIdentity<ApplicationUser, ApplicationRole>(options =>
     {
@@ -123,8 +127,8 @@ builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 
 builder.Services.AddScoped<ICurrentCustomerAccessor, CurrentCustomerAccessor>();
 builder.Services.AddScoped<ICustomerProfileService, CustomerProfileService>();
-
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(PortalPolicies.Customer, policy =>
