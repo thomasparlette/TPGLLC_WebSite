@@ -2,14 +2,13 @@
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
-@using System.Reflection
-@using Microsoft.AspNetCore.Authorization
-@using TPGLLC.Application.Contracts.V1.Portal
+@using Microsoft.EntityFrameworkCore
+@using TPGLLC.Data
 @using TPGLLC.Data.Entities
-@using TPGLLC.Web.Features.Portal
 @using TPGLLC.Web.Services.Customers
 
-@inject CustomerPortalStore PortalStore
+@inject TPGLLCDbContext Db
+@inject ICurrentCustomerAccessor CurrentCustomerAccessor
 @inject ICustomerProfileService CustomerProfileService
 
 <PageTitle>Customer Portal</PageTitle>
@@ -17,161 +16,235 @@
 <section class="portal-dashboard">
     <div class="portal-header">
         <p class="section-kicker">Customer Portal</p>
-        <h1>Welcome back, @PortalStore.Profile.DisplayName</h1>
+        <h1>Welcome back, @DisplayName</h1>
         <p>Manage your vehicles, appointments, service history, and invoices in one place.</p>
     </div>
 
     <div class="portal-stats">
         <div class="portal-stat">
-            <div class="portal-stat-value">@PortalStore.Vehicles.Count</div>
+            <div class="portal-stat-value">@_vehicles.Count</div>
             <div class="portal-stat-label">Vehicles</div>
         </div>
 
         <div class="portal-stat">
-            <div class="portal-stat-value">@PortalStore.Appointments.Count</div>
-            <div class="portal-stat-label">Appointments</div>
+            <div class="portal-stat-value">@_requests.Count</div>
+            <div class="portal-stat-label">Appointment Requests</div>
         </div>
 
         <div class="portal-stat">
-            <div class="portal-stat-value">@PortalStore.History.Count</div>
+            <div class="portal-stat-value">@_history.Count</div>
             <div class="portal-stat-label">Service Visits</div>
         </div>
 
         <div class="portal-stat">
-            <div class="portal-stat-value">@PortalStore.Invoices.Count(x => !x.Paid)</div>
-            <div class="portal-stat-label">Outstanding Invoices</div>
+            <div class="portal-stat-value">@_vehicles.Count(v => v.IsPrimary)</div>
+            <div class="portal-stat-label">Primary Vehicle</div>
         </div>
     </div>
 
     <div class="portal-section">
         <h2>Quick Actions</h2>
         <div class="portal-actions">
-            <a class="portal-action-button" href="/portal/appointments">Schedule Appointment</a>
             <a class="portal-action-button" href="/portal/vehicles">Add Vehicle</a>
-            <a class="portal-action-button" href="/portal/history">View Service History</a>
+            <a class="portal-action-button" href="/portal/appointments">Request Appointment</a>
+            <a class="portal-action-button" href="/portal/history">View History</a>
             <a class="portal-action-button" href="/portal/invoices">Review Invoices</a>
         </div>
     </div>
 
     <div class="portal-section">
-        <h2>Profile</h2>
-        <div class="portal-activity">
-            <div class="portal-activity-item">
-                <div class="portal-activity-icon">👤</div>
-                <div>
-                    <div><strong>@PortalStore.Profile.DisplayName</strong></div>
-                    <div>@PortalStore.Profile.Email</div>
-                    <div>@PortalStore.Profile.Phone</div>
-                    <div>@FormatAddress(PortalStore.Profile)</div>
+        <h2>My Vehicles</h2>
+        @if (_vehicles.Count == 0)
+        {
+            <div class="portal-activity">
+                <div class="portal-activity-item">
+                    <div class="portal-activity-icon">🚗</div>
+                    <div>No vehicles are on file yet.</div>
                 </div>
             </div>
-        </div>
+        }
+        else
+        {
+            <div class="portal-dashboard-grid">
+                @foreach (var vehicle in _vehicles)
+                {
+                    <a class="portal-card-link" href="/portal/vehicles">
+                        <div class="portal-card-icon">🚗</div>
+                        <h3>@GetVehicleTitle(vehicle)</h3>
+                        <p>@GetVehicleDetails(vehicle)</p>
+                    </a>
+                }
+            </div>
+        }
     </div>
 
     <div class="portal-section">
-        <h2>Upcoming Appointment</h2>
-        @if (PortalStore.Appointments.Count > 0)
+        <h2>Recent Appointment Requests</h2>
+        @if (_requests.Count == 0)
         {
-            var next = PortalStore.Appointments[0];
-
             <div class="portal-activity">
                 <div class="portal-activity-item">
                     <div class="portal-activity-icon">📅</div>
-                    <div>
-                        <div><strong>@next.VehicleName</strong></div>
-                        <div>@next.Service</div>
-                        <div>@next.Date.ToString("MMM d, yyyy") at @next.Time.ToString("h:mm tt")</div>
-                        <div>@next.Status</div>
-                    </div>
+                    <div>No appointment requests found for your account email.</div>
                 </div>
             </div>
         }
         else
         {
             <div class="portal-activity">
-                <div class="portal-activity-item">
-                    <div class="portal-activity-icon">📅</div>
-                    <div>No appointments scheduled.</div>
-                </div>
+                @foreach (var request in _requests)
+                {
+                    <div class="portal-activity-item">
+                        <div class="portal-activity-icon">📅</div>
+                        <div>
+                            <div><strong>@request.ServiceNeeded</strong></div>
+                            <div>@FormatAppointmentRequest(request)</div>
+                            <div>Status: @request.Status</div>
+                        </div>
+                    </div>
+                }
             </div>
         }
     </div>
 
     <div class="portal-section">
-        <h2>Recent Activity</h2>
-        <div class="portal-activity">
-            @foreach (var item in PortalStore.History.Take(3))
-            {
+        <h2>Service History</h2>
+        @if (_history.Count == 0)
+        {
+            <div class="portal-activity">
                 <div class="portal-activity-item">
-                    <div class="portal-activity-icon">🔧</div>
-                    <div>
-                        <div><strong>@item.VehicleName</strong></div>
-                        <div>@item.Service</div>
-                        <div>@item.Date.ToString("MMM d, yyyy") · @item.Status</div>
-                    </div>
+                    <div class="portal-activity-icon">🛠️</div>
+                    <div>No service history found for this customer.</div>
                 </div>
-            }
-        </div>
+            </div>
+        }
+        else
+        {
+            <div class="portal-activity">
+                @foreach (var item in _history)
+                {
+                    <div class="portal-activity-item">
+                        <div class="portal-activity-icon">🛠️</div>
+                        <div>
+                            <div><strong>@item.VehicleName</strong></div>
+                            <div>@item.Service</div>
+                            <div>@item.ServiceDate.ToString("MMM d, yyyy") · @item.Status</div>
+                            @if (item.Mileage.HasValue)
+                            {
+                                <div>@item.Mileage.Value.ToString("N0") mi</div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(item.Technician))
+                            {
+                                <div>Technician: @item.Technician</div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
     </div>
 </section>
 
 @code {
+    private CustomerProfile? _profile;
+    private Customer? _customer;
+    private List<CustomerVehicle> _vehicles = [];
+    private List<AppointmentRequest> _requests = [];
+    private List<ServiceHistoryEntry> _history = [];
+
+    private string DisplayName =>
+        _profile is null
+            ? "Customer"
+            : $"{_profile.FirstName} {_profile.LastName}".Trim();
+
     protected override async Task OnInitializedAsync()
     {
-        var profile = await CustomerProfileService.GetCurrentAsync();
-        if (profile is not null)
+        var current = CurrentCustomerAccessor.GetCurrentCustomer();
+        if (!current.IsAuthenticated)
         {
-            PortalStore.UpdateProfile(ToDto(profile, PortalStore.Profile));
+            return;
+        }
+
+        _profile = await CustomerProfileService.GetCurrentAsync();
+
+        _customer = await Db.Customers
+            .Include(x => x.Vehicles)
+            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
+
+        if (_customer is not null)
+        {
+            _vehicles = _customer.Vehicles
+                .OrderByDescending(x => x.IsPrimary)
+                .ThenByDescending(x => x.CreatedUtc)
+                .ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(current.Email))
+        {
+            _requests = await Db.AppointmentRequests
+                .Where(x => x.Email == current.Email)
+                .OrderByDescending(x => x.SubmittedAtUtc)
+                .Take(5)
+                .ToListAsync();
+        }
+
+        if (_customer is not null)
+        {
+            _history = await Db.ServiceHistoryEntries
+                .Where(x => x.CustomerId == _customer.Id)
+                .OrderByDescending(x => x.ServiceDate)
+                .Take(5)
+                .ToListAsync();
         }
     }
 
-    private static CustomerProfileDto ToDto(CustomerProfile profile, CustomerProfileDto fallback)
+    private static string GetVehicleTitle(CustomerVehicle vehicle)
     {
-        return new CustomerProfileDto(
-            DisplayName: GetString(profile, "DisplayName") ?? fallback.DisplayName,
-            Email: GetString(profile, "Email") ?? fallback.Email,
-            Phone: GetString(profile, "Phone") ?? fallback.Phone,
-            AddressLine1: GetString(profile, "AddressLine1") ?? fallback.AddressLine1,
-            AddressLine2: GetString(profile, "AddressLine2") ?? fallback.AddressLine2,
-            City: GetString(profile, "City") ?? fallback.City,
-            State: GetString(profile, "State") ?? fallback.State,
-            PostalCode: GetString(profile, "PostalCode") ?? fallback.PostalCode
-        );
+        var year = vehicle.ModelYear?.ToString() ?? "";
+        var make = vehicle.Make ?? "";
+        var model = vehicle.Model ?? "";
+
+        var title = string.Join(" ", new[] { year, make, model }.Where(x => !string.IsNullOrWhiteSpace(x)));
+        return string.IsNullOrWhiteSpace(title) ? "Unnamed Vehicle" : title;
     }
 
-    private static string? GetString(object source, string propertyName)
-    {
-        var value = source.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public)?.GetValue(source);
-        return value?.ToString();
-    }
-
-    private static string FormatAddress(CustomerProfileDto profile)
+    private static string GetVehicleDetails(CustomerVehicle vehicle)
     {
         var parts = new List<string>();
 
-        if (!string.IsNullOrWhiteSpace(profile.AddressLine1))
+        if (!string.IsNullOrWhiteSpace(vehicle.VehicleType))
         {
-            parts.Add(profile.AddressLine1);
+            parts.Add(vehicle.VehicleType);
         }
 
-        if (!string.IsNullOrWhiteSpace(profile.AddressLine2))
+        if (!string.IsNullOrWhiteSpace(vehicle.Nickname))
         {
-            parts.Add(profile.AddressLine2);
+            parts.Add(vehicle.Nickname);
         }
 
-        var cityStateZip = string.Join(", ", new[]
+        if (vehicle.Mileage.HasValue)
         {
-            profile.City,
-            profile.State
+            parts.Add($"{vehicle.Mileage.Value:N0} mi");
+        }
+
+        if (!string.IsNullOrWhiteSpace(vehicle.Vin))
+        {
+            parts.Add($"VIN {vehicle.Vin}");
+        }
+
+        return parts.Count == 0 ? "No additional details" : string.Join(" · ", parts);
+    }
+
+    private static string FormatAppointmentRequest(AppointmentRequest request)
+    {
+        var when = string.Join(" ", new[]
+        {
+            request.PreferredDate,
+            request.PreferredTime
         }.Where(x => !string.IsNullOrWhiteSpace(x)));
 
-        if (!string.IsNullOrWhiteSpace(cityStateZip) || !string.IsNullOrWhiteSpace(profile.PostalCode))
-        {
-            parts.Add(string.IsNullOrWhiteSpace(profile.PostalCode)
-                ? cityStateZip
-                : $"{cityStateZip} {profile.PostalCode}".Trim());
-        }
-
-        return parts.Count == 0 ? "No address on file" : string.Join(" | ", parts);
+        return string.IsNullOrWhiteSpace(when)
+            ? "No preferred date/time provided"
+            : when;
     }
 }

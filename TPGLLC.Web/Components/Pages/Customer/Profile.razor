@@ -1,129 +1,187 @@
-﻿@page "/customer/profile"
-@rendermode InteractiveServer
-@inject CustomerPortalStore PortalStore
-@attribute [Authorize]
-
+﻿@page "/portal/profile"
 @layout CustomerLayout
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
-<div class="quote-card" style="margin-bottom:1.5rem;">
-    <p class="section-kicker">Profile</p>
-    <h1 style="margin-top:0;">My Profile</h1>
-    <p style="margin-bottom:0;">Update your contact information.</p>
-</div>
+@using TPGLLC.Data.Entities
+@using TPGLLC.Web.Services.Customers
 
-<div class="quote-card">
-    <EditForm Model="_model" OnValidSubmit="SaveAsync" FormName="CustomerProfileForm">
+@inject ICustomerProfileService CustomerProfileService
+@inject ICurrentCustomerAccessor CurrentCustomerAccessor
+
+<PageTitle>My Profile</PageTitle>
+
+<section class="portal-dashboard">
+    <div class="portal-header">
+        <p class="section-kicker">Customer Portal</p>
+        <h1>My Profile</h1>
+        <p>Update your contact details and communication preferences.</p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="auth-alert">@_errorMessage</div>
+    }
+
+    @if (_saved)
+    {
+        <div class="auth-success">Profile saved successfully.</div>
+    }
+
+    <div class="portal-section">
+        <h2>Account Summary</h2>
+        <div class="portal-activity">
+            <div class="portal-activity-item">
+                <div class="portal-activity-icon">👤</div>
+                <div>
+                    <div><strong>@_accountEmail</strong></div>
+                    <div>@(_profile.UpdatedUtc?.ToString("MMM d, yyyy h:mm tt") ?? "No updates yet")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <EditForm Model="_profile" OnValidSubmit="SaveAsync">
         <DataAnnotationsValidator />
         <ValidationSummary />
 
-        @if (!string.IsNullOrWhiteSpace(_message))
-        {
-            <div class="form-status">@_message</div>
-        }
+        <div class="portal-section">
+            <h2>Contact Information</h2>
+            <div class="profile-grid">
+                <div class="form-field">
+                    <label>First Name</label>
+                    <input @bind="_profile.FirstName" />
+                </div>
 
-        <div class="form-grid">
-            <div class="form-field full">
-                <label>Name</label>
-                <InputText class="input" @bind-Value="_model.DisplayName" />
-            </div>
+                <div class="form-field">
+                    <label>Last Name</label>
+                    <input @bind="_profile.LastName" />
+                </div>
 
-            <div class="form-field full">
-                <label>Email</label>
-                <InputText class="input" @bind-Value="_model.Email" />
-            </div>
+                <div class="form-field">
+                    <label>Phone</label>
+                    <input @bind="_profile.Phone" />
+                </div>
 
-            <div class="form-field">
-                <label>Phone</label>
-                <InputText class="input" @bind-Value="_model.Phone" />
-            </div>
-
-            <div class="form-field">
-                <label>Address Line 1</label>
-                <InputText class="input" @bind-Value="_model.AddressLine1" />
-            </div>
-
-            <div class="form-field full">
-                <label>Address Line 2</label>
-                <InputText class="input" @bind-Value="_model.AddressLine2" />
-            </div>
-
-            <div class="form-field">
-                <label>City</label>
-                <InputText class="input" @bind-Value="_model.City" />
-            </div>
-
-            <div class="form-field">
-                <label>State</label>
-                <InputText class="input" @bind-Value="_model.State" />
-            </div>
-
-            <div class="form-field">
-                <label>Postal Code</label>
-                <InputText class="input" @bind-Value="_model.PostalCode" />
+                <div class="form-field">
+                    <label>Company</label>
+                    <input @bind="_profile.Company" />
+                </div>
             </div>
         </div>
 
-        <div class="hero-actions" style="margin-top:1rem;">
-            <button class="btn btn-primary" type="submit">Save Profile</button>
+        <div class="portal-section">
+            <h2>Address</h2>
+            <div class="profile-grid">
+                <div class="form-field full">
+                    <label>Address Line 1</label>
+                    <input @bind="_profile.Address1" />
+                </div>
+
+                <div class="form-field full">
+                    <label>Address Line 2</label>
+                    <input @bind="_profile.Address2" />
+                </div>
+
+                <div class="form-field">
+                    <label>City</label>
+                    <input @bind="_profile.City" />
+                </div>
+
+                <div class="form-field">
+                    <label>State</label>
+                    <input @bind="_profile.State" />
+                </div>
+
+                <div class="form-field">
+                    <label>Zip Code</label>
+                    <input @bind="_profile.ZipCode" />
+                </div>
+
+                <div class="form-field">
+                    <label>Country</label>
+                    <input @bind="_profile.Country" />
+                </div>
+            </div>
+        </div>
+
+        <div class="portal-section">
+            <h2>Communication Preferences</h2>
+            <div class="profile-grid">
+                <div class="form-field">
+                    <label>Preferred Contact Method</label>
+                    <select @bind="_profile.PreferredContactMethod">
+                        <option value="">Select one</option>
+                        <option value="Email">Email</option>
+                        <option value="SMS">SMS</option>
+                        <option value="Phone">Phone</option>
+                    </select>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" @bind="_profile.ReceiveEmail" />
+                    <label>Receive email updates</label>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" @bind="_profile.ReceiveSms" />
+                    <label>Receive SMS updates</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="portal-actions" style="margin-top: 1.5rem;">
+            <button type="submit" class="portal-action-button">Save Profile</button>
+            <a class="portal-action-button" href="/portal/dashboard">Back to Dashboard</a>
         </div>
     </EditForm>
-</div>
+</section>
 
 @code {
-    private readonly ProfileModel _model = new();
-    private string? _message;
+    private CustomerProfile _profile = new();
+    private string? _accountEmail;
+    private string? _errorMessage;
+    private bool _saved;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        _model.DisplayName = PortalStore.Profile.DisplayName;
-        _model.Email = PortalStore.Profile.Email;
-        _model.Phone = PortalStore.Profile.Phone;
-        _model.AddressLine1 = PortalStore.Profile.AddressLine1;
-        _model.AddressLine2 = PortalStore.Profile.AddressLine2 ?? string.Empty;
-        _model.City = PortalStore.Profile.City;
-        _model.State = PortalStore.Profile.State;
-        _model.PostalCode = PortalStore.Profile.PostalCode;
+        var current = CurrentCustomerAccessor.GetCurrentCustomer();
+        _accountEmail = current.Email;
+
+        if (!current.IsAuthenticated)
+        {
+            _errorMessage = "You must be signed in to view your profile.";
+            return;
+        }
+
+        var profile = await CustomerProfileService.GetCurrentAsync();
+
+        _profile = profile ?? new CustomerProfile
+        {
+            ApplicationUserId = current.UserId,
+            ReceiveEmail = true
+        };
     }
 
-    private Task SaveAsync()
+    private async Task SaveAsync()
     {
-        PortalStore.UpdateProfile(new CustomerProfileDto(
-            DisplayName: _model.DisplayName,
-            Email: _model.Email,
-            Phone: _model.Phone,
-            AddressLine1: _model.AddressLine1,
-            AddressLine2: string.IsNullOrWhiteSpace(_model.AddressLine2) ? null : _model.AddressLine2,
-            City: _model.City,
-            State: _model.State,
-            PostalCode: _model.PostalCode));
+        _errorMessage = null;
+        _saved = false;
 
-        _message = "Profile saved.";
-        return Task.CompletedTask;
-    }
+        try
+        {
+            var current = CurrentCustomerAccessor.GetCurrentCustomer();
 
-    private sealed class ProfileModel
-    {
-        [Required]
-        public string DisplayName { get; set; } = string.Empty;
+            if (!_profile.ApplicationUserId.Equals(current.UserId, StringComparison.Ordinal))
+            {
+                _profile.ApplicationUserId = current.UserId;
+            }
 
-        [Required, EmailAddress]
-        public string Email { get; set; } = string.Empty;
-
-        [Required]
-        public string Phone { get; set; } = string.Empty;
-
-        [Required]
-        public string AddressLine1 { get; set; } = string.Empty;
-
-        public string? AddressLine2 { get; set; }
-
-        [Required]
-        public string City { get; set; } = string.Empty;
-
-        [Required]
-        public string State { get; set; } = string.Empty;
-
-        [Required]
-        public string PostalCode { get; set; } = string.Empty;
+            _profile = await CustomerProfileService.SaveAsync(_profile);
+            _saved = true;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
     }
 }

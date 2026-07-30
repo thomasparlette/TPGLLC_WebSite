@@ -63,4 +63,34 @@ public sealed class CustomerProfileService
 
         await _db.SaveChangesAsync();
     }
+    public async Task<CustomerProfile> SaveAsync(CustomerProfile profile)
+    {
+        var existing = await GetAsync(profile.ApplicationUserId);
+
+        if (existing is null)
+        {
+            profile.CreatedUtc = DateTimeOffset.UtcNow;
+            _db.CustomerProfiles.Add(profile);
+            await _db.SaveChangesAsync();
+            return profile;
+        }
+
+        existing.FirstName = profile.FirstName;
+        existing.LastName = profile.LastName;
+        existing.Phone = profile.Phone;
+        existing.Company = profile.Company;
+        existing.Address1 = profile.Address1;
+        existing.Address2 = profile.Address2;
+        existing.City = profile.City;
+        existing.State = profile.State;
+        existing.ZipCode = profile.ZipCode;
+        existing.Country = profile.Country;
+        existing.PreferredContactMethod = profile.PreferredContactMethod;
+        existing.ReceiveEmail = profile.ReceiveEmail;
+        existing.ReceiveSms = profile.ReceiveSms;
+        existing.UpdatedUtc = DateTimeOffset.UtcNow;
+
+        await _db.SaveChangesAsync();
+        return existing;
+    }
 }

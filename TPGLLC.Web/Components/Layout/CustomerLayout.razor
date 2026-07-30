@@ -1,7 +1,5 @@
 ﻿@inherits LayoutComponentBase
-@using TPGLLC.Web.Features.Portal
-
-@inject CustomerPortalStore PortalStore
+@inject TPGLLC.Web.Services.Customers.ICustomerProfileService CustomerProfileService
 
 <div class="app-shell portal-shell">
     <header class="site-header portal-header">
@@ -15,7 +13,7 @@
 
         <div class="portal-user">
             <div class="brand-tagline">
-                Welcome, @(PortalStore.Profile?.DisplayName ?? "Customer")
+                Welcome, @(_displayName ?? "Customer")
             </div>
             <a class="btn btn-secondary" href="/Identity/Account/Logout">Sign Out</a>
         </div>
@@ -38,3 +36,16 @@
         </div>
     </main>
 </div>
+
+@code {
+    private string? _displayName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var profile = await CustomerProfileService.GetCurrentAsync();
+        if (profile is not null)
+        {
+            _displayName = $"{profile.FirstName} {profile.LastName}".Trim();
+        }
+    }
+}

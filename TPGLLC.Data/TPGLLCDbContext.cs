@@ -20,6 +20,7 @@ public sealed class TPGLLCDbContext
     public DbSet<VehicleCatalogEntry> VehicleCatalogEntries => Set<VehicleCatalogEntry>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerVehicle> CustomerVehicles => Set<CustomerVehicle>();
+    public DbSet<ServiceHistoryEntry> ServiceHistoryEntries => Set<ServiceHistoryEntry>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
