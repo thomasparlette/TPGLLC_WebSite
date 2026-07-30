@@ -108,6 +108,21 @@
 
                 <div class="vehicle-grid">
                     <div class="form-field">
+                        <label>Model Year</label>
+                        <InputText class="input" @bind-Value="_form.ModelYear" placeholder="e.g. 2021" />
+                    </div>
+
+                    <div class="form-field">
+                        <label>Make</label>
+                        <InputText class="input" @bind-Value="_form.Make" placeholder="e.g. Ford" />
+                    </div>
+
+                    <div class="form-field">
+                        <label>Model</label>
+                        <InputText class="input" @bind-Value="_form.Model" placeholder="e.g. F-150" />
+                    </div>
+
+                    <div class="form-field">
                         <label>Vehicle Type</label>
                         <InputSelect class="input" @bind-Value="_form.VehicleType">
                             <option value="">Select type</option>
@@ -115,21 +130,6 @@
                             <option value="Motorcycle">Motorcycle</option>
                             <option value="Other">Other</option>
                         </InputSelect>
-                    </div>
-
-                    <div class="form-field">
-                        <label>Model Year</label>
-                        <InputText class="input" @bind-Value="_form.ModelYear" placeholder="e.g. 2021" />
-                    </div>
-
-                    <div class="form-field">
-                        <label>Make</label>
-                        <InputText class="input" @bind-Value="_form.Make" />
-                    </div>
-
-                    <div class="form-field">
-                        <label>Model</label>
-                        <InputText class="input" @bind-Value="_form.Model" />
                     </div>
 
                     <div class="form-field">

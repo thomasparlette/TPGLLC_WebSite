@@ -168,7 +168,21 @@ a {
     font-size: 0.85rem;
     gap: 1rem;
 }
+.vehicle-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
 
+    .vehicle-grid .full {
+        grid-column: 1 / -1;
+    }
+
+@media (max-width: 900px) {
+    .vehicle-grid {
+        grid-template-columns: 1fr;
+    }
+}
 /* ==========================================
    PORTAL NAVIGATION
 ========================================== */
