@@ -62,7 +62,7 @@
                 @foreach (var vehicle in _vehicles)
                 {
                     <article class="portal-card-link" @key="vehicle.Id">
-                        <div class="portal-card-icon">@GetVehicleIcon(vehicle.VehicleType)</div>
+                        <div class="portal-card-icon">🚗</div>
 
                         <h3>@GetVehicleTitle(vehicle)</h3>
                         <p>@GetVehicleDetails(vehicle)</p>
@@ -123,16 +123,6 @@
                     </div>
 
                     <div class="form-field">
-                        <label>Vehicle Type</label>
-                        <InputSelect class="input" @bind-Value="_form.VehicleType">
-                            <option value="">Select type</option>
-                            <option value="Automotive">Automotive</option>
-                            <option value="Motorcycle">Motorcycle</option>
-                            <option value="Other">Other</option>
-                        </InputSelect>
-                    </div>
-
-                    <div class="form-field">
                         <label>Nickname</label>
                         <InputText class="input" @bind-Value="_form.Nickname" />
                     </div>
@@ -179,10 +169,7 @@
     private string? _errorMessage;
     private string? _successMessage;
 
-    private VehicleFormModel _form = new()
-    {
-        VehicleType = "Automotive"
-    };
+    private VehicleFormModel _form = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -254,10 +241,7 @@
     private void ResetForm()
     {
         _editingVehicleId = null;
-        _form = new VehicleFormModel
-        {
-            VehicleType = "Automotive"
-        };
+        _form = new VehicleFormModel();
     }
 
     private void EditVehicle(Guid id)
@@ -274,7 +258,6 @@
 
         _form = new VehicleFormModel
         {
-            VehicleType = vehicle.VehicleType,
             ModelYear = vehicle.ModelYear?.ToString(),
             Make = vehicle.Make,
             Model = vehicle.Model,
@@ -317,7 +300,8 @@
             vehicle = new CustomerVehicle
             {
                 CustomerId = _customer.Id,
-                CreatedUtc = DateTimeOffset.UtcNow
+                CreatedUtc = DateTimeOffset.UtcNow,
+                VehicleType = "Automotive"
             };
 
             Db.CustomerVehicles.Add(vehicle);
@@ -329,7 +313,6 @@
                 ?? throw new InvalidOperationException("Vehicle not found.");
         }
 
-        vehicle.VehicleType = _form.VehicleType.Trim();
         vehicle.ModelYear = modelYear;
         vehicle.Make = string.IsNullOrWhiteSpace(_form.Make) ? null : _form.Make.Trim();
         vehicle.Model = string.IsNullOrWhiteSpace(_form.Model) ? null : _form.Model.Trim();
@@ -503,11 +486,6 @@
     {
         var details = new List<string>();
 
-        if (!string.IsNullOrWhiteSpace(vehicle.VehicleType))
-        {
-            details.Add(vehicle.VehicleType);
-        }
-
         if (!string.IsNullOrWhiteSpace(vehicle.Nickname))
         {
             details.Add(vehicle.Nickname);
@@ -523,24 +501,16 @@
             details.Add($"Plate {vehicle.LicensePlate}");
         }
 
-        return details.Count == 0 ? "No additional details" : string.Join(" · ", details);
-    }
-
-    private static string GetVehicleIcon(string? vehicleType)
-    {
-        return vehicleType?.ToLowerInvariant() switch
+        if (!string.IsNullOrWhiteSpace(vehicle.Vin))
         {
-            "motorcycle" => "🏍",
-            "other" => "🚙",
-            _ => "🚗"
-        };
+            details.Add($"VIN {vehicle.Vin}");
+        }
+
+        return details.Count == 0 ? "No additional details" : string.Join(" · ", details);
     }
 
     private sealed class VehicleFormModel
     {
-        [Required]
-        public string VehicleType { get; set; } = "Automotive";
-
         public string? ModelYear { get; set; }
 
         public string? Make { get; set; }
