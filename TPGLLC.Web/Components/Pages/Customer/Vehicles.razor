@@ -7,11 +7,13 @@
 @using Microsoft.EntityFrameworkCore
 @using TPGLLC.Data
 @using TPGLLC.Data.Entities
+@using TPGLLC.Services.Vehicles
 @using TPGLLC.Web.Services.Customers
 
 @inject TPGLLCDbContext Db
 @inject ICurrentCustomerAccessor CurrentCustomerAccessor
 @inject ICustomerProfileService CustomerProfileService
+@inject IVehicleCatalogService VehicleCatalog
 
 <PageTitle>My Vehicles</PageTitle>
 
@@ -75,7 +77,7 @@
                         <div class="portal-actions" style="margin-top:1rem;">
                             <button type="button"
                                     class="portal-action-button"
-                                    @onclick="() => EditVehicle(vehicle.Id)">
+                                    @onclick="() => EditVehicleAsync(vehicle.Id)">
                                 Edit
                             </button>
 
@@ -109,17 +111,41 @@
                 <div class="vehicle-grid">
                     <div class="form-field">
                         <label>Model Year</label>
-                        <InputText class="input" @bind-Value="_form.ModelYear" placeholder="e.g. 2021" />
+                        <select class="input" @bind="_form.ModelYear" @bind:after="OnVehicleYearChanged">
+                            <option value="">Select year</option>
+                            @foreach (var year in _years)
+                            {
+                                <option value="@year">@year</option>
+                            }
+                        </select>
                     </div>
 
                     <div class="form-field">
                         <label>Make</label>
-                        <InputText class="input" @bind-Value="_form.Make" placeholder="e.g. Ford" />
+                        <select class="input"
+                                @bind="_form.Make"
+                                @bind:after="OnVehicleMakeChanged"
+                                disabled="@(_makes.Count == 0)">
+                            <option value="">Select make</option>
+                            @foreach (var make in _makes)
+                            {
+                                <option value="@make">@make</option>
+                            }
+                        </select>
                     </div>
 
                     <div class="form-field">
                         <label>Model</label>
-                        <InputText class="input" @bind-Value="_form.Model" placeholder="e.g. F-150" />
+                        <select class="input"
+                                @bind="_form.Model"
+                                @bind:after="OnVehicleModelChanged"
+                                disabled="@(_models.Count == 0)">
+                            <option value="">Select model</option>
+                            @foreach (var model in _models)
+                            {
+                                <option value="@model">@model</option>
+                            }
+                        </select>
                     </div>
 
                     <div class="form-field">
@@ -169,11 +195,28 @@
     private string? _errorMessage;
     private string? _successMessage;
 
+    private List<int> _years = [];
+    private List<string> _makes = [];
+    private List<string> _models = [];
+
     private VehicleFormModel _form = new();
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadVehicleCatalogAsync();
         await LoadAsync();
+    }
+
+    private async Task LoadVehicleCatalogAsync()
+    {
+        _years = (await VehicleCatalog.GetYearsAsync()).ToList();
+
+        if (_years.Count == 0)
+        {
+            _years = Enumerable.Range(1996, DateTime.UtcNow.Year - 1996 + 1)
+                .Reverse()
+                .ToList();
+        }
     }
 
     private async Task LoadAsync()
@@ -242,9 +285,11 @@
     {
         _editingVehicleId = null;
         _form = new VehicleFormModel();
+        _makes = [];
+        _models = [];
     }
 
-    private void EditVehicle(Guid id)
+    private async Task EditVehicleAsync(Guid id)
     {
         var vehicle = _vehicles.FirstOrDefault(x => x.Id == id);
         if (vehicle is null)
@@ -267,6 +312,59 @@
             Mileage = vehicle.Mileage?.ToString(),
             IsPrimary = vehicle.IsPrimary
         };
+
+        await RefreshMakesAsync();
+        await RefreshModelsAsync();
+    }
+
+    private async Task OnVehicleYearChanged()
+    {
+        _form.Make = null;
+        _form.Model = null;
+
+        _makes = [];
+        _models = [];
+
+        await RefreshMakesAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnVehicleMakeChanged()
+    {
+        _form.Model = null;
+        _models = [];
+
+        await RefreshModelsAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnVehicleModelChanged()
+    {
+        return Task.CompletedTask;
+    }
+
+    private async Task RefreshMakesAsync()
+    {
+        _makes = [];
+
+        if (TryParseYear(_form.ModelYear, out var year) && year.HasValue)
+        {
+            _makes = (await VehicleCatalog.GetMakesAsync(year.Value)).ToList();
+            EnsureSelectedValue(_makes, _form.Make);
+        }
+    }
+
+    private async Task RefreshModelsAsync()
+    {
+        _models = [];
+
+        if (TryParseYear(_form.ModelYear, out var year) &&
+            year.HasValue &&
+            !string.IsNullOrWhiteSpace(_form.Make))
+        {
+            _models = (await VehicleCatalog.GetModelsAsync(year.Value, _form.Make.Trim())).ToList();
+            EnsureSelectedValue(_models, _form.Model);
+        }
     }
 
     private async Task SaveVehicleAsync()
@@ -428,6 +526,19 @@
         {
             vehicle.IsPrimary = false;
             vehicle.UpdatedUtc = DateTimeOffset.UtcNow;
+        }
+    }
+
+    private static void EnsureSelectedValue(List<string> values, string? selectedValue)
+    {
+        if (string.IsNullOrWhiteSpace(selectedValue))
+        {
+            return;
+        }
+
+        if (!values.Contains(selectedValue, StringComparer.OrdinalIgnoreCase))
+        {
+            values.Insert(0, selectedValue);
         }
     }
 
