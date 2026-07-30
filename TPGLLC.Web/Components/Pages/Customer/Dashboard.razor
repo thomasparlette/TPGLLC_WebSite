@@ -1,82 +1,177 @@
-﻿@page "/customer/dashboard"
-@rendermode InteractiveServer
-@inject CustomerPortalStore PortalStore
-@attribute [Authorize]
-
+﻿@page "/portal/dashboard"
 @layout CustomerLayout
-@using TPGLLC.Web.Components.Shared
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
-<div class="quote-card" style="margin-bottom:1.5rem;">
-    <p class="section-kicker">Dashboard</p>
-    <h1 style="margin-top:0;">Welcome back, @(PortalStore.Profile?.DisplayName ?? "Customer")</h1>
-    <p style="margin-bottom:0;">
-        Manage your vehicles, appointments, service history, and invoices in one place.
-    </p>
-</div>
+@using System.Reflection
+@using Microsoft.AspNetCore.Authorization
+@using TPGLLC.Application.Contracts.V1.Portal
+@using TPGLLC.Data.Entities
+@using TPGLLC.Web.Features.Portal
+@using TPGLLC.Web.Services.Customers
 
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-bottom:1.5rem;">
-    <DashboardCard Title="My Vehicles"
-                   Value="@PortalStore.Vehicles.Count.ToString()"
-                   Description="Registered in your profile"
-                   Kicker="Overview"
-                   Href="/customer/vehicles"
-                   ActionText="Manage" />
+@inject CustomerPortalStore PortalStore
+@inject ICustomerProfileService CustomerProfileService
 
-    <DashboardCard Title="Appointments"
-                   Value="@PortalStore.Appointments.Count.ToString()"
-                   Description="Scheduled or pending"
-                   Kicker="Overview"
-                   Href="/customer/appointments"
-                   ActionText="View" />
+<PageTitle>Customer Portal</PageTitle>
 
-    <DashboardCard Title="Service History"
-                   Value="@PortalStore.History.Count.ToString()"
-                   Description="Completed shop visits"
-                   Kicker="Overview"
-                   Href="/customer/history"
-                   ActionText="Review" />
+<section class="portal-dashboard">
+    <div class="portal-header">
+        <p class="section-kicker">Customer Portal</p>
+        <h1>Welcome back, @PortalStore.Profile.DisplayName</h1>
+        <p>Manage your vehicles, appointments, service history, and invoices in one place.</p>
+    </div>
 
-    <DashboardCard Title="Invoices"
-                   Value="@PortalStore.Invoices.Count(i => !i.Paid).ToString()"
-                   Description="Outstanding invoices"
-                   Kicker="Overview"
-                   Href="/customer/invoices"
-                   ActionText="Open" />
-</div>
+    <div class="portal-stats">
+        <div class="portal-stat">
+            <div class="portal-stat-value">@PortalStore.Vehicles.Count</div>
+            <div class="portal-stat-label">Vehicles</div>
+        </div>
 
-<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:1.5rem;">
-    <section class="quote-card">
-        <p class="section-kicker">Recent Activity</p>
-        <h2 style="margin-top:0;">Latest service updates</h2>
+        <div class="portal-stat">
+            <div class="portal-stat-value">@PortalStore.Appointments.Count</div>
+            <div class="portal-stat-label">Appointments</div>
+        </div>
 
-        @if (PortalStore.History.Count == 0)
+        <div class="portal-stat">
+            <div class="portal-stat-value">@PortalStore.History.Count</div>
+            <div class="portal-stat-label">Service Visits</div>
+        </div>
+
+        <div class="portal-stat">
+            <div class="portal-stat-value">@PortalStore.Invoices.Count(x => !x.Paid)</div>
+            <div class="portal-stat-label">Outstanding Invoices</div>
+        </div>
+    </div>
+
+    <div class="portal-section">
+        <h2>Quick Actions</h2>
+        <div class="portal-actions">
+            <a class="portal-action-button" href="/portal/appointments">Schedule Appointment</a>
+            <a class="portal-action-button" href="/portal/vehicles">Add Vehicle</a>
+            <a class="portal-action-button" href="/portal/history">View Service History</a>
+            <a class="portal-action-button" href="/portal/invoices">Review Invoices</a>
+        </div>
+    </div>
+
+    <div class="portal-section">
+        <h2>Profile</h2>
+        <div class="portal-activity">
+            <div class="portal-activity-item">
+                <div class="portal-activity-icon">👤</div>
+                <div>
+                    <div><strong>@PortalStore.Profile.DisplayName</strong></div>
+                    <div>@PortalStore.Profile.Email</div>
+                    <div>@PortalStore.Profile.Phone</div>
+                    <div>@FormatAddress(PortalStore.Profile)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="portal-section">
+        <h2>Upcoming Appointment</h2>
+        @if (PortalStore.Appointments.Count > 0)
         {
-            <p>No completed service history yet.</p>
+            var next = PortalStore.Appointments[0];
+
+            <div class="portal-activity">
+                <div class="portal-activity-item">
+                    <div class="portal-activity-icon">📅</div>
+                    <div>
+                        <div><strong>@next.VehicleName</strong></div>
+                        <div>@next.Service</div>
+                        <div>@next.Date.ToString("MMM d, yyyy") at @next.Time.ToString("h:mm tt")</div>
+                        <div>@next.Status</div>
+                    </div>
+                </div>
+            </div>
         }
         else
         {
-            <div style="display:flex;flex-direction:column;gap:.75rem;">
-                @foreach (var entry in PortalStore.History.Take(3))
-                {
-                    <div style="padding:.9rem 1rem;border-radius:1rem;background:rgba(255,255,255,.04);">
-                        <strong>@entry.Service</strong>
-                        <div>@entry.VehicleName</div>
-                        <div>@entry.Date.ToString("MMM d, yyyy") • @entry.Status</div>
-                    </div>
-                }
+            <div class="portal-activity">
+                <div class="portal-activity-item">
+                    <div class="portal-activity-icon">📅</div>
+                    <div>No appointments scheduled.</div>
+                </div>
             </div>
         }
-    </section>
+    </div>
 
-    <section class="quote-card">
-        <p class="section-kicker">Quick Actions</p>
-        <h2 style="margin-top:0;">Get started</h2>
-
-        <div class="hero-actions" style="display:flex;flex-direction:column;gap:.75rem;">
-            <a class="btn btn-primary" href="/customer/vehicles">Manage Vehicles</a>
-            <a class="btn btn-secondary" href="/customer/vehicles/add">Add Vehicle</a>
-            <a class="btn btn-secondary" href="/customer/appointments">Schedule Appointment</a>
-            <a class="btn btn-secondary" href="/customer/profile">Edit Profile</a>
+    <div class="portal-section">
+        <h2>Recent Activity</h2>
+        <div class="portal-activity">
+            @foreach (var item in PortalStore.History.Take(3))
+            {
+                <div class="portal-activity-item">
+                    <div class="portal-activity-icon">🔧</div>
+                    <div>
+                        <div><strong>@item.VehicleName</strong></div>
+                        <div>@item.Service</div>
+                        <div>@item.Date.ToString("MMM d, yyyy") · @item.Status</div>
+                    </div>
+                </div>
+            }
         </div>
-    </section>
-</div>
+    </div>
+</section>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var profile = await CustomerProfileService.GetCurrentAsync();
+        if (profile is not null)
+        {
+            PortalStore.UpdateProfile(ToDto(profile, PortalStore.Profile));
+        }
+    }
+
+    private static CustomerProfileDto ToDto(CustomerProfile profile, CustomerProfileDto fallback)
+    {
+        return new CustomerProfileDto(
+            DisplayName: GetString(profile, "DisplayName") ?? fallback.DisplayName,
+            Email: GetString(profile, "Email") ?? fallback.Email,
+            Phone: GetString(profile, "Phone") ?? fallback.Phone,
+            AddressLine1: GetString(profile, "AddressLine1") ?? fallback.AddressLine1,
+            AddressLine2: GetString(profile, "AddressLine2") ?? fallback.AddressLine2,
+            City: GetString(profile, "City") ?? fallback.City,
+            State: GetString(profile, "State") ?? fallback.State,
+            PostalCode: GetString(profile, "PostalCode") ?? fallback.PostalCode
+        );
+    }
+
+    private static string? GetString(object source, string propertyName)
+    {
+        var value = source.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public)?.GetValue(source);
+        return value?.ToString();
+    }
+
+    private static string FormatAddress(CustomerProfileDto profile)
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(profile.AddressLine1))
+        {
+            parts.Add(profile.AddressLine1);
+        }
+
+        if (!string.IsNullOrWhiteSpace(profile.AddressLine2))
+        {
+            parts.Add(profile.AddressLine2);
+        }
+
+        var cityStateZip = string.Join(", ", new[]
+        {
+            profile.City,
+            profile.State
+        }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+        if (!string.IsNullOrWhiteSpace(cityStateZip) || !string.IsNullOrWhiteSpace(profile.PostalCode))
+        {
+            parts.Add(string.IsNullOrWhiteSpace(profile.PostalCode)
+                ? cityStateZip
+                : $"{cityStateZip} {profile.PostalCode}".Trim());
+        }
+
+        return parts.Count == 0 ? "No address on file" : string.Join(" | ", parts);
+    }
+}
