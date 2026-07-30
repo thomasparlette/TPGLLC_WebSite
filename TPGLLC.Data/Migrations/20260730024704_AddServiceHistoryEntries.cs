@@ -5,7 +5,7 @@
 namespace TPGLLC.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class AddServiceHistoryEntries : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
