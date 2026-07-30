@@ -1,0 +1,13 @@
+﻿<div class="portal-stats">
+    <DashboardCard Value="@VehicleCount.ToString()" Label="Vehicles" />
+    <DashboardCard Value="@AppointmentRequestCount.ToString()" Label="Appointment Requests" />
+    <DashboardCard Value="@ServiceVisitCount.ToString()" Label="Service Visits" />
+    <DashboardCard Value="@PrimaryVehicleCount.ToString()" Label="Primary Vehicle" />
+</div>
+
+@code {
+    [Parameter] public int VehicleCount { get; set; }
+    [Parameter] public int AppointmentRequestCount { get; set; }
+    [Parameter] public int ServiceVisitCount { get; set; }
+    [Parameter] public int PrimaryVehicleCount { get; set; }
+}

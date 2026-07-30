@@ -1,0 +1,51 @@
+﻿@using TPGLLC.Data.Entities
+
+<section class="portal-section">
+    <div class="portal-section-heading">
+        <h2>Timeline</h2>
+        <a href="#top">Top</a>
+    </div>
+
+    @if (Entries is null || Entries.Count == 0)
+    {
+        <div class="portal-activity">
+            <div class="portal-activity-item">
+                <div class="portal-activity-icon">🛠️</div>
+                <div>No service history found for this customer.</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="portal-activity">
+            @foreach (var entry in Entries)
+            {
+                <div class="portal-activity-item">
+                    <div class="portal-activity-icon">🛠️</div>
+                    <div>
+                        <div><strong>@entry.ServiceDate.ToString("MMM d, yyyy")</strong></div>
+                        <div>@entry.VehicleName</div>
+                        <div>@entry.Service</div>
+                        @if (entry.Mileage.HasValue)
+                        {
+                            <div>@entry.Mileage.Value.ToString("N0") mi</div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(entry.Technician))
+                        {
+                            <div>Technician: @entry.Technician</div>
+                        }
+                        <div class="portal-muted">@entry.Status</div>
+                        @if (!string.IsNullOrWhiteSpace(entry.Notes))
+                        {
+                            <div style="margin-top:0.35rem;">@entry.Notes</div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public IReadOnlyList<ServiceHistoryEntry> Entries { get; set; } = Array.Empty<ServiceHistoryEntry>();
+}

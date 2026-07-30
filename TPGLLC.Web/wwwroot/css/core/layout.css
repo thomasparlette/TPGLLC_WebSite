@@ -266,19 +266,3 @@ pre {
     .profile-grid .full {
         grid-column: 1 / -1;
     }
-
-.vehicle-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
-}
-
-    .vehicle-grid .full {
-        grid-column: 1 / -1;
-    }
-
-.vehicle-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-}

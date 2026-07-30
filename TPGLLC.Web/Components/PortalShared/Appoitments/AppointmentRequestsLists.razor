@@ -1,0 +1,31 @@
+﻿@using TPGLLC.Data.Entities
+
+<section class="portal-section">
+    <div class="portal-section-heading">
+        <h2>Your Requests</h2>
+        <a href="#appointment-form">New Request</a>
+    </div>
+
+    @if (Requests is null || Requests.Count == 0)
+    {
+        <div class="portal-activity">
+            <div class="portal-activity-item">
+                <div class="portal-activity-icon">📅</div>
+                <div>No appointment requests are on file yet.</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="portal-dashboard-grid">
+            @foreach (var request in Requests)
+            {
+                <AppointmentRequestCard Request="request" />
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public IReadOnlyList<AppointmentRequest> Requests { get; set; } = Array.Empty<AppointmentRequest>();
+}

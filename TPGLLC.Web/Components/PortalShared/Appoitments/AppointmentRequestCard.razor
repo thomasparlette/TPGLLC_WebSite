@@ -1,0 +1,54 @@
+﻿@using TPGLLC.Data.Entities
+@using System.Linq
+
+<article class="portal-card-link" style="cursor:default;" @key="Request.RequestId">
+    <div class="portal-card-icon">📅</div>
+
+    <h3>@Request.ServiceNeeded</h3>
+    <p>@FormatAppointmentRequest(Request)</p>
+
+    <div class="portal-primary-meta" style="margin-top:0.75rem;">
+        <span>@GetVehicleSummary(Request)</span>
+        <span>@Request.Status</span>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Request.Message))
+    {
+        <p style="margin-top:0.9rem;">@Request.Message</p>
+    }
+
+    <div style="margin-top:0.9rem; color:#6b7280; font-size:0.9rem;">
+        Submitted @Request.SubmittedAtUtc.ToLocalTime().ToString("MMM d, yyyy")
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public AppointmentRequest Request { get; set; } = default!;
+
+    private static string FormatAppointmentRequest(AppointmentRequest request)
+    {
+        var when = string.Join(" ", new[]
+        {
+            request.PreferredDate,
+            request.PreferredTime
+        }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+        return string.IsNullOrWhiteSpace(when)
+            ? "No preferred date/time provided"
+            : when;
+    }
+
+    private static string GetVehicleSummary(AppointmentRequest request)
+    {
+        var parts = new[]
+        {
+            request.VehicleYear,
+            request.VehicleMake,
+            request.VehicleModel
+        }
+        .Where(x => !string.IsNullOrWhiteSpace(x));
+
+        var summary = string.Join(" ", parts);
+        return string.IsNullOrWhiteSpace(summary) ? "No vehicle selected" : summary;
+    }
+}

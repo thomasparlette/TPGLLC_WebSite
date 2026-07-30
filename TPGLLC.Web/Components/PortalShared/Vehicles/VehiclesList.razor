@@ -1,0 +1,37 @@
+﻿@using TPGLLC.Data.Entities
+
+<section class="portal-section">
+    <div class="portal-section-heading">
+        <h2>Your Vehicles</h2>
+        <a href="#vehicle-form">Add / Edit</a>
+    </div>
+
+    @if (Vehicles is null || Vehicles.Count == 0)
+    {
+        <div class="portal-activity">
+            <div class="portal-activity-item">
+                <div class="portal-activity-icon">🚗</div>
+                <div>No vehicles are on file yet.</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="portal-dashboard-grid">
+            @foreach (var vehicle in Vehicles)
+            {
+                <PortalVehicleCard Item="vehicle"
+                             OnEdit="OnEdit"
+                             OnDelete="OnDelete"
+                             OnMakePrimary="OnMakePrimary" />
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public IReadOnlyList<CustomerVehicle> Vehicles { get; set; } = Array.Empty<CustomerVehicle>();
+    [Parameter] public EventCallback<Guid> OnEdit { get; set; }
+    [Parameter] public EventCallback<Guid> OnDelete { get; set; }
+    [Parameter] public EventCallback<Guid> OnMakePrimary { get; set; }
+}

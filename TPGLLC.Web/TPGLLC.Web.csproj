@@ -59,6 +59,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Components\Pages\Customer\Portal\" />
+    <Folder Include="Components\Forms\" />
   </ItemGroup>
 </Project>

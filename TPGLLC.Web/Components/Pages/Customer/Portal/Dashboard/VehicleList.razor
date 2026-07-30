@@ -1,0 +1,31 @@
+﻿@using TPGLLC.Data.Entities
+
+<section class="portal-section">
+    <div class="portal-section-heading">
+        <h2>My Vehicles</h2>
+        <a href="/portal/vehicles">View all</a>
+    </div>
+
+    @if (Vehicles is null || Vehicles.Count == 0)
+    {
+        <div class="portal-activity">
+            <div class="portal-activity-item">
+                <div class="portal-activity-icon">🚗</div>
+                <div>No vehicles are on file yet.</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="portal-dashboard-grid">
+            @foreach (var vehicle in Vehicles.Take(3))
+            {
+                <VehicleCard Vehicle="vehicle" Href="/portal/vehicles" />
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public IReadOnlyList<CustomerVehicle> Vehicles { get; set; } = Array.Empty<CustomerVehicle>();
+}

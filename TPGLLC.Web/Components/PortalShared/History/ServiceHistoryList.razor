@@ -1,0 +1,31 @@
+﻿@using TPGLLC.Data.Entities
+
+<section class="portal-section">
+    <div class="portal-section-heading">
+        <h2>Recent Visits</h2>
+        <a href="#history-form">Filter</a>
+    </div>
+
+    @if (Entries is null || Entries.Count == 0)
+    {
+        <div class="portal-activity">
+            <div class="portal-activity-item">
+                <div class="portal-activity-icon">🛠️</div>
+                <div>No service visits available.</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="portal-dashboard-grid">
+            @foreach (var entry in Entries)
+            {
+                <ServiceHistoryEntryCard Entry="entry" />
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public IReadOnlyList<ServiceHistoryEntry> Entries { get; set; } = Array.Empty<ServiceHistoryEntry>();
+}

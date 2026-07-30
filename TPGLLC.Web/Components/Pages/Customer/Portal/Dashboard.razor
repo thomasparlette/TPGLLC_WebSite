@@ -1,0 +1,174 @@
+@page "/portal/dashboard"
+@layout CustomerLayout
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+@using Microsoft.EntityFrameworkCore
+@using TPGLLC.Data
+@using TPGLLC.Data.Entities
+@using TPGLLC.Web.Services.Customers
+@using TPGLLC.Web.Components.Portal.Dashboard
+@using TPGLLC.Web.Components.Shared
+@using TPGLLC.Web.Components.PortalShared.Vehicles
+@using TPGLLC.Web.Components.PortalShared.History
+
+@inject TPGLLCDbContext Db
+@inject ICurrentCustomerAccessor CurrentCustomerAccessor
+
+<PageTitle>Customer Portal</PageTitle>
+
+<section class="portal-dashboard">
+    <DashboardHero DisplayName="@DisplayName" VehicleCount="@_vehicles.Count" />
+
+    <DashboardStats
+        VehicleCount="@_vehicles.Count"
+        AppointmentRequestCount="@_requests.Count"
+        ServiceVisitCount="@_history.Count"
+        PrimaryVehicleCount="@_vehicles.Count(v => v.IsPrimary)" />
+
+    <DashboardQuickActions />
+
+    <div class="portal-grid">
+        <PrimaryVehicleCard Vehicle="@_primaryVehicle" />
+        <AppointmentCard Request="@_nextRequest" />
+    </div>
+
+    <div class="portal-grid">
+        <VehicleList Vehicles="@_vehicles" />
+        <ActivityTimeline Items="@_activity" />
+    </div>
+
+    <ServiceHistoryCard History="@_history" />
+</section>
+
+@code {
+    private CustomerProfile? _profile;
+    private Customer? _customer;
+    private List<CustomerVehicle> _vehicles = [];
+    private List<AppointmentRequest> _requests = [];
+    private List<ServiceHistoryEntry> _history = [];
+
+    private CustomerVehicle? _primaryVehicle;
+    private AppointmentRequest? _nextRequest;
+    private List<ActivityItem> _activity = [];
+
+    private string DisplayName =>
+        _profile is null
+            ? "Customer"
+            : $"{_profile.FirstName} {_profile.LastName}".Trim();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        Db.ChangeTracker.Clear();
+
+        _profile = null;
+        _customer = null;
+        _vehicles = [];
+        _requests = [];
+        _history = [];
+        _primaryVehicle = null;
+        _nextRequest = null;
+        _activity = [];
+
+        var current = CurrentCustomerAccessor.GetCurrentCustomer();
+        if (!current.IsAuthenticated)
+        {
+            return;
+        }
+
+        _profile = await Db.CustomerProfiles
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
+
+        _customer = await Db.Customers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
+
+        if (_customer is not null)
+        {
+            _vehicles = await Db.CustomerVehicles
+                .AsNoTracking()
+                .Where(v => v.CustomerId == _customer.Id)
+                .OrderByDescending(v => v.IsPrimary)
+                .ThenByDescending(v => v.CreatedUtc)
+                .ToListAsync();
+
+            _primaryVehicle = _vehicles.FirstOrDefault(v => v.IsPrimary) ?? _vehicles.FirstOrDefault();
+
+            _history = await Db.ServiceHistoryEntries
+                .AsNoTracking()
+                .Where(h => h.CustomerId == _customer.Id)
+                .OrderByDescending(h => h.ServiceDate)
+                .Take(10)
+                .ToListAsync();
+        }
+
+        if (!string.IsNullOrWhiteSpace(current.Email))
+        {
+            _requests = await Db.AppointmentRequests
+                .AsNoTracking()
+                .Where(x => x.Email == current.Email)
+                .OrderByDescending(x => x.SubmittedAtUtc)
+                .Take(10)
+                .ToListAsync();
+
+            _nextRequest = _requests.FirstOrDefault();
+        }
+
+        BuildActivityFeed();
+    }
+
+    private void BuildActivityFeed()
+    {
+        var items = new List<ActivityItem>();
+
+        if (_vehicles.Count > 0)
+        {
+            var newestVehicle = _vehicles.First();
+            items.Add(new ActivityItem(
+                "🚗",
+                "Vehicle added",
+                GetVehicleTitle(newestVehicle),
+                newestVehicle.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy")));
+        }
+
+        if (_nextRequest is not null)
+        {
+            items.Add(new ActivityItem(
+                "📅",
+                "Appointment request",
+                _nextRequest.ServiceNeeded,
+                _nextRequest.SubmittedAtUtc.ToLocalTime().ToString("MMM d, yyyy")));
+        }
+
+        if (_history.Count > 0)
+        {
+            var latestService = _history.First();
+            items.Add(new ActivityItem(
+                "🛠️",
+                "Service completed",
+                $"{latestService.VehicleName} · {latestService.Service}",
+                latestService.ServiceDate.ToString("MMM d, yyyy")));
+        }
+
+        _activity = items;
+    }
+
+    private static string GetVehicleTitle(CustomerVehicle vehicle)
+    {
+        var parts = new[]
+        {
+            vehicle.ModelYear?.ToString(),
+            vehicle.Make,
+            vehicle.Model
+        }
+        .Where(x => !string.IsNullOrWhiteSpace(x));
+
+        var title = string.Join(" ", parts);
+        return string.IsNullOrWhiteSpace(title) ? "Unnamed Vehicle" : title;
+    }
+}

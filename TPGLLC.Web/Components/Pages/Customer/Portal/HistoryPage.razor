@@ -1,0 +1,98 @@
+﻿@page "/portal/history"
+@layout CustomerLayout
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+@using Microsoft.EntityFrameworkCore
+@using TPGLLC.Data
+@using TPGLLC.Data.Entities
+@using TPGLLC.Web.Services.Customers
+@using TPGLLC.Web.Components.PortalShared.History
+@inject TPGLLCDbContext Db
+@inject ICurrentCustomerAccessor CurrentCustomerAccessor
+
+<PageTitle>Service History</PageTitle>
+
+<section class="portal-dashboard" id="top">
+    <ServiceHistoryPageHeader />
+
+    <ServiceHistoryStats TotalVisits="@_entries.Count.ToString()"
+                         CompletedVisits="@_completedCount.ToString()"
+                         VehiclesServiced="@_vehiclesServicedCount.ToString()"
+                         LatestVisitDate="@GetLatestVisitDate()" />
+
+    <div class="portal-section">
+        <div class="portal-section-heading">
+            <h2>Quick Actions</h2>
+        </div>
+
+        <div class="portal-actions portal-actions-wrap">
+            <a class="portal-action-button" href="/portal/vehicles">View Vehicles</a>
+            <a class="portal-action-button" href="/portal/appointments">Request Appointment</a>
+            <a class="portal-action-button" href="/portal/dashboard">Back to Dashboard</a>
+        </div>
+    </div>
+
+    <ServiceHistoryTimeline Entries="@_entries" />
+    <ServiceHistoryList Entries="@_recentEntries" />
+</section>
+
+@code {
+    private Customer? _customer;
+    private List<ServiceHistoryEntry> _entries = [];
+    private List<ServiceHistoryEntry> _recentEntries = [];
+    private int _completedCount;
+    private int _vehiclesServicedCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        Db.ChangeTracker.Clear();
+
+        _customer = null;
+        _entries = [];
+        _recentEntries = [];
+        _completedCount = 0;
+        _vehiclesServicedCount = 0;
+
+        var current = CurrentCustomerAccessor.GetCurrentCustomer();
+        if (!current.IsAuthenticated)
+        {
+            return;
+        }
+
+        _customer = await Db.Customers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
+
+        if (_customer is null)
+        {
+            return;
+        }
+
+        _entries = await Db.ServiceHistoryEntries
+            .AsNoTracking()
+            .Where(x => x.CustomerId == _customer.Id)
+            .OrderByDescending(x => x.ServiceDate)
+            .ToListAsync();
+
+        _recentEntries = _entries.Take(6).ToList();
+        _completedCount = _entries.Count(x => x.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase));
+        _vehiclesServicedCount = _entries
+            .Select(x => x.VehicleName)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
+    }
+
+    private string GetLatestVisitDate()
+    {
+        var latest = _entries.FirstOrDefault();
+        return latest is null
+            ? "None"
+            : latest.ServiceDate.ToString("MMM d, yyyy");
+    }
+}

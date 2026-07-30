@@ -1,0 +1,36 @@
+﻿<section class="portal-section">
+    <div class="portal-section-heading">
+        <h2>Recent Activity</h2>
+        <a href="/portal/history">Service History</a>
+    </div>
+
+    @if (Items is null || Items.Count == 0)
+    {
+        <div class="portal-activity">
+            <div class="portal-activity-item">
+                <div class="portal-activity-icon">✨</div>
+                <div>No recent activity yet.</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="portal-activity">
+            @foreach (var item in Items)
+            {
+                <div class="portal-activity-item">
+                    <div class="portal-activity-icon">@item.Icon</div>
+                    <div>
+                        <div><strong>@item.Title</strong></div>
+                        <div>@item.Subtitle</div>
+                        <div class="portal-muted">@item.When</div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public IReadOnlyList<ActivityItem> Items { get; set; } = Array.Empty<ActivityItem>();
+}

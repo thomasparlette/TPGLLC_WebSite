@@ -1,0 +1,28 @@
+﻿<div class="portal-stats">
+    <div class="portal-stat">
+        <div class="portal-stat-value">@TotalVisits</div>
+        <div class="portal-stat-label">Visits</div>
+    </div>
+
+    <div class="portal-stat">
+        <div class="portal-stat-value">@CompletedVisits</div>
+        <div class="portal-stat-label">Completed</div>
+    </div>
+
+    <div class="portal-stat">
+        <div class="portal-stat-value">@VehiclesServiced</div>
+        <div class="portal-stat-label">Vehicles</div>
+    </div>
+
+    <div class="portal-stat">
+        <div class="portal-stat-value">@LatestVisitDate</div>
+        <div class="portal-stat-label">Latest Visit</div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string TotalVisits { get; set; } = "0";
+    [Parameter] public string CompletedVisits { get; set; } = "0";
+    [Parameter] public string VehiclesServiced { get; set; } = "0";
+    [Parameter] public string LatestVisitDate { get; set; } = "None";
+}

@@ -1,0 +1,143 @@
+﻿@using TPGLLC.Web.Components.PortalShared.Vehicles
+
+<section class="portal-section" id="vehicle-form">
+    <div class="portal-section-heading">
+        <h2>@(IsEditing ? "Edit Vehicle" : "Add Vehicle")</h2>
+        <a href="#top">Top</a>
+    </div>
+
+    <div class="auth-card" style="margin-left:0; margin-right:0; width:100%;">
+        <EditForm Model="Form" OnValidSubmit="HandleSubmitAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="vehicle-grid">
+                <div class="form-field">
+                    <label>Model Year</label>
+                    <InputSelect class="input"
+                                 @bind-Value="Form.ModelYear"
+                                 @bind-Value:after="HandleYearChangedAsync">
+                        <option value="">Select year</option>
+                        @foreach (var year in Years)
+                        {
+                            <option value="@year">@year</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="form-field">
+                    <label>Make</label>
+                    <InputSelect class="input"
+                                 @bind-Value="Form.Make"
+                                 @bind-Value:after="HandleMakeChangedAsync"
+                                 disabled="@(!Makes.Any())">
+                        <option value="">Select make</option>
+                        @foreach (var make in Makes)
+                        {
+                            <option value="@make">@make</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="form-field">
+                    <label>Model</label>
+                    <InputSelect class="input"
+                                 @bind-Value="Form.Model"
+                                 @bind-Value:after="HandleModelChangedAsync"
+                                 disabled="@(!Models.Any())">
+                        <option value="">Select model</option>
+                        @foreach (var model in Models)
+                        {
+                            <option value="@model">@model</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="form-field">
+                    <label>Nickname</label>
+                    <InputText class="input" @bind-Value="Form.Nickname" />
+                </div>
+
+                <div class="form-field">
+                    <label>License Plate</label>
+                    <InputText class="input" @bind-Value="Form.LicensePlate" />
+                </div>
+
+                <div class="form-field">
+                    <label>VIN</label>
+                    <InputText class="input" @bind-Value="Form.Vin" maxlength="17" />
+                </div>
+
+                <div class="form-field">
+                    <label>Mileage</label>
+                    <InputText class="input" @bind-Value="Form.Mileage" placeholder="e.g. 52,800" />
+                </div>
+
+                <div class="form-check full">
+                    <InputCheckbox @bind-Value="Form.IsPrimary" />
+                    <label>Make this my primary vehicle</label>
+                </div>
+            </div>
+
+            <div class="portal-actions" style="margin-top:1.25rem;">
+                <button type="submit" class="portal-action-button">
+                    @(IsEditing ? "Save Changes" : "Add Vehicle")
+                </button>
+
+                <button type="button" class="portal-action-button" @onclick="HandleCancelAsync">
+                    Cancel
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public VehicleFormModel Form { get; set; } = default!;
+    [Parameter] public IReadOnlyList<int> Years { get; set; } = Array.Empty<int>();
+    [Parameter] public IReadOnlyList<string> Makes { get; set; } = Array.Empty<string>();
+    [Parameter] public IReadOnlyList<string> Models { get; set; } = Array.Empty<string>();
+    [Parameter] public bool IsEditing { get; set; }
+
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnYearChangedCallback { get; set; }
+    [Parameter] public EventCallback OnMakeChangedCallback { get; set; }
+
+    private async Task HandleSubmitAsync()
+    {
+        if (OnSave.HasDelegate)
+        {
+            await OnSave.InvokeAsync();
+        }
+    }
+
+    private async Task HandleCancelAsync()
+    {
+        if (OnCancel.HasDelegate)
+        {
+            await OnCancel.InvokeAsync();
+        }
+    }
+
+    private async Task HandleYearChangedAsync()
+    {
+        if (OnYearChangedCallback.HasDelegate)
+        {
+            await OnYearChangedCallback.InvokeAsync();
+        }
+    }
+
+    private async Task HandleMakeChangedAsync()
+    {
+        if (OnMakeChangedCallback.HasDelegate)
+        {
+            await OnMakeChangedCallback.InvokeAsync();
+        }
+    }
+
+    private Task HandleModelChangedAsync()
+    {
+        return Task.CompletedTask;
+    }
+}

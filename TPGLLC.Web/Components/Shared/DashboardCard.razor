@@ -1,30 +1,9 @@
-﻿<div class="quote-card" style="height:100%;display:flex;flex-direction:column;justify-content:space-between;gap:1rem;">
-    <div>
-        @if (!string.IsNullOrWhiteSpace(Kicker))
-        {
-            <p class="section-kicker">@Kicker</p>
-        }
-
-        <h3 style="margin-top:0;">@Title</h3>
-        <div style="font-size:clamp(1.75rem,4vw,2.5rem);font-weight:700;line-height:1;">@Value</div>
-
-        @if (!string.IsNullOrWhiteSpace(Description))
-        {
-            <p>@Description</p>
-        }
-    </div>
-
-    @if (!string.IsNullOrWhiteSpace(Href))
-    {
-        <a class="btn btn-secondary" href="@Href">@ActionText</a>
-    }
+﻿<div class="portal-stat">
+    <div class="portal-stat-value">@Value</div>
+    <div class="portal-stat-label">@Label</div>
 </div>
 
 @code {
-    [Parameter] public string Title { get; set; } = string.Empty;
-    [Parameter] public string Value { get; set; } = string.Empty;
-    [Parameter] public string? Description { get; set; }
-    [Parameter] public string? Kicker { get; set; }
-    [Parameter] public string? Href { get; set; }
-    [Parameter] public string ActionText { get; set; } = "View";
+    [Parameter] public string Value { get; set; } = "0";
+    [Parameter] public string Label { get; set; } = string.Empty;
 }

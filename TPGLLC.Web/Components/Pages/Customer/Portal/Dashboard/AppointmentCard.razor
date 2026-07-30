@@ -1,0 +1,64 @@
+﻿@using TPGLLC.Data.Entities
+
+<section class="portal-section portal-feature-card">
+    <div class="portal-section-heading">
+        <h2>Upcoming Appointment</h2>
+        <a href="/portal/appointments">All Requests</a>
+    </div>
+
+    @if (Request is null)
+    {
+        <div class="portal-activity">
+            <div class="portal-activity-item">
+                <div class="portal-activity-icon">📅</div>
+                <div>No upcoming appointment requests found.</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="portal-appointment-card">
+            <div class="portal-appointment-date">
+                <strong>@FormatAppointmentDate(Request)</strong>
+                <span>@FormatAppointmentTime(Request)</span>
+            </div>
+
+            <div class="portal-appointment-body">
+                <h3>@Request.ServiceNeeded</h3>
+                <p>@FormatAppointmentRequest(Request)</p>
+                <span class="portal-status-pill">@Request.Status</span>
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public AppointmentRequest? Request { get; set; }
+
+    private static string FormatAppointmentRequest(AppointmentRequest request)
+    {
+        var when = string.Join(" ", new[]
+        {
+            request.PreferredDate,
+            request.PreferredTime
+        }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+        return string.IsNullOrWhiteSpace(when)
+            ? "No preferred date/time provided"
+            : when;
+    }
+
+    private static string FormatAppointmentDate(AppointmentRequest request)
+    {
+        return string.IsNullOrWhiteSpace(request.PreferredDate)
+            ? "Appointment"
+            : request.PreferredDate;
+    }
+
+    private static string FormatAppointmentTime(AppointmentRequest request)
+    {
+        return string.IsNullOrWhiteSpace(request.PreferredTime)
+            ? "Time pending"
+            : request.PreferredTime;
+    }
+}

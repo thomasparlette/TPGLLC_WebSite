@@ -1,0 +1,28 @@
+﻿<div class="portal-stats">
+    <div class="portal-stat">
+        <div class="portal-stat-value">@TotalRequests</div>
+        <div class="portal-stat-label">Requests</div>
+    </div>
+
+    <div class="portal-stat">
+        <div class="portal-stat-value">@OpenRequests</div>
+        <div class="portal-stat-label">Open</div>
+    </div>
+
+    <div class="portal-stat">
+        <div class="portal-stat-value">@LatestRequestDate</div>
+        <div class="portal-stat-label">Latest Request</div>
+    </div>
+
+    <div class="portal-stat">
+        <div class="portal-stat-value">@LatestRequestStatus</div>
+        <div class="portal-stat-label">Latest Status</div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string TotalRequests { get; set; } = "0";
+    [Parameter] public string OpenRequests { get; set; } = "0";
+    [Parameter] public string LatestRequestDate { get; set; } = "None";
+    [Parameter] public string LatestRequestStatus { get; set; } = "None";
+}

@@ -1,1 +1,32 @@
-﻿/* Reserved for vehicles-specific portal styles. */
+﻿.vehicle-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: start;
+}
+
+    .vehicle-grid .full {
+        grid-column: 1 / -1;
+    }
+
+    .vehicle-grid .form-field {
+        min-width: 0;
+    }
+
+    .vehicle-grid .input,
+    .vehicle-grid select {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+.vehicle-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+    .vehicle-grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,33 @@
+﻿@using TPGLLC.Data.Entities
+
+<article class="portal-card-link" style="cursor:default;">
+    <div class="portal-card-icon">🛠️</div>
+
+    <h3>@Entry.VehicleName</h3>
+    <p>@Entry.Service</p>
+
+    <div class="portal-primary-meta" style="margin-top:0.75rem;">
+        <span>@Entry.ServiceDate.ToString("MMM d, yyyy")</span>
+        <span>@Entry.Status</span>
+        @if (Entry.Mileage.HasValue)
+        {
+            <span>@Entry.Mileage.Value.ToString("N0") mi</span>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Entry.Technician))
+    {
+        <div style="margin-top:0.75rem; color:#6b7280;">
+            Technician: @Entry.Technician
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Entry.Notes))
+    {
+        <p style="margin-top:0.9rem;">@Entry.Notes</p>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public ServiceHistoryEntry Entry { get; set; } = default!;
+}

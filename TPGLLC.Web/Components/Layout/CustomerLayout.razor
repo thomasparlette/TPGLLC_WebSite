@@ -1,8 +1,11 @@
 ﻿@inherits LayoutComponentBase
-@inject TPGLLC.Web.Services.Customers.ICustomerProfileService CustomerProfileService
+@using TPGLLC.Web.Services.Customers
+
+@inject ICurrentCustomerAccessor CurrentCustomerAccessor
+@inject ICustomerProfileService CustomerProfileService
 
 <div class="app-shell portal-shell">
-    <header class="site-header portal-header">
+    <header class="site-header">
         <a class="brand" href="/portal/dashboard">
             <img class="brand-logo" src="/images/logo.jpeg" alt="Tom Parlette Garage LLC logo" />
             <div class="brand-copy">
@@ -13,7 +16,7 @@
 
         <div class="portal-user">
             <div class="brand-tagline">
-                Welcome, @(_displayName ?? "Customer")
+                Welcome, @_displayName
             </div>
             <a class="btn btn-secondary" href="/Identity/Account/Logout">Sign Out</a>
         </div>
@@ -38,14 +41,19 @@
 </div>
 
 @code {
-    private string? _displayName;
+    private string _displayName = "Customer";
 
     protected override async Task OnInitializedAsync()
     {
-        var profile = await CustomerProfileService.GetCurrentAsync();
-        if (profile is not null)
+        var current = CurrentCustomerAccessor.GetCurrentCustomer();
+        if (!current.IsAuthenticated)
         {
-            _displayName = $"{profile.FirstName} {profile.LastName}".Trim();
+            return;
         }
+
+        var profile = await CustomerProfileService.GetCurrentAsync();
+        var name = $"{profile?.FirstName} {profile?.LastName}".Trim();
+
+        _displayName = string.IsNullOrWhiteSpace(name) ? "Customer" : name;
     }
 }

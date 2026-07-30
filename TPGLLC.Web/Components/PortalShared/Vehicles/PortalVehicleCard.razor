@@ -1,21 +1,40 @@
 ﻿@using TPGLLC.Data.Entities
 @using System.Linq
 
-<a class="portal-card-link" href="@Href" @key="Vehicle.Id">
-    <div class="portal-card-icon">@GetVehicleIcon(Vehicle)</div>
-    <h3>@GetVehicleTitle(Vehicle)</h3>
-    <p>@GetVehicleDetails(Vehicle)</p>
+<article class="portal-card-link" @key="Item.Id">
+    <div class="portal-card-icon">@GetVehicleIcon(Item)</div>
 
-    @if (ShowPrimaryBadge && Vehicle.IsPrimary)
+    <h3>@GetVehicleTitle(Item)</h3>
+    <p>@GetVehicleDetails(Item)</p>
+
+    @if (Item.IsPrimary)
     {
         <div class="portal-chip">Primary</div>
     }
-</a>
+
+    <div class="portal-actions" style="margin-top:1rem;">
+        <button type="button" class="portal-action-button" @onclick="EditAsync">Edit</button>
+
+        <button type="button"
+                class="portal-action-button"
+                @onclick="MakePrimaryAsync"
+                disabled="@Item.IsPrimary">
+            Make Primary
+        </button>
+
+        <button type="button" class="portal-action-button" @onclick="DeleteAsync">Delete</button>
+    </div>
+</article>
 
 @code {
-    [Parameter, EditorRequired] public CustomerVehicle Vehicle { get; set; } = default!;
-    [Parameter] public string Href { get; set; } = "/portal/vehicles";
-    [Parameter] public bool ShowPrimaryBadge { get; set; } = true;
+    [Parameter, EditorRequired] public CustomerVehicle Item { get; set; } = default!;
+    [Parameter] public EventCallback<Guid> OnEdit { get; set; }
+    [Parameter] public EventCallback<Guid> OnDelete { get; set; }
+    [Parameter] public EventCallback<Guid> OnMakePrimary { get; set; }
+
+    private Task EditAsync() => OnEdit.InvokeAsync(Item.Id);
+    private Task DeleteAsync() => OnDelete.InvokeAsync(Item.Id);
+    private Task MakePrimaryAsync() => OnMakePrimary.InvokeAsync(Item.Id);
 
     private static string GetVehicleTitle(CustomerVehicle vehicle)
     {
