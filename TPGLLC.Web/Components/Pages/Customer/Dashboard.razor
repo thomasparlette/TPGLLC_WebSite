@@ -168,33 +168,37 @@
         _profile = await CustomerProfileService.GetCurrentAsync();
 
         _customer = await Db.Customers
-            .Include(x => x.Vehicles)
-            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
+        .AsNoTracking()
+        .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
 
         if (_customer is not null)
         {
-            _vehicles = _customer.Vehicles
+            _vehicles = await Db.CustomerVehicles
+                .AsNoTracking()
+                .Where(x => x.CustomerId == _customer.Id)
                 .OrderByDescending(x => x.IsPrimary)
                 .ThenByDescending(x => x.CreatedUtc)
-                .ToList();
+                .ToListAsync();
         }
 
         if (!string.IsNullOrWhiteSpace(current.Email))
         {
             _requests = await Db.AppointmentRequests
-                .Where(x => x.Email == current.Email)
-                .OrderByDescending(x => x.SubmittedAtUtc)
-                .Take(5)
-                .ToListAsync();
+            .AsNoTracking()
+            .Where(x => x.Email == current.Email)
+            .OrderByDescending(x => x.SubmittedAtUtc)
+            .Take(5)
+            .ToListAsync(); ;
         }
 
         if (_customer is not null)
         {
             _history = await Db.ServiceHistoryEntries
-                .Where(x => x.CustomerId == _customer.Id)
-                .OrderByDescending(x => x.ServiceDate)
-                .Take(5)
-                .ToListAsync();
+            .AsNoTracking()
+            .Where(x => x.CustomerId == _customer.Id)
+            .OrderByDescending(x => x.ServiceDate)
+            .Take(5)
+            .ToListAsync();
         }
     }
 
