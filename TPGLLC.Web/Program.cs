@@ -10,8 +10,14 @@ using TPGLLC.Web.Services.Appointments;
 using TPGLLC.Web.Services.Customers;
 using TPGLLC.Services.Vehicles;
 using TPGLLC.Web.Services;
+using System.IO;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDataProtection()
+    .SetApplicationName("TPGLLC.Web")
+    .PersistKeysToFileSystem(new DirectoryInfo(@"D:\TPGLLC\DataProtectionKeys"));
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
