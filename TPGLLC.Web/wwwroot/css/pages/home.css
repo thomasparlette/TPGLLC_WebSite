@@ -289,24 +289,6 @@
         margin-top: 0.65rem;
     }
 
-.vehicle-grid {
-    grid-column: 1 / -1;
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
-    align-items: start;
-}
-
-.vehicle-grid .form-field {
-    min-width: 0;
-}
-
-.vehicle-grid .input {
-    width: 100%;
-    box-sizing: border-box;
-}
-
 .faq-section .faq-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -397,6 +379,7 @@
         color: #8a5a00;
         border: 1px solid #ffd89c;
     }
+
 .account-page {
     width: min(1100px, calc(100% - 2rem));
     margin: 2rem auto 0;
@@ -472,4 +455,3 @@
     gap: 0.75rem;
     margin-top: 1rem;
 }
-

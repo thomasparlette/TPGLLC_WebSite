@@ -176,18 +176,19 @@
     .success-card {
         flex-direction: column;
     }
-    
-        .account-feature-list {
-            grid-template-columns: 1fr;
-        }
 
-        .account-card {
-            padding: 1.25rem;
-        }
+    .account-feature-list {
+        grid-template-columns: 1fr;
+    }
 
-        .account-actions .btn {
-            width: 100%;
-        }
+    .account-card {
+        padding: 1.25rem;
+    }
+
+    .account-actions .btn {
+        width: 100%;
+    }
+
     .customer-shell {
         grid-template-columns: 1fr;
     }
