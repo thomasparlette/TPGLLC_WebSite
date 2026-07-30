@@ -1,4 +1,4 @@
-﻿@page "/portal/dashboard"
+@page "/portal/dashboard"
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
@@ -6,6 +6,7 @@
 @using TPGLLC.Data
 @using TPGLLC.Data.Entities
 @using TPGLLC.Web.Services.Customers
+@using System.Linq
 
 @inject TPGLLCDbContext Db
 @inject ICurrentCustomerAccessor CurrentCustomerAccessor
@@ -13,10 +14,17 @@
 <PageTitle>Customer Portal</PageTitle>
 
 <section class="portal-dashboard">
-    <div class="portal-header">
-        <p class="section-kicker">Customer Portal</p>
-        <h1>Welcome back, @DisplayName</h1>
-        <p>Manage your vehicles, appointments, service history, and invoices in one place.</p>
+    <div class="portal-hero">
+        <div>
+            <p class="section-kicker">Customer Portal</p>
+            <h1>Welcome back, @DisplayName</h1>
+            <p>Manage your vehicles, appointments, service history, and invoices in one place.</p>
+        </div>
+
+        <div class="portal-hero-badge">
+            <span>Live Portal</span>
+            <strong>@_vehicles.Count vehicle@( _vehicles.Count == 1 ? "" : "s")</strong>
+        </div>
     </div>
 
     <div class="portal-stats">
@@ -43,7 +51,7 @@
 
     <div class="portal-section">
         <h2>Quick Actions</h2>
-        <div class="portal-actions">
+        <div class="portal-actions portal-actions-wrap">
             <a class="portal-action-button" href="/portal/vehicles">Add Vehicle</a>
             <a class="portal-action-button" href="/portal/appointments">Request Appointment</a>
             <a class="portal-action-button" href="/portal/history">View History</a>
@@ -51,63 +59,166 @@
         </div>
     </div>
 
-    <div class="portal-section">
-        <h2>My Vehicles</h2>
-        @if (_vehicles.Count == 0)
-        {
-            <div class="portal-activity">
-                <div class="portal-activity-item">
-                    <div class="portal-activity-icon">🚗</div>
-                    <div>No vehicles are on file yet.</div>
-                </div>
+    <div class="portal-grid">
+        <section class="portal-section portal-feature-card">
+            <div class="portal-section-heading">
+                <h2>Primary Vehicle</h2>
+                <a href="/portal/vehicles">Manage</a>
             </div>
-        }
-        else
-        {
-            <div class="portal-dashboard-grid">
-                @foreach (var vehicle in _vehicles)
-                {
-                    <a class="portal-card-link" href="/portal/vehicles" @key="vehicle.Id">
-                        <div class="portal-card-icon">🚗</div>
-                        <h3>@GetVehicleTitle(vehicle)</h3>
-                        <p>@GetVehicleDetails(vehicle)</p>
-                    </a>
-                }
-            </div>
-        }
-    </div>
 
-    <div class="portal-section">
-        <h2>Recent Appointment Requests</h2>
-        @if (_requests.Count == 0)
-        {
-            <div class="portal-activity">
-                <div class="portal-activity-item">
-                    <div class="portal-activity-icon">📅</div>
-                    <div>No appointment requests found for your account email.</div>
-                </div>
-            </div>
-        }
-        else
-        {
-            <div class="portal-activity">
-                @foreach (var request in _requests)
-                {
+            @if (_primaryVehicle is null)
+            {
+                <div class="portal-activity">
                     <div class="portal-activity-item">
-                        <div class="portal-activity-icon">📅</div>
-                        <div>
-                            <div><strong>@request.ServiceNeeded</strong></div>
-                            <div>@FormatAppointmentRequest(request)</div>
-                            <div>Status: @request.Status</div>
+                        <div class="portal-activity-icon">🚗</div>
+                        <div>No primary vehicle set yet.</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="portal-primary-vehicle">
+                    <div class="portal-primary-vehicle-image">
+                        @GetVehicleIcon(_primaryVehicle)
+                    </div>
+
+                    <div class="portal-primary-vehicle-body">
+                        <h3>@GetVehicleTitle(_primaryVehicle)</h3>
+                        <p>@GetVehicleDetails(_primaryVehicle)</p>
+
+                        <div class="portal-primary-meta">
+                            @if (!string.IsNullOrWhiteSpace(_primaryVehicle.Vin))
+                            {
+                                <span>VIN @(_primaryVehicle.Vin)</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(_primaryVehicle.LicensePlate))
+                            {
+                                <span>Plate @_primaryVehicle.LicensePlate</span>
+                            }
+                            @if (_primaryVehicle.Mileage.HasValue)
+                            {
+                                <span>@_primaryVehicle.Mileage.Value.ToString("N0") mi</span>
+                            }
+                        </div>
+
+                        <div class="portal-actions" style="margin-top:1rem;">
+                            <a class="portal-action-button" href="/portal/vehicles">View Vehicles</a>
+                            <a class="portal-action-button" href="/portal/appointments">Schedule Service</a>
                         </div>
                     </div>
-                }
+                </div>
+            }
+        </section>
+
+        <section class="portal-section portal-feature-card">
+            <div class="portal-section-heading">
+                <h2>Upcoming Appointment</h2>
+                <a href="/portal/appointments">All Requests</a>
             </div>
-        }
+
+            @if (_nextRequest is null)
+            {
+                <div class="portal-activity">
+                    <div class="portal-activity-item">
+                        <div class="portal-activity-icon">📅</div>
+                        <div>No upcoming appointment requests found.</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="portal-appointment-card">
+                    <div class="portal-appointment-date">
+                        <strong>@FormatAppointmentDate(_nextRequest)</strong>
+                        <span>@FormatAppointmentTime(_nextRequest)</span>
+                    </div>
+
+                    <div class="portal-appointment-body">
+                        <h3>@_nextRequest.ServiceNeeded</h3>
+                        <p>@FormatAppointmentRequest(_nextRequest)</p>
+                        <span class="portal-status-pill">@_nextRequest.Status</span>
+                    </div>
+                </div>
+            }
+        </section>
+    </div>
+
+    <div class="portal-grid">
+        <section class="portal-section">
+            <div class="portal-section-heading">
+                <h2>My Vehicles</h2>
+                <a href="/portal/vehicles">View all</a>
+            </div>
+
+            @if (_vehicles.Count == 0)
+            {
+                <div class="portal-activity">
+                    <div class="portal-activity-item">
+                        <div class="portal-activity-icon">🚗</div>
+                        <div>No vehicles are on file yet.</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="portal-dashboard-grid">
+                    @foreach (var vehicle in _vehicles.Take(3))
+                    {
+                        <a class="portal-card-link" href="/portal/vehicles" @key="vehicle.Id">
+                            <div class="portal-card-icon">@GetVehicleIcon(vehicle)</div>
+                            <h3>@GetVehicleTitle(vehicle)</h3>
+                            <p>@GetVehicleDetails(vehicle)</p>
+
+                            @if (vehicle.IsPrimary)
+                            {
+                                <div class="portal-chip">Primary</div>
+                            }
+                        </a>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="portal-section">
+            <div class="portal-section-heading">
+                <h2>Recent Activity</h2>
+                <a href="/portal/history">Service History</a>
+            </div>
+
+            @if (_activity.Count == 0)
+            {
+                <div class="portal-activity">
+                    <div class="portal-activity-item">
+                        <div class="portal-activity-icon">✨</div>
+                        <div>No recent activity yet.</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="portal-activity">
+                    @foreach (var item in _activity)
+                    {
+                        <div class="portal-activity-item">
+                            <div class="portal-activity-icon">@item.Icon</div>
+                            <div>
+                                <div><strong>@item.Title</strong></div>
+                                <div>@item.Subtitle</div>
+                                <div class="portal-muted">@item.When</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
     </div>
 
     <div class="portal-section">
-        <h2>Service History</h2>
+        <div class="portal-section-heading">
+            <h2>Service History</h2>
+            <a href="/portal/history">View all</a>
+        </div>
+
         @if (_history.Count == 0)
         {
             <div class="portal-activity">
@@ -120,7 +231,7 @@
         else
         {
             <div class="portal-activity">
-                @foreach (var item in _history)
+                @foreach (var item in _history.Take(3))
                 {
                     <div class="portal-activity-item">
                         <div class="portal-activity-icon">🛠️</div>
@@ -151,6 +262,10 @@
     private List<AppointmentRequest> _requests = [];
     private List<ServiceHistoryEntry> _history = [];
 
+    private CustomerVehicle? _primaryVehicle;
+    private AppointmentRequest? _nextRequest;
+    private List<ActivityItem> _activity = [];
+
     private string DisplayName =>
         _profile is null
             ? "Customer"
@@ -170,6 +285,9 @@
         _vehicles = [];
         _requests = [];
         _history = [];
+        _primaryVehicle = null;
+        _nextRequest = null;
+        _activity = [];
 
         var current = CurrentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
@@ -194,11 +312,13 @@
                 .ThenByDescending(v => v.CreatedUtc)
                 .ToListAsync();
 
+            _primaryVehicle = _vehicles.FirstOrDefault(v => v.IsPrimary) ?? _vehicles.FirstOrDefault();
+
             _history = await Db.ServiceHistoryEntries
                 .AsNoTracking()
                 .Where(h => h.CustomerId == _customer.Id)
                 .OrderByDescending(h => h.ServiceDate)
-                .Take(5)
+                .Take(10)
                 .ToListAsync();
         }
 
@@ -208,18 +328,62 @@
                 .AsNoTracking()
                 .Where(x => x.Email == current.Email)
                 .OrderByDescending(x => x.SubmittedAtUtc)
-                .Take(5)
+                .Take(10)
                 .ToListAsync();
+
+            _nextRequest = _requests.FirstOrDefault();
         }
+
+        BuildActivityFeed();
+    }
+
+    private void BuildActivityFeed()
+    {
+        var items = new List<ActivityItem>();
+
+        if (_vehicles.Count > 0)
+        {
+            var newestVehicle = _vehicles.First();
+            items.Add(new ActivityItem(
+                "🚗",
+                "Vehicle added",
+                GetVehicleTitle(newestVehicle),
+                newestVehicle.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy")));
+        }
+
+        if (_nextRequest is not null)
+        {
+            items.Add(new ActivityItem(
+                "📅",
+                "Appointment request",
+                _nextRequest.ServiceNeeded,
+                _nextRequest.SubmittedAtUtc.ToLocalTime().ToString("MMM d, yyyy")));
+        }
+
+        if (_history.Count > 0)
+        {
+            var latestService = _history.First();
+            items.Add(new ActivityItem(
+                "🛠️",
+                "Service completed",
+                $"{latestService.VehicleName} · {latestService.Service}",
+                latestService.ServiceDate.ToString("MMM d, yyyy")));
+        }
+
+        _activity = items;
     }
 
     private static string GetVehicleTitle(CustomerVehicle vehicle)
     {
-        var year = vehicle.ModelYear?.ToString() ?? "";
-        var make = vehicle.Make ?? "";
-        var model = vehicle.Model ?? "";
+        var parts = new[]
+        {
+            vehicle.ModelYear?.ToString(),
+            vehicle.Make,
+            vehicle.Model
+        }
+        .Where(x => !string.IsNullOrWhiteSpace(x));
 
-        var title = string.Join(" ", new[] { year, make, model }.Where(x => !string.IsNullOrWhiteSpace(x)));
+        var title = string.Join(" ", parts);
         return string.IsNullOrWhiteSpace(title) ? "Unnamed Vehicle" : title;
     }
 
@@ -245,6 +409,21 @@
         return parts.Count == 0 ? "No additional details" : string.Join(" · ", parts);
     }
 
+    private static string GetVehicleIcon(CustomerVehicle vehicle)
+    {
+        return vehicle.Make?.ToLowerInvariant() switch
+        {
+            "ford" => "🚙",
+            "chevrolet" => "🚙",
+            "gmc" => "🚙",
+            "toyota" => "🚗",
+            "honda" => "🚗",
+            "acura" => "🚗",
+            "harley-davidson" => "🏍️",
+            _ => "🚘"
+        };
+    }
+
     private static string FormatAppointmentRequest(AppointmentRequest request)
     {
         var when = string.Join(" ", new[]
@@ -257,4 +436,20 @@
             ? "No preferred date/time provided"
             : when;
     }
+
+    private static string FormatAppointmentDate(AppointmentRequest request)
+    {
+        return string.IsNullOrWhiteSpace(request.PreferredDate)
+            ? "Appointment"
+            : request.PreferredDate;
+    }
+
+    private static string FormatAppointmentTime(AppointmentRequest request)
+    {
+        return string.IsNullOrWhiteSpace(request.PreferredTime)
+            ? "Time pending"
+            : request.PreferredTime;
+    }
+
+    private sealed record ActivityItem(string Icon, string Title, string Subtitle, string When);
 }
