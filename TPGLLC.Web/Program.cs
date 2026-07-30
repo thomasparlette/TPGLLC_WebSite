@@ -194,4 +194,9 @@ app.MapGet("/version", (IWebHostEnvironment env) =>
 })
 .AllowAnonymous();
 
+app.MapGet("/db", (TPGLLCDbContext db) =>
+{
+    return db.Database.GetConnectionString();
+});
+
 app.Run();
