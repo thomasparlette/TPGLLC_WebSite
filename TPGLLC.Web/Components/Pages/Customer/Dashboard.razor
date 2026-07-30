@@ -9,7 +9,6 @@
 
 @inject TPGLLCDbContext Db
 @inject ICurrentCustomerAccessor CurrentCustomerAccessor
-@inject ICustomerProfileService CustomerProfileService
 
 <PageTitle>Customer Portal</PageTitle>
 
@@ -68,7 +67,7 @@
             <div class="portal-dashboard-grid">
                 @foreach (var vehicle in _vehicles)
                 {
-                    <a class="portal-card-link" href="/portal/vehicles">
+                    <a class="portal-card-link" href="/portal/vehicles" @key="vehicle.Id">
                         <div class="portal-card-icon">🚗</div>
                         <h3>@GetVehicleTitle(vehicle)</h3>
                         <p>@GetVehicleDetails(vehicle)</p>
@@ -157,19 +156,34 @@
             ? "Customer"
             : $"{_profile.FirstName} {_profile.LastName}".Trim();
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        Db.ChangeTracker.Clear();
+
+        _profile = null;
+        _customer = null;
+        _vehicles = [];
+        _requests = [];
+        _history = [];
+
         var current = CurrentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
             return;
         }
 
-        _profile = await CustomerProfileService.GetCurrentAsync();
+        _profile = await Db.CustomerProfiles
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
 
         _customer = await Db.Customers
-        .AsNoTracking()
-        .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
 
         if (_customer is not null)
         {
@@ -179,26 +193,23 @@
                 .OrderByDescending(x => x.IsPrimary)
                 .ThenByDescending(x => x.CreatedUtc)
                 .ToListAsync();
+
+            _history = await Db.ServiceHistoryEntries
+                .AsNoTracking()
+                .Where(x => x.CustomerId == _customer.Id)
+                .OrderByDescending(x => x.ServiceDate)
+                .Take(5)
+                .ToListAsync();
         }
 
         if (!string.IsNullOrWhiteSpace(current.Email))
         {
             _requests = await Db.AppointmentRequests
-            .AsNoTracking()
-            .Where(x => x.Email == current.Email)
-            .OrderByDescending(x => x.SubmittedAtUtc)
-            .Take(5)
-            .ToListAsync(); ;
-        }
-
-        if (_customer is not null)
-        {
-            _history = await Db.ServiceHistoryEntries
-            .AsNoTracking()
-            .Where(x => x.CustomerId == _customer.Id)
-            .OrderByDescending(x => x.ServiceDate)
-            .Take(5)
-            .ToListAsync();
+                .AsNoTracking()
+                .Where(x => x.Email == current.Email)
+                .OrderByDescending(x => x.SubmittedAtUtc)
+                .Take(5)
+                .ToListAsync();
         }
     }
 
@@ -215,11 +226,6 @@
     private static string GetVehicleDetails(CustomerVehicle vehicle)
     {
         var parts = new List<string>();
-
-        if (!string.IsNullOrWhiteSpace(vehicle.VehicleType))
-        {
-            parts.Add(vehicle.VehicleType);
-        }
 
         if (!string.IsNullOrWhiteSpace(vehicle.Nickname))
         {
