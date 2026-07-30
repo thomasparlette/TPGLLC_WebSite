@@ -181,26 +181,19 @@
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
 
-        _customer = await Db.Customers
+        _vehicles = await Db.CustomerVehicles
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
+            .Where(v => v.Customer.ApplicationUserId == current.UserId)
+            .OrderByDescending(v => v.IsPrimary)
+            .ThenByDescending(v => v.CreatedUtc)
+            .ToListAsync();
 
-        if (_customer is not null)
-        {
-            _vehicles = await Db.CustomerVehicles
-                .AsNoTracking()
-                .Where(x => x.CustomerId == _customer.Id)
-                .OrderByDescending(x => x.IsPrimary)
-                .ThenByDescending(x => x.CreatedUtc)
-                .ToListAsync();
-
-            _history = await Db.ServiceHistoryEntries
-                .AsNoTracking()
-                .Where(x => x.CustomerId == _customer.Id)
-                .OrderByDescending(x => x.ServiceDate)
-                .Take(5)
-                .ToListAsync();
-        }
+        _history = await Db.ServiceHistoryEntries
+            .AsNoTracking()
+            .Where(h => h.Customer.ApplicationUserId == current.UserId)
+            .OrderByDescending(h => h.ServiceDate)
+            .Take(5)
+            .ToListAsync();
 
         if (!string.IsNullOrWhiteSpace(current.Email))
         {
