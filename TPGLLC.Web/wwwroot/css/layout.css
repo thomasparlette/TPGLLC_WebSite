@@ -602,6 +602,27 @@ pre {
         grid-template-columns: 1fr;
     }
 }
+.vehicle-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+    .vehicle-grid .full {
+        grid-column: 1 / -1;
+    }
+
+.vehicle-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+    .vehicle-grid {
+        grid-template-columns: 1fr;
+    }
+}
 
 /* ==========================================
    RESPONSIVE
