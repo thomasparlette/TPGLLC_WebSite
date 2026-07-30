@@ -638,6 +638,185 @@ pre {
     }
 }
 
+.portal-hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    align-items: stretch;
+    background: linear-gradient(135deg, #0d2a63 0%, #12387c 100%);
+    color: #fff;
+    border-radius: 24px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.portal-hero h1 {
+    margin: 0.25rem 0 0.5rem;
+    color: #fff;
+}
+
+.portal-hero p {
+    margin: 0;
+    color: rgba(255,255,255,0.9);
+}
+
+.portal-hero-badge {
+    min-width: 180px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.08);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+}
+
+.portal-hero-badge span {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    opacity: 0.85;
+}
+
+.portal-hero-badge strong {
+    font-size: 1.2rem;
+    margin-top: 0.4rem;
+}
+
+.portal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.portal-section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.portal-section-heading h2 {
+    margin: 0;
+}
+
+.portal-section-heading a {
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.portal-feature-card {
+    min-height: 100%;
+}
+
+.portal-primary-vehicle {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 1rem;
+    align-items: center;
+}
+
+.portal-primary-vehicle-image {
+    width: 120px;
+    height: 120px;
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    background: #eef3ff;
+    color: #0d2a63;
+}
+
+.portal-primary-vehicle-body h3 {
+    margin: 0 0 0.4rem;
+}
+
+.portal-primary-vehicle-body p {
+    margin: 0 0 0.8rem;
+}
+
+.portal-primary-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    color: #4b5f88;
+    font-size: 0.95rem;
+}
+
+.portal-primary-meta span {
+    background: #f6f8fc;
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+}
+
+.portal-appointment-card {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 20px;
+    background: #f8fbff;
+    border: 1px solid #e6ecf7;
+}
+
+.portal-appointment-date {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    text-align: center;
+    padding: 0.75rem;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(13, 42, 99, 0.08);
+}
+
+.portal-appointment-body h3 {
+    margin: 0 0 0.35rem;
+}
+
+.portal-appointment-body p {
+    margin: 0 0 0.75rem;
+}
+
+.portal-status-pill,
+.portal-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    background: #edf3ff;
+    color: #0d2a63;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.portal-muted {
+    color: #6c7fa8;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 980px) {
+    .portal-hero,
+    .portal-grid,
+    .portal-primary-vehicle,
+    .portal-appointment-card {
+        grid-template-columns: 1fr;
+    }
+
+    .portal-hero {
+        flex-direction: column;
+    }
+
+    .portal-hero-badge {
+        min-width: 0;
+    }
+}
+
 /* ==========================================
    RESPONSIVE
 ========================================== */
