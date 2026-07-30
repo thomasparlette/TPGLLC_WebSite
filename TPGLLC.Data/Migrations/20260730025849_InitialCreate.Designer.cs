@@ -12,8 +12,8 @@ using TPGLLC.Data;
 namespace TPGLLC.Data.Migrations
 {
     [DbContext(typeof(TPGLLCDbContext))]
-    [Migration("20260730024704_AddServiceHistoryEntries")]
-    partial class AddServiceHistoryEntries
+    [Migration("20260730025849_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
