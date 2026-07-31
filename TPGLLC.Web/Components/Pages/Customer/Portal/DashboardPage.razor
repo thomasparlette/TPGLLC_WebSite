@@ -22,16 +22,16 @@
     <DashboardQuickActions />
 
     <div class="portal-grid">
-        <PrimaryVehicleCard Vehicle="@_model.PrimaryVehicle" />
-        <AppointmentCard Request="@_model.NextRequest" />
+        <DashboardPrimaryVehicleCard Vehicle="@_model.PrimaryVehicle" />
+        <DashboardAppointmentCard Request="@_model.NextRequest" />
     </div>
 
     <div class="portal-grid">
-        <VehiclesList Vehicles="@_model.Vehicles" />
-        <ActivityTimeline Items="@_model.Activity" />
+        <DashboardVehicleList Vehicles="@_model.Vehicles" />
+        <DashboardActivityTimeline Items="@_model.Activity" />
     </div>
 
-    <ServiceHistoryCard History="@_model.History" />
+    <DashboardServiceHistoryCard History="@_model.History" />
 </section>
 
 @code {

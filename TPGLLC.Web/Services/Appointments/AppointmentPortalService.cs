@@ -21,7 +21,7 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         ICurrentCustomerAccessor currentCustomerAccessor,
         ICustomerProfileService customerProfileService,
         IVehicleCatalogService vehicleCatalogService,
-    IBuildEnvironmentService buildEnvironmentService)
+        IBuildEnvironmentService buildEnvironmentService)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
@@ -36,6 +36,7 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         {
             return _buildEnvironmentService.CreateAppointments();
         }
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -63,15 +64,13 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
                 .ToListAsync();
         }
 
-        var model = new AppointmentPageViewModel
+        return new AppointmentPageViewModel
         {
             Requests = requests,
             OpenRequests = requests.Where(x => !IsClosedStatus(x.Status)).ToList(),
             Years = await GetYearsAsync(),
             Form = BuildDefaultForm(profile, current.Email)
         };
-
-        return model;
     }
 
     public async Task<AppointmentPageViewModel> ResetAsync()
@@ -117,6 +116,12 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
 
     public async Task<AppointmentPageViewModel> SaveAsync(AppointmentPageViewModel model)
     {
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            model.SuccessMessage = "Build environment does not save appointments.";
+            return model;
+        }
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -124,13 +129,13 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             return model;
         }
 
-        if (!TryParseYear(model.Form.VehicleYear, out var _))
+        if (!TryParseYear(model.Form.VehicleYear, out _))
         {
             model.ErrorMessage = "Vehicle year must be a valid year.";
             return model;
         }
 
-        if (!TryParseMileage(model.Form.Mileage, out var _))
+        if (!TryParseMileage(model.Form.Mileage, out _))
         {
             model.ErrorMessage = "Mileage must be a valid whole number.";
             return model;
@@ -147,15 +152,12 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             Name = string.IsNullOrWhiteSpace(model.Form.Name)
                 ? BuildDisplayName(profile, current.Email)
                 : model.Form.Name.Trim(),
-
             Email = string.IsNullOrWhiteSpace(model.Form.Email)
                 ? (current.Email ?? string.Empty).Trim()
                 : model.Form.Email.Trim(),
-
             Phone = string.IsNullOrWhiteSpace(model.Form.Phone)
                 ? (profile?.Phone ?? string.Empty).Trim()
                 : model.Form.Phone.Trim(),
-
             Company = string.IsNullOrWhiteSpace(profile?.Company) ? null : profile.Company.Trim(),
             VehicleType = string.IsNullOrWhiteSpace(model.Form.VehicleType) ? "Automotive" : model.Form.VehicleType.Trim(),
             VehicleYear = string.IsNullOrWhiteSpace(model.Form.VehicleYear) ? null : model.Form.VehicleYear.Trim(),
@@ -213,12 +215,7 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             return name;
         }
 
-        if (!string.IsNullOrWhiteSpace(email))
-        {
-            return email.Trim();
-        }
-
-        return "Customer";
+        return string.IsNullOrWhiteSpace(email) ? "Customer" : email.Trim();
     }
 
     private static bool IsClosedStatus(string? status)

@@ -1,0 +1,80 @@
+﻿@{
+    var title = ViewData["Title"] as string ?? "TPGLLC";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@title - Tom Parlette Garage LLC</title>
+
+    <link rel="stylesheet" href="~/css/core/variables.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/core/components.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/core/layout.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/pages/home.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/portal/portal.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/portal/dashboard.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/portal/vehicles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/portal/appointments.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/portal/history.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/portal/invoices.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/portal/profile.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/core/animations.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/mobile.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="app-shell">
+        <header class="site-header">
+            <a class="brand" href="~/">
+                <img class="brand-logo" src="~/images/logo.jpeg" alt="Tom Parlette Garage LLC logo" />
+                <div class="brand-copy">
+                    <span class="brand-name">Tom Parlette Garage LLC</span>
+                    <span class="brand-tagline">Built on Trust. Driven by Results.</span>
+                </div>
+            </a>
+
+            <nav class="site-nav">
+                <a href="~/">Back to Home</a>
+                <a href="~/services">Services</a>
+                <a href="~/contact">Contact</a>
+                <a href="~/portal/dashboard">Customer Portal</a>
+            </nav>
+        </header>
+
+        <main class="page-content">
+            @RenderBody()
+        </main>
+
+        <footer class="site-footer">
+            <div class="footer-grid">
+                <div>
+                    <div class="footer-brand">TPG LLC</div>
+                    <p>Reliable automotive service and customer support.</p>
+                </div>
+
+                <div>
+                    <div class="footer-heading">Quick Links</div>
+                    <p><a href="~/">Home</a></p>
+                    <p><a href="~/services">Services</a></p>
+                    <p><a href="~/contact">Contact</a></p>
+                </div>
+
+                <div>
+                    <div class="footer-heading">Account</div>
+                    <p><a href="~/Identity/Account/Login">Login</a></p>
+                    <p><a href="~/Identity/Account/Register">Register</a></p>
+                    <p><a href="~/Identity/Account/Logout">Logout</a></p>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <span>&copy; @DateTime.Now.Year TPG LLC. All rights reserved.</span>
+                <span>Parlette Garage LLC | Honest service • Quality work • Trusted locally</span>
+            </div>
+        </footer>
+    </div>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

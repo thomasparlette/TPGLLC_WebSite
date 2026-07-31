@@ -42,5 +42,6 @@
 </section>
 
 @code {
-    [Parameter] public IReadOnlyList<ServiceHistoryEntry> History { get; set; } = Array.Empty<ServiceHistoryEntry>();
+    [Parameter]
+    public IReadOnlyList<ServiceHistoryEntry> History { get; set; } = Array.Empty<ServiceHistoryEntry>();
 }

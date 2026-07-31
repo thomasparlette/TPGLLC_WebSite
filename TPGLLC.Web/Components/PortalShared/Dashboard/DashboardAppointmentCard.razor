@@ -33,7 +33,7 @@
 </section>
 
 @code {
-    [Parameter] public AppointmentRequest? Request { get; set; }
+    [Parameter, EditorRequired] public AppointmentRequest? Request { get; set; }
 
     private static string FormatAppointmentRequest(AppointmentRequest request)
     {

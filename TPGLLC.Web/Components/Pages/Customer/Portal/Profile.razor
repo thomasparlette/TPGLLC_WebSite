@@ -1,0 +1,35 @@
+﻿@page "/portal/profile"
+@layout CustomerLayout
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Customer Portal</PageTitle>
+
+<section class="section">
+    <div class="section-heading">
+        <p class="section-kicker">Customer Portal</p>
+        <h1>Welcome to your portal</h1>
+        <p>Manage your vehicles, appointments, service history, and invoices in one place.</p>
+    </div>
+
+    <div class="portal-dashboard-grid">
+        <a class="portal-card-link" href="/portal/vehicles">
+            <h3>My Vehicles</h3>
+            <p>Add and view your vehicles.</p>
+        </a>
+
+        <a class="portal-card-link" href="/portal/appointments">
+            <h3>Appointments</h3>
+            <p>Request and review service visits.</p>
+        </a>
+
+        <a class="portal-card-link" href="/portal/history">
+            <h3>History</h3>
+            <p>See completed service records.</p>
+        </a>
+
+        <a class="portal-card-link" href="/portal/invoices">
+            <h3>Invoices</h3>
+            <p>Review estimates and invoices.</p>
+        </a>
+    </div>
+</section>

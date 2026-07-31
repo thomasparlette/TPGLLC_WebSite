@@ -21,12 +21,14 @@ public sealed class VehiclePortalService : IVehiclePortalService
         IDbContextFactory<TPGLLCDbContext> dbFactory,
         ICurrentCustomerAccessor currentCustomerAccessor,
         ICustomerProfileService customerProfileService,
-        IVehicleCatalogService vehicleCatalogService)
+        IVehicleCatalogService vehicleCatalogService,
+        IBuildEnvironmentService buildEnvironmentService)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
         _customerProfileService = customerProfileService;
         _vehicleCatalogService = vehicleCatalogService;
+        _buildEnvironmentService = buildEnvironmentService;
     }
 
     public async Task<VehiclePageViewModel> GetAsync()

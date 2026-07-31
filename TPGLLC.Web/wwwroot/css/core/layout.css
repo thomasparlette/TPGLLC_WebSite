@@ -266,3 +266,19 @@ pre {
     .profile-grid .full {
         grid-column: 1 / -1;
     }
+
+.primary-button {
+    background: #0d2a63;
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    padding: 0.85rem 1.5rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+    .primary-button:hover {
+        background: #d71920;
+        color: #ffffff;
+    }

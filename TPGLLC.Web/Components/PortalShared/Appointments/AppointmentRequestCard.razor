@@ -1,14 +1,14 @@
-﻿@using TPGLLC.Data.Entities
-@using System.Linq
+﻿@using System.Linq
+@using TPGLLC.Data.Entities
 
-<article class="portal-card-link" style="cursor:default;" @key="Request.RequestId">
+<article class="portal-card-link" style="cursor:default;">
     <div class="portal-card-icon">📅</div>
 
     <h3>@Request.ServiceNeeded</h3>
-    <p>@FormatAppointmentRequest(Request)</p>
+    <p>@GetVehicleSummary()</p>
 
     <div class="portal-primary-meta" style="margin-top:0.75rem;">
-        <span>@GetVehicleSummary(Request)</span>
+        <span>@FormatAppointmentRequest()</span>
         <span>@Request.Status</span>
     </div>
 
@@ -23,32 +23,33 @@
 </article>
 
 @code {
-    [Parameter, EditorRequired] public AppointmentRequest Request { get; set; } = default!;
+    [Parameter, EditorRequired]
+    public AppointmentRequest Request { get; set; } = default!;
 
-    private static string FormatAppointmentRequest(AppointmentRequest request)
-    {
-        var when = string.Join(" ", new[]
-        {
-            request.PreferredDate,
-            request.PreferredTime
-        }.Where(x => !string.IsNullOrWhiteSpace(x)));
-
-        return string.IsNullOrWhiteSpace(when)
-            ? "No preferred date/time provided"
-            : when;
-    }
-
-    private static string GetVehicleSummary(AppointmentRequest request)
+    private string GetVehicleSummary()
     {
         var parts = new[]
         {
-            request.VehicleYear,
-            request.VehicleMake,
-            request.VehicleModel
+            Request.VehicleYear,
+            Request.VehicleMake,
+            Request.VehicleModel
         }
         .Where(x => !string.IsNullOrWhiteSpace(x));
 
         var summary = string.Join(" ", parts);
         return string.IsNullOrWhiteSpace(summary) ? "No vehicle selected" : summary;
+    }
+
+    private string FormatAppointmentRequest()
+    {
+        var when = string.Join(" ", new[]
+        {
+            Request.PreferredDate,
+            Request.PreferredTime
+        }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+        return string.IsNullOrWhiteSpace(when)
+            ? "No preferred date/time provided"
+            : when;
     }
 }

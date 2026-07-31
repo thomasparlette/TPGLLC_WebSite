@@ -1,4 +1,5 @@
 ﻿@page "/portal/vehicles"
+@page "/portal/vehicles/add"
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
@@ -26,7 +27,7 @@
     <VehicleStats VehicleCount="@_model.Vehicles.Count"
                   PrimaryVehicleCount="@_model.Vehicles.Count(x => x.IsPrimary)" />
 
-    <VehiclesLists Vehicles="@_model.Vehicles"
+    <VehicleList Vehicles="@_model.Vehicles"
                   OnEdit="EditVehicleAsync"
                   OnDelete="DeleteVehicleAsync"
                   OnMakePrimary="SetPrimaryVehicleAsync" />
