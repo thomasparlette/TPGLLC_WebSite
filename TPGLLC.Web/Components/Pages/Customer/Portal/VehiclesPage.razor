@@ -2,421 +2,86 @@
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
-@using Microsoft.EntityFrameworkCore
-@using TPGLLC.Data
-@using TPGLLC.Data.Entities
-@using TPGLLC.Services.Vehicles
-@using TPGLLC.Web.Services.Customers
+@using TPGLLC.Web.Services.Portal
+@using TPGLLC.Web.ViewModels.Portal
 @using TPGLLC.Web.Components.PortalShared.Vehicles
-@inject TPGLLCDbContext Db
-@inject ICurrentCustomerAccessor CurrentCustomerAccessor
-@inject ICustomerProfileService CustomerProfileService
-@inject IVehicleCatalogService VehicleCatalog
+
+@inject IVehiclePortalService VehiclePortalService
 
 <PageTitle>My Vehicles</PageTitle>
 
-<section class="portal-dashboard">
+<section class="portal-dashboard" id="top">
     <VehiclePageHeader />
 
-    <VehicleStats VehicleCount="@_vehicles.Count"
-                  PrimaryVehicleCount="@_vehicles.Count(x => x.IsPrimary)" />
+    @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
+    {
+        <div class="auth-alert">@_model.ErrorMessage</div>
+    }
 
-    <VehiclesList Vehicles="@_vehicles"
+    @if (!string.IsNullOrWhiteSpace(_model.SuccessMessage))
+    {
+        <div class="auth-success">@_model.SuccessMessage</div>
+    }
+
+    <VehicleStats VehicleCount="@_model.Vehicles.Count"
+                  PrimaryVehicleCount="@_model.Vehicles.Count(x => x.IsPrimary)" />
+
+    <VehicleList Vehicles="@_model.Vehicles"
                   OnEdit="EditVehicleAsync"
                   OnDelete="DeleteVehicleAsync"
                   OnMakePrimary="SetPrimaryVehicleAsync" />
 
-    <VehicleForm Form="@_form"
-                 Years="@_years"
-                 Makes="@_makes"
-                 Models="@_models"
-                 IsEditing="@(_editingVehicleId is not null)"
+    <VehicleForm Form="@_model.Form"
+                 Years="@_model.Years"
+                 Makes="@_model.Makes"
+                 Models="@_model.Models"
+                 IsEditing="@(_model.EditingVehicleId is not null)"
                  OnSave="SaveVehicleAsync"
-                 OnCancel="ResetForm"
-                 OnYearChangedCallback="OnVehicleYearChanged"
-                 OnMakeChangedCallback="OnVehicleMakeChanged" />
+                 OnCancel="ResetFormAsync"
+                 OnYearChangedCallback="OnVehicleYearChangedAsync"
+                 OnMakeChangedCallback="OnVehicleMakeChangedAsync" />
 </section>
 
 @code {
-    private Customer? _customer;
-    private List<CustomerVehicle> _vehicles = [];
-    private Guid? _editingVehicleId;
-    private string? _errorMessage;
-    private string? _successMessage;
-
-    private List<int> _years = [];
-    private List<string> _makes = [];
-    private List<string> _models = [];
-
-    private VehicleFormModel _form = new();
+    private VehiclePageViewModel _model = new();
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadCatalogAsync();
-        await LoadAsync();
-    }
-
-    private async Task LoadCatalogAsync()
-    {
-        _years = (await VehicleCatalog.GetYearsAsync()).Distinct().OrderByDescending(x => x).ToList();
-
-        if (_years.Count == 0)
-        {
-            _years = Enumerable.Range(1995, DateTime.UtcNow.Year - 1995 + 1)
-                .Reverse()
-                .ToList();
-        }
-    }
-
-    private async Task LoadAsync()
-    {
-        _errorMessage = null;
-        _successMessage = null;
-
-        var current = CurrentCustomerAccessor.GetCurrentCustomer();
-        if (!current.IsAuthenticated)
-        {
-            _errorMessage = "You must be signed in to manage vehicles.";
-            return;
-        }
-
-        _customer = await Db.Customers
-            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
-
-        if (_customer is null)
-        {
-            await EnsureCustomerAsync(current);
-        }
-
-        await ReloadVehiclesAsync();
-        ResetForm();
-    }
-
-    private async Task EnsureCustomerAsync(CurrentCustomer current)
-    {
-        var profile = await CustomerProfileService.GetCurrentAsync();
-
-        _customer = new Customer
-        {
-            ApplicationUserId = current.UserId,
-            FirstName = string.IsNullOrWhiteSpace(profile?.FirstName) ? "Customer" : profile!.FirstName.Trim(),
-            LastName = string.IsNullOrWhiteSpace(profile?.LastName) ? "Account" : profile!.LastName.Trim(),
-            Email = string.IsNullOrWhiteSpace(current.Email) ? profile?.Phone : current.Email,
-            Phone = profile?.Phone,
-            AddressLine1 = profile?.Address1,
-            AddressLine2 = profile?.Address2,
-            City = profile?.City,
-            State = profile?.State,
-            PostalCode = profile?.ZipCode
-        };
-
-        Db.Customers.Add(_customer);
-        await Db.SaveChangesAsync();
-    }
-
-    private async Task ReloadVehiclesAsync()
-    {
-        if (_customer is null)
-        {
-            _vehicles = [];
-            return;
-        }
-
-        _vehicles = await Db.CustomerVehicles
-            .AsNoTracking()
-            .Where(x => x.CustomerId == _customer.Id)
-            .OrderByDescending(x => x.IsPrimary)
-            .ThenByDescending(x => x.CreatedUtc)
-            .ToListAsync();
-    }
-
-    private void ResetForm()
-    {
-        _editingVehicleId = null;
-        _form = new VehicleFormModel();
-        _makes = [];
-        _models = [];
-    }
-
-    private async Task EditVehicleAsync(Guid id)
-    {
-        var vehicle = _vehicles.FirstOrDefault(x => x.Id == id);
-        if (vehicle is null)
-        {
-            return;
-        }
-
-        _editingVehicleId = id;
-        _errorMessage = null;
-        _successMessage = null;
-
-        _form = new VehicleFormModel
-        {
-            ModelYear = vehicle.ModelYear?.ToString() ?? string.Empty,
-            Make = vehicle.Make ?? string.Empty,
-            Model = vehicle.Model ?? string.Empty,
-            Vin = vehicle.Vin,
-            Nickname = vehicle.Nickname,
-            LicensePlate = vehicle.LicensePlate,
-            Mileage = vehicle.Mileage?.ToString(),
-            IsPrimary = vehicle.IsPrimary
-        };
-
-        await RefreshMakesAsync();
-        await RefreshModelsAsync();
+        _model = await VehiclePortalService.GetAsync();
     }
 
     private async Task SaveVehicleAsync()
     {
-        _errorMessage = null;
-        _successMessage = null;
+        _model = await VehiclePortalService.SaveAsync(_model);
+    }
 
-        if (_customer is null)
-        {
-            _errorMessage = "Customer record not available.";
-            return;
-        }
+    private async Task ResetFormAsync()
+    {
+        _model = await VehiclePortalService.ResetAsync();
+    }
 
-        if (!TryParseYear(_form.ModelYear, out var modelYear))
-        {
-            _errorMessage = "Model year must be a valid year.";
-            return;
-        }
-
-        if (!TryParseMileage(_form.Mileage, out var mileage))
-        {
-            _errorMessage = "Mileage must be a valid whole number.";
-            return;
-        }
-
-        var isNew = _editingVehicleId is null;
-
-        CustomerVehicle vehicle;
-        if (isNew)
-        {
-            vehicle = new CustomerVehicle
-            {
-                CustomerId = _customer.Id,
-                CreatedUtc = DateTimeOffset.UtcNow,
-                VehicleType = "Automotive"
-            };
-
-            Db.CustomerVehicles.Add(vehicle);
-        }
-        else
-        {
-            vehicle = await Db.CustomerVehicles
-                .FirstOrDefaultAsync(x => x.Id == _editingVehicleId && x.CustomerId == _customer.Id)
-                ?? throw new InvalidOperationException("Vehicle not found.");
-        }
-
-        vehicle.ModelYear = modelYear;
-        vehicle.Make = string.IsNullOrWhiteSpace(_form.Make) ? null : _form.Make.Trim();
-        vehicle.Model = string.IsNullOrWhiteSpace(_form.Model) ? null : _form.Model.Trim();
-        vehicle.Vin = string.IsNullOrWhiteSpace(_form.Vin) ? null : _form.Vin.Trim();
-        vehicle.Nickname = string.IsNullOrWhiteSpace(_form.Nickname) ? null : _form.Nickname.Trim();
-        vehicle.LicensePlate = string.IsNullOrWhiteSpace(_form.LicensePlate) ? null : _form.LicensePlate.Trim();
-        vehicle.Mileage = mileage;
-        vehicle.IsPrimary = _form.IsPrimary;
-        vehicle.UpdatedUtc = DateTimeOffset.UtcNow;
-
-        if (vehicle.IsPrimary)
-        {
-            await ClearOtherPrimaryVehiclesAsync(vehicle.Id);
-        }
-
-        await Db.SaveChangesAsync();
-        await ReloadVehiclesAsync();
-
-        _successMessage = isNew ? "Vehicle added." : "Vehicle updated.";
-        ResetForm();
+    private async Task EditVehicleAsync(Guid id)
+    {
+        _model = await VehiclePortalService.StartEditAsync(id);
     }
 
     private async Task DeleteVehicleAsync(Guid id)
     {
-        if (_customer is null)
-        {
-            return;
-        }
-
-        var vehicle = await Db.CustomerVehicles
-            .FirstOrDefaultAsync(x => x.Id == id && x.CustomerId == _customer.Id);
-
-        if (vehicle is null)
-        {
-            return;
-        }
-
-        var wasPrimary = vehicle.IsPrimary;
-
-        Db.CustomerVehicles.Remove(vehicle);
-        await Db.SaveChangesAsync();
-
-        if (wasPrimary)
-        {
-            var fallback = await Db.CustomerVehicles
-                .Where(x => x.CustomerId == _customer.Id)
-                .OrderByDescending(x => x.CreatedUtc)
-                .FirstOrDefaultAsync();
-
-            if (fallback is not null)
-            {
-                fallback.IsPrimary = true;
-                fallback.UpdatedUtc = DateTimeOffset.UtcNow;
-                await Db.SaveChangesAsync();
-            }
-        }
-
-        _successMessage = "Vehicle deleted.";
-        if (_editingVehicleId == id)
-        {
-            ResetForm();
-        }
-
-        await ReloadVehiclesAsync();
+        _model = await VehiclePortalService.DeleteAsync(id);
     }
 
     private async Task SetPrimaryVehicleAsync(Guid id)
     {
-        if (_customer is null)
-        {
-            return;
-        }
-
-        var selected = await Db.CustomerVehicles
-            .FirstOrDefaultAsync(x => x.Id == id && x.CustomerId == _customer.Id);
-
-        if (selected is null)
-        {
-            return;
-        }
-
-        var currentPrimary = await Db.CustomerVehicles
-            .Where(x => x.CustomerId == _customer.Id && x.Id != id && x.IsPrimary)
-            .ToListAsync();
-
-        foreach (var vehicle in currentPrimary)
-        {
-            vehicle.IsPrimary = false;
-            vehicle.UpdatedUtc = DateTimeOffset.UtcNow;
-        }
-
-        selected.IsPrimary = true;
-        selected.UpdatedUtc = DateTimeOffset.UtcNow;
-
-        await Db.SaveChangesAsync();
-        await ReloadVehiclesAsync();
-
-        _successMessage = "Primary vehicle updated.";
+        _model = await VehiclePortalService.MakePrimaryAsync(id);
     }
 
-    private async Task OnVehicleYearChanged()
+    private async Task OnVehicleYearChangedAsync()
     {
-        _form.Make = string.Empty;
-        _form.Model = string.Empty;
-        _makes = [];
-        _models = [];
-
-        await RefreshMakesAsync();
+        _model = await VehiclePortalService.YearChangedAsync(_model);
     }
 
-    private async Task OnVehicleMakeChanged()
+    private async Task OnVehicleMakeChangedAsync()
     {
-        _form.Model = string.Empty;
-        _models = [];
-
-        await RefreshModelsAsync();
-    }
-
-    private async Task RefreshMakesAsync()
-    {
-        _makes = [];
-
-        if (TryParseYear(_form.ModelYear, out var year) && year.HasValue)
-        {
-            _makes = (await VehicleCatalog.GetMakesAsync(year.Value)).ToList();
-            EnsureSelectedValue(_makes, _form.Make);
-        }
-    }
-
-    private async Task RefreshModelsAsync()
-    {
-        _models = [];
-
-        if (TryParseYear(_form.ModelYear, out var year) &&
-            year.HasValue &&
-            !string.IsNullOrWhiteSpace(_form.Make))
-        {
-            _models = (await VehicleCatalog.GetModelsAsync(year.Value, _form.Make.Trim())).ToList();
-            EnsureSelectedValue(_models, _form.Model);
-        }
-    }
-
-    private async Task ClearOtherPrimaryVehiclesAsync(Guid keepVehicleId)
-    {
-        if (_customer is null)
-        {
-            return;
-        }
-
-        var others = await Db.CustomerVehicles
-            .Where(x => x.CustomerId == _customer.Id && x.Id != keepVehicleId && x.IsPrimary)
-            .ToListAsync();
-
-        foreach (var vehicle in others)
-        {
-            vehicle.IsPrimary = false;
-            vehicle.UpdatedUtc = DateTimeOffset.UtcNow;
-        }
-    }
-
-    private static void EnsureSelectedValue(List<string> values, string? selectedValue)
-    {
-        if (string.IsNullOrWhiteSpace(selectedValue))
-        {
-            return;
-        }
-
-        if (!values.Contains(selectedValue, StringComparer.OrdinalIgnoreCase))
-        {
-            values.Insert(0, selectedValue);
-        }
-    }
-
-    private static bool TryParseYear(string? value, out int? year)
-    {
-        year = null;
-
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        if (int.TryParse(value.Trim(), out var parsed) && parsed is >= 1900 and <= 3000)
-        {
-            year = parsed;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool TryParseMileage(string? value, out int? mileage)
-    {
-        mileage = null;
-
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return true;
-        }
-
-        var normalized = value.Replace(",", "", StringComparison.Ordinal).Trim();
-        if (int.TryParse(normalized, out var parsed) && parsed >= 0)
-        {
-            mileage = parsed;
-            return true;
-        }
-
-        return false;
+        _model = await VehiclePortalService.MakeChangedAsync(_model);
     }
 }

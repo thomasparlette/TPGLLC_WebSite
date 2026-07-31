@@ -1,13 +1,13 @@
 ﻿@page "/portal/appointments"
 @layout CustomerLayout
-@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@attribute [Authorize]
 
 @using Microsoft.EntityFrameworkCore
 @using TPGLLC.Data
 @using TPGLLC.Data.Entities
 @using TPGLLC.Services.Vehicles
 @using TPGLLC.Web.Services.Customers
-@using TPGLLC.Web.Components.PortalShared.Appoitments
+@using TPGLLC.Web.Components.PortalShared.Appointments
 
 @inject TPGLLCDbContext Db
 @inject ICurrentCustomerAccessor CurrentCustomerAccessor

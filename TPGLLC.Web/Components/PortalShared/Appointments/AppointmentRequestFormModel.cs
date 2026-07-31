@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace TPGLLC.Web.Components.PortalShared.Appoitments;
+namespace TPGLLC.Web.Components.PortalShared.Appointments;
 
 public sealed class AppointmentRequestFormModel
 {

@@ -1,17 +1,17 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
+using System.IO;
 using TPGLLC.Data;
+using TPGLLC.Services.Vehicles;
 using TPGLLC.Shared.Identity;
 using TPGLLC.Web.Authorization;
 using TPGLLC.Web.Components;
-using TPGLLC.Web.Features.Portal;
+using TPGLLC.Web.Services;
 using TPGLLC.Web.Services.Appointments;
 using TPGLLC.Web.Services.Customers;
-using TPGLLC.Services.Vehicles;
-using TPGLLC.Web.Services;
-using System.IO;
-using Microsoft.AspNetCore.DataProtection;
+using TPGLLC.Web.Services.Portal;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -116,18 +116,23 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
 
-builder.Services.AddScoped<CustomerPortalStore>();
-builder.Services.AddScoped<IVehicleCatalogService, VehicleCatalogService>();
+
 
 builder.Services.Configure<AppointmentEmailOptions>(
     builder.Configuration.GetSection("Gmail"));
 
-builder.Services.AddScoped<IEmailTemplateRenderer, FileEmailTemplateRenderer>();
-builder.Services.AddScoped<IAppointmentService, AppointmentService>();
-
+builder.Services.AddScoped<IVehicleCatalogService, VehicleCatalogService>();
 builder.Services.AddScoped<ICurrentCustomerAccessor, CurrentCustomerAccessor>();
 builder.Services.AddScoped<ICustomerProfileService, CustomerProfileService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IVehiclePortalService, VehiclePortalService>();
+builder.Services.AddScoped<IAppointmentPortalService, AppointmentPortalService>();
+builder.Services.AddScoped<IEmailTemplateRenderer, FileEmailTemplateRenderer>();
+
+
+
+
 
 
 builder.Services.AddAuthorizationBuilder()
