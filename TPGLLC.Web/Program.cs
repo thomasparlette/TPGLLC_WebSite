@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Hosting.StaticWebAssets;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.InMemory;
 using System.IO;
 using TPGLLC.Data;
 using TPGLLC.Services.Vehicles;
@@ -15,9 +17,15 @@ using TPGLLC.Web.Services.Portal;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var keyPath = builder.Environment.IsEnvironment("Build")
+    ? Path.Combine(Path.GetTempPath(), "TPGLLC", "DataProtectionKeys")
+    : @"D:\TPGLLC\DataProtectionKeys";
+
+Directory.CreateDirectory(keyPath);
+
 builder.Services.AddDataProtection()
     .SetApplicationName("TPGLLC.Web")
-    .PersistKeysToFileSystem(new DirectoryInfo(@"D:\TPGLLC\DataProtectionKeys"));
+    .PersistKeysToFileSystem(new DirectoryInfo(keyPath));
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -51,14 +59,30 @@ var connectionString =
     ?? envConnection
     ?? throw new InvalidOperationException("Missing WebsiteDb connection string.");
 
-builder.Services.AddDbContext<TPGLLCDbContext>(options =>
-    options.UseSqlServer(connectionString,
-        sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)));
+if (builder.Environment.IsEnvironment("Build"))
+{
+    //
+    // Build Environment
+    // No SQL Server required
+    StaticWebAssetsLoader.UseStaticWebAssets(builder.Environment, builder.Configuration);
+    builder.Services.AddDbContext<TPGLLCDbContext>(options =>
+        options.UseInMemoryDatabase("TPGLLC_Build"));
 
-builder.Services.AddDbContextFactory<TPGLLCDbContext>(options =>
-    options.UseSqlServer(connectionString,
-        sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)));
+    builder.Services.AddDbContextFactory<TPGLLCDbContext>(options =>
+        options.UseInMemoryDatabase("TPGLLC_Build"));
 
+    Console.WriteLine("Running in BUILD environment (InMemory database).");
+}
+else
+{
+    builder.Services.AddDbContext<TPGLLCDbContext>(options =>
+        options.UseSqlServer(connectionString,
+            sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)));
+
+    builder.Services.AddDbContextFactory<TPGLLCDbContext>(options =>
+        options.UseSqlServer(connectionString,
+            sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)));
+}
 builder.Services
     .AddIdentity<ApplicationUser, ApplicationRole>(options =>
     {
@@ -128,11 +152,8 @@ builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IVehiclePortalService, VehiclePortalService>();
 builder.Services.AddScoped<IAppointmentPortalService, AppointmentPortalService>();
+builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 builder.Services.AddScoped<IEmailTemplateRenderer, FileEmailTemplateRenderer>();
-
-
-
-
 
 
 builder.Services.AddAuthorizationBuilder()

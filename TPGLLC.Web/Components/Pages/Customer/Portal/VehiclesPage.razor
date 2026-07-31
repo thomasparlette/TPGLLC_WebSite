@@ -26,7 +26,7 @@
     <VehicleStats VehicleCount="@_model.Vehicles.Count"
                   PrimaryVehicleCount="@_model.Vehicles.Count(x => x.IsPrimary)" />
 
-    <VehicleLists Vehicles="@_model.Vehicles"
+    <VehiclesLists Vehicles="@_model.Vehicles"
                   OnEdit="EditVehicleAsync"
                   OnDelete="DeleteVehicleAsync"
                   OnMakePrimary="SetPrimaryVehicleAsync" />

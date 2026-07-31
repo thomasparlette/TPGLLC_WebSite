@@ -6,6 +6,7 @@ using TPGLLC.Web.Components.PortalShared.Vehicles;
 using TPGLLC.Web.Services.Customers;
 using TPGLLC.Web.ViewModels.Portal;
 
+
 namespace TPGLLC.Web.Services.Portal;
 
 public sealed class VehiclePortalService : IVehiclePortalService
@@ -14,6 +15,7 @@ public sealed class VehiclePortalService : IVehiclePortalService
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
     private readonly ICustomerProfileService _customerProfileService;
     private readonly IVehicleCatalogService _vehicleCatalogService;
+    private readonly IBuildEnvironmentService _buildEnvironmentService;
 
     public VehiclePortalService(
         IDbContextFactory<TPGLLCDbContext> dbFactory,
@@ -29,6 +31,10 @@ public sealed class VehiclePortalService : IVehiclePortalService
 
     public async Task<VehiclePageViewModel> GetAsync()
     {
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            return _buildEnvironmentService.CreateVehicles();
+        }
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -59,6 +65,10 @@ public sealed class VehiclePortalService : IVehiclePortalService
 
     public async Task<VehiclePageViewModel> StartEditAsync(Guid vehicleId)
     {
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            return _buildEnvironmentService.CreateVehicles();
+        }
         var model = await GetAsync();
         if (!string.IsNullOrWhiteSpace(model.ErrorMessage))
         {
@@ -148,6 +158,10 @@ public sealed class VehiclePortalService : IVehiclePortalService
 
     public async Task<VehiclePageViewModel> SaveAsync(VehiclePageViewModel model)
     {
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            return _buildEnvironmentService.CreateVehicles();
+        }
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -222,6 +236,10 @@ public sealed class VehiclePortalService : IVehiclePortalService
 
     public async Task<VehiclePageViewModel> DeleteAsync(Guid vehicleId)
     {
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            return _buildEnvironmentService.CreateVehicles();
+        }
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -264,6 +282,10 @@ public sealed class VehiclePortalService : IVehiclePortalService
 
     public async Task<VehiclePageViewModel> MakePrimaryAsync(Guid vehicleId)
     {
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            return _buildEnvironmentService.CreateVehicles();
+        }
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {

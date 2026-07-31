@@ -6,21 +6,31 @@ using TPGLLC.Web.ViewModels.Portal;
 
 namespace TPGLLC.Web.Services.Portal;
 
+
+
 public sealed class DashboardService : IDashboardService
 {
     private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
+    private readonly IBuildEnvironmentService _buildEnvironmentService;
 
     public DashboardService(
         IDbContextFactory<TPGLLCDbContext> dbFactory,
-        ICurrentCustomerAccessor currentCustomerAccessor)
+        ICurrentCustomerAccessor currentCustomerAccessor,
+        IBuildEnvironmentService buildEnvironmentService)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
+        _buildEnvironmentService = buildEnvironmentService;
     }
 
     public async Task<DashboardViewModel> GetAsync()
     {
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            return _buildEnvironmentService.CreateDashboard();
+        }
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {

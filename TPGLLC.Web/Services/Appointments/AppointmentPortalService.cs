@@ -14,21 +14,28 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
     private readonly ICustomerProfileService _customerProfileService;
     private readonly IVehicleCatalogService _vehicleCatalogService;
+    private readonly IBuildEnvironmentService _buildEnvironmentService;
 
     public AppointmentPortalService(
         IDbContextFactory<TPGLLCDbContext> dbFactory,
         ICurrentCustomerAccessor currentCustomerAccessor,
         ICustomerProfileService customerProfileService,
-        IVehicleCatalogService vehicleCatalogService)
+        IVehicleCatalogService vehicleCatalogService,
+    IBuildEnvironmentService buildEnvironmentService)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
         _customerProfileService = customerProfileService;
         _vehicleCatalogService = vehicleCatalogService;
+        _buildEnvironmentService = buildEnvironmentService;
     }
 
     public async Task<AppointmentPageViewModel> GetAsync()
     {
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            return _buildEnvironmentService.CreateAppointments();
+        }
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
