@@ -1,5 +1,16 @@
-﻿<div class="portal-header">
-    <p class="section-kicker">Customer Portal</p>
-    <h1>My Vehicles</h1>
-    <p>Add, edit, delete, and mark your primary vehicle.</p>
+﻿<div class="portal-stats">
+    <div class="portal-stat">
+        <div class="portal-stat-value">@VehicleCount</div>
+        <div class="portal-stat-label">Vehicles</div>
+    </div>
+
+    <div class="portal-stat">
+        <div class="portal-stat-value">@PrimaryVehicleCount</div>
+        <div class="portal-stat-label">Primary Vehicles</div>
+    </div>
 </div>
+
+@code {
+    [Parameter] public int VehicleCount { get; set; }
+    [Parameter] public int PrimaryVehicleCount { get; set; }
+}
