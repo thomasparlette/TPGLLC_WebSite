@@ -17,15 +17,11 @@ using TPGLLC.Web.Services.Portal;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var keyPath = builder.Environment.IsEnvironment("Build")
-    ? Path.Combine(Path.GetTempPath(), "TPGLLC", "DataProtectionKeys")
-    : @"D:\TPGLLC\DataProtectionKeys";
-
-Directory.CreateDirectory(keyPath);
-
-builder.Services.AddDataProtection()
+builder.Services
+    .AddDataProtection()
     .SetApplicationName("TPGLLC.Web")
-    .PersistKeysToFileSystem(new DirectoryInfo(keyPath));
+    .PersistKeysToFileSystem(
+        new DirectoryInfo(@"D:\Websites\TPGLLC\DataProtectionKeys"));
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

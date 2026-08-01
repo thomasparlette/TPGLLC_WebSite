@@ -1,5 +1,4 @@
 ﻿@page "/portal/vehicles"
-@page "/portal/vehicles/add"
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
@@ -9,10 +8,14 @@
 
 @inject IVehiclePortalService VehiclePortalService
 
-<PageTitle>My Vehicles</PageTitle>
+<PageTitle>Vehicles</PageTitle>
 
 <section class="portal-dashboard" id="top">
-    <VehiclePageHeader />
+    <div class="portal-header">
+        <p class="section-kicker">Customer Portal</p>
+        <h1>Vehicle Management</h1>
+        <p>Manage all of your registered vehicles.</p>
+    </div>
 
     @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
     {
@@ -27,48 +30,78 @@
     <VehicleStats VehicleCount="@_model.Vehicles.Count"
                   PrimaryVehicleCount="@_model.Vehicles.Count(x => x.IsPrimary)" />
 
-    <VehicleList Vehicles="@_model.Vehicles"
-                  OnEdit="EditVehicleAsync"
-                  OnDelete="DeleteVehicleAsync"
-                  OnMakePrimary="SetPrimaryVehicleAsync" />
+    <div class="portal-section">
+        <div class="portal-section-heading">
+            <h2>Your Vehicles</h2>
 
-    <VehicleForm Form="@_model.Form"
-                 Years="@_model.Years"
-                 Makes="@_model.Makes"
-                 Models="@_model.Models"
-                 IsEditing="@(_model.EditingVehicleId is not null)"
-                 OnSave="SaveVehicleAsync"
-                 OnCancel="ResetFormAsync"
-                 OnYearChangedCallback="OnVehicleYearChangedAsync"
-                 OnMakeChangedCallback="OnVehicleMakeChangedAsync" />
+            <button type="button"
+                    class="portal-action-button"
+                    @onclick="ToggleAddVehicle">
+                + Add Vehicle
+            </button>
+        </div>
+
+        <VehiclesList Vehicles="@_model.Vehicles"
+                      OnEdit="EditVehicleAsync"
+                      OnDelete="DeleteVehicleAsync"
+                      OnMakePrimary="SetPrimaryVehicleAsync" />
+    </div>
+
+    @if (_showVehicleForm)
+    {
+        <VehicleForm Form="@_model.Form"
+                     Years="@_model.Years"
+                     Makes="@_model.Makes"
+                     Models="@_model.Models"
+                     IsEditing="@(_model.EditingVehicleId is not null)"
+                     OnSave="@EventCallback.Factory.Create(this, SaveVehicleAsync)"
+                     OnCancel="@EventCallback.Factory.Create(this, CancelVehicleAsync)"
+                     OnYearChangedCallback="@EventCallback.Factory.Create(this, OnVehicleYearChangedAsync)"
+                     OnMakeChangedCallback="@EventCallback.Factory.Create(this, OnVehicleMakeChangedAsync)" />
+    }
 </section>
 
 @code {
     private VehiclePageViewModel _model = new();
+    private bool _showVehicleForm;
 
     protected override async Task OnInitializedAsync()
     {
         _model = await VehiclePortalService.GetAsync();
     }
 
+    private void ToggleAddVehicle()
+    {
+        if (_model.EditingVehicleId is not null)
+        {
+            return;
+        }
+
+        _showVehicleForm = !_showVehicleForm;
+    }
+
     private async Task SaveVehicleAsync()
     {
         _model = await VehiclePortalService.SaveAsync(_model);
+        _showVehicleForm = false;
     }
 
-    private async Task ResetFormAsync()
+    private async Task CancelVehicleAsync()
     {
         _model = await VehiclePortalService.ResetAsync();
+        _showVehicleForm = false;
     }
 
     private async Task EditVehicleAsync(Guid id)
     {
         _model = await VehiclePortalService.StartEditAsync(id);
+        _showVehicleForm = true;
     }
 
     private async Task DeleteVehicleAsync(Guid id)
     {
         _model = await VehiclePortalService.DeleteAsync(id);
+        _showVehicleForm = false;
     }
 
     private async Task SetPrimaryVehicleAsync(Guid id)
