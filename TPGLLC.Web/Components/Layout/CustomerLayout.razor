@@ -12,7 +12,18 @@
         </a>
 
         <div class="portal-topbar-actions">
-            <div class="portal-topbar-welcome">Welcome, Customer</div>
+            <AuthorizeView>
+                <Authorized>
+                    <div class="portal-topbar-welcome">
+                        Welcome, @context.User.Identity?.Name
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <div class="portal-topbar-welcome">
+                        Welcome
+                    </div>
+                </NotAuthorized>
+            </AuthorizeView>
 
             <button type="button"
                     class="portal-mobile-menu-toggle"
@@ -28,7 +39,9 @@
     </header>
 
     <div class="customer-layout-shell">
-        <div class="portal-sidebar-backdrop @( _mobileMenuOpen ? "show" : "" )" @onclick="CloseMenu"></div>
+        <div class="portal-sidebar-backdrop @( _mobileMenuOpen ? "show" : "" )"
+             @onclick="CloseMenu">
+        </div>
 
         <aside class="portal-sidebar @( _mobileMenuOpen ? "open" : "" )">
             <SidebarNavigation OnNavigate="CloseMenu" />
