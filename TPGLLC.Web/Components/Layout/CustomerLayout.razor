@@ -13,9 +13,9 @@
 
         <div class="portal-topbar-actions">
             <AuthorizeView>
-                <Authorized>
+                <Authorized Context="authState">
                     <div class="portal-topbar-welcome">
-                        Welcome, @context.User.Identity?.Name
+                        Welcome, @(GetDisplayName(authState.User))
                     </div>
                 </Authorized>
                 <NotAuthorized>
@@ -64,5 +64,21 @@
     private void CloseMenu()
     {
         _mobileMenuOpen = false;
+    }
+
+    private static string GetDisplayName(System.Security.Claims.ClaimsPrincipal user)
+    {
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            return "Customer";
+        }
+
+        var name =
+            user.Identity?.Name ??
+            user.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ??
+            user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ??
+            "Customer";
+
+        return string.IsNullOrWhiteSpace(name) ? "Customer" : name;
     }
 }
