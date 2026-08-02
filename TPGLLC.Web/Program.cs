@@ -151,6 +151,9 @@ builder.Services.AddScoped<IAppointmentPortalService, AppointmentPortalService>(
 builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 builder.Services.AddScoped<IEmailTemplateRenderer, FileEmailTemplateRenderer>();
 builder.Services.AddSingleton<IBuildEnvironmentService, BuildEnvironmentService>();
+builder.Services.AddScoped<ICustomerAccountService, CustomerAccountService>();
+builder.Services.AddScoped<IVehiclePhotoService, VehiclePhotoService>();
+builder.Services.AddScoped<IVehicleDetailsService, VehicleDetailsService>();
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(PortalPolicies.Customer, policy =>

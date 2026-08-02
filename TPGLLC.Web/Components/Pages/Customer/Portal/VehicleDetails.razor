@@ -1,0 +1,151 @@
+﻿@page "/portal/vehicles/{VehicleId:guid}"
+@layout CustomerLayout
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+@using TPGLLC.Web.Services.Portal
+@using TPGLLC.Web.ViewModels.Portal
+
+@inject IVehicleDetailsService VehicleDetailsService
+@inject NavigationManager Navigation
+
+<PageTitle>Vehicle Details</PageTitle>
+
+<section class="portal-dashboard">
+    <div class="portal-header">
+        <p class="section-kicker">Customer Portal</p>
+        <h1>@_model.VehicleTitle</h1>
+        <p>View details and service history for this vehicle.</p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
+    {
+        <div class="auth-alert">@_model.ErrorMessage</div>
+    }
+    else if (_model.Vehicle is null)
+    {
+        <div class="portal-section">
+            <div class="portal-activity">
+                <div class="portal-activity-item">
+                    <div class="portal-activity-icon">🚗</div>
+                    <div>Vehicle not found.</div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="portal-section">
+            <div class="portal-section-heading">
+                <h2>Vehicle Summary</h2>
+
+                <div class="portal-actions portal-actions-wrap">
+                    <a class="portal-action-button" href="/portal/vehicles">Back to Vehicles</a>
+                </div>
+            </div>
+
+            <div class="portal-dashboard-grid">
+                <div class="portal-stat">
+                    <div class="portal-stat-value">@(_model.Vehicle.ModelYear?.ToString() ?? "—")</div>
+                    <div class="portal-stat-label">Year</div>
+                </div>
+
+                <div class="portal-stat">
+                    <div class="portal-stat-value">@(_model.Vehicle.Make ?? "—")</div>
+                    <div class="portal-stat-label">Make</div>
+                </div>
+
+                <div class="portal-stat">
+                    <div class="portal-stat-value">@(_model.Vehicle.Model ?? "—")</div>
+                    <div class="portal-stat-label">Model</div>
+                </div>
+
+                <div class="portal-stat">
+                    <div class="portal-stat-value">@(_model.Vehicle.Mileage?.ToString("N0") ?? "—")</div>
+                    <div class="portal-stat-label">Mileage</div>
+                </div>
+            </div>
+
+            <div class="portal-activity" style="margin-top:1.5rem;">
+                <div class="portal-activity-item">
+                    <div class="portal-activity-icon">🚘</div>
+                    <div>
+                        <div><strong>@_model.VehicleTitle</strong></div>
+                        <div>@(_model.Vehicle.Nickname ?? "No nickname set")</div>
+                        <div>@(_model.Vehicle.LicensePlate ?? "No plate set")</div>
+                        <div>@(_model.Vehicle.Vin ?? "No VIN set")</div>
+                        <div>@(_model.Vehicle.VehicleType)</div>
+                        <div>
+                            @if (_model.Vehicle.IsPrimary)
+                            {
+                                <span class="portal-chip">Primary Vehicle</span>
+                            }
+                            else
+                            {
+                                <span class="portal-muted">Not primary</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="portal-section">
+            <div class="portal-section-heading">
+                <h2>Service History</h2>
+                <a href="/portal/history">View full history</a>
+            </div>
+
+            @if (_model.ServiceHistory.Count == 0)
+            {
+                <div class="portal-activity">
+                    <div class="portal-activity-item">
+                        <div class="portal-activity-icon">🛠️</div>
+                        <div>No service history found for this vehicle.</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="portal-activity">
+                    @foreach (var item in _model.ServiceHistory)
+                    {
+                        <div class="portal-activity-item">
+                            <div class="portal-activity-icon">🛠️</div>
+                            <div>
+                                <div><strong>@item.ServiceDate.ToString("MMM d, yyyy")</strong></div>
+                                <div>@item.Service</div>
+                                <div>@item.Status</div>
+
+                                @if (item.Mileage.HasValue)
+                                {
+                                    <div>@item.Mileage.Value.ToString("N0") mi</div>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(item.Technician))
+                                {
+                                    <div>Technician: @item.Technician</div>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(item.Notes))
+                                {
+                                    <div style="margin-top:0.35rem;">@item.Notes</div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public Guid VehicleId { get; set; }
+
+    private VehicleDetailsViewModel _model = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _model = await VehicleDetailsService.GetAsync(VehicleId);
+    }
+}

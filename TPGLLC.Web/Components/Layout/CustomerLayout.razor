@@ -1,59 +1,55 @@
 ﻿@inherits LayoutComponentBase
-@using TPGLLC.Web.Services.Customers
+@using Microsoft.AspNetCore.Components.Authorization
 
-@inject ICurrentCustomerAccessor CurrentCustomerAccessor
-@inject ICustomerProfileService CustomerProfileService
-
-<div class="app-shell portal-shell">
-    <header class="site-header">
-        <a class="brand" href="/portal/dashboard">
-            <img class="brand-logo" src="/images/logo.jpeg" alt="Tom Parlette Garage LLC logo" />
-            <div class="brand-copy">
-                <span class="brand-name">Tom Parlette Garage LLC</span>
-                <span class="brand-tagline">Customer Portal</span>
+<div class="customer-layout">
+    <header class="portal-topbar">
+        <a class="portal-brand" href="/portal/dashboard">
+            <img src="/images/logo.jpeg" alt="Tom Parlette Garage LLC" />
+            <div>
+                <div class="portal-brand-name">Tom Parlette Garage LLC</div>
+                <div class="portal-brand-subtitle">Customer Portal</div>
             </div>
         </a>
 
-        <div class="portal-user">
-            <div class="brand-tagline">
-                Welcome, @_displayName
-            </div>
-            <a class="btn btn-secondary" href="/Identity/Account/Logout">Sign Out</a>
+        <div class="portal-topbar-actions">
+            <div class="portal-topbar-welcome">Welcome, Customer</div>
+
+            <button type="button"
+                    class="portal-mobile-menu-toggle"
+                    @onclick="ToggleMenu"
+                    aria-label="Open navigation menu">
+                ☰
+            </button>
+
+            <a class="portal-signout-button" href="/Identity/Account/Logout">
+                Sign Out
+            </a>
         </div>
     </header>
 
-    <main class="page-content">
-        <div class="customer-shell">
-            <aside class="customer-sidebar">
-                <div class="sidebar-heading">
-                    <p class="section-kicker">Customer Portal</p>
-                    <h3>Navigation</h3>
-                </div>
+    <div class="customer-layout-shell">
+        <div class="portal-sidebar-backdrop @( _mobileMenuOpen ? "show" : "" )" @onclick="CloseMenu"></div>
 
-                <SidebarNavigation />
-            </aside>
+        <aside class="portal-sidebar @( _mobileMenuOpen ? "open" : "" )">
+            <SidebarNavigation OnNavigate="CloseMenu" />
+        </aside>
 
-            <section class="customer-content">
-                @Body
-            </section>
-        </div>
-    </main>
+        <main class="portal-content">
+            @Body
+        </main>
+    </div>
 </div>
 
 @code {
-    private string _displayName = "Customer";
+    private bool _mobileMenuOpen;
 
-    protected override async Task OnInitializedAsync()
+    private void ToggleMenu()
     {
-        var current = CurrentCustomerAccessor.GetCurrentCustomer();
-        if (!current.IsAuthenticated)
-        {
-            return;
-        }
+        _mobileMenuOpen = !_mobileMenuOpen;
+    }
 
-        var profile = await CustomerProfileService.GetCurrentAsync();
-        var name = $"{profile?.FirstName} {profile?.LastName}".Trim();
-
-        _displayName = string.IsNullOrWhiteSpace(name) ? "Customer" : name;
+    private void CloseMenu()
+    {
+        _mobileMenuOpen = false;
     }
 }

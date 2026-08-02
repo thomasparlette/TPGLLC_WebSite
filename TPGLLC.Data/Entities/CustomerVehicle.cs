@@ -24,6 +24,10 @@ public sealed class CustomerVehicle
 
     public bool IsPrimary { get; set; }
 
+    public string? PhotoPath { get; set; }
+
+    public DateTimeOffset? PhotoUpdatedUtc { get; set; }
+
     public DateTimeOffset CreatedUtc { get; set; } = DateTimeOffset.UtcNow;
 
     public DateTimeOffset? UpdatedUtc { get; set; }

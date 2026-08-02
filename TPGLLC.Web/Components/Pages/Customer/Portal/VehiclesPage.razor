@@ -2,11 +2,13 @@
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
+@using Microsoft.AspNetCore.Components.Forms
 @using TPGLLC.Web.Services.Portal
 @using TPGLLC.Web.ViewModels.Portal
 @using TPGLLC.Web.Components.PortalShared.Vehicles
 
 @inject IVehiclePortalService VehiclePortalService
+@inject IVehiclePhotoService VehiclePhotoService
 
 <PageTitle>Vehicles</PageTitle>
 
@@ -34,9 +36,7 @@
         <div class="portal-section-heading">
             <h2>Your Vehicles</h2>
 
-            <button type="button"
-                    class="portal-action-button"
-                    @onclick="ToggleAddVehicle">
+            <button type="button" class="portal-action-button" @onclick="ToggleAddVehicle">
                 + Add Vehicle
             </button>
         </div>
@@ -56,8 +56,43 @@
                      IsEditing="@(_model.EditingVehicleId is not null)"
                      OnSave="@EventCallback.Factory.Create(this, SaveVehicleAsync)"
                      OnCancel="@EventCallback.Factory.Create(this, CancelVehicleAsync)"
-                     OnYearChangedCallback="@EventCallback.Factory.Create(this, OnVehicleYearChangedAsync)"
-                     OnMakeChangedCallback="@EventCallback.Factory.Create(this, OnVehicleMakeChangedAsync)" />
+                     OnYearChanged="@EventCallback.Factory.Create(this, OnVehicleYearChangedAsync)"
+                     OnMakeChanged="@EventCallback.Factory.Create(this, OnVehicleMakeChangedAsync)" />
+    }
+
+    @if (_model.EditingVehicleId is not null)
+    {
+        var selectedVehicle = _model.Vehicles.FirstOrDefault(x => x.Id == _model.EditingVehicleId);
+
+        <div class="portal-section">
+            <div class="portal-section-heading">
+                <h2>Vehicle Photo</h2>
+                <a href="#top">Top</a>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(selectedVehicle?.PhotoPath))
+            {
+                <div style="margin-bottom:1rem;">
+                    <img src="@selectedVehicle.PhotoPath"
+                         alt="Vehicle photo"
+                         style="max-width:320px; width:100%; border-radius:16px; display:block;" />
+                </div>
+
+                <button type="button"
+                        class="portal-action-button"
+                        @onclick="RemovePhotoAsync">
+                    Remove Photo
+                </button>
+            }
+
+            <div style="margin-top:1rem;">
+                <InputFile OnChange="UploadPhotoAsync" accept="image/*" />
+            </div>
+
+            <p style="margin-top:0.75rem; color:#6b7280;">
+                Upload a JPG, PNG, or WEBP image. Maximum 5 MB.
+            </p>
+        </div>
     }
 </section>
 
@@ -117,5 +152,31 @@
     private async Task OnVehicleMakeChangedAsync()
     {
         _model = await VehiclePortalService.MakeChangedAsync(_model);
+    }
+
+    private async Task UploadPhotoAsync(InputFileChangeEventArgs e)
+    {
+        if (_model.EditingVehicleId is null)
+        {
+            return;
+        }
+
+        await VehiclePhotoService.UploadAsync(_model.EditingVehicleId.Value, e.File);
+        _model = await VehiclePortalService.GetAsync();
+        _model = await VehiclePortalService.StartEditAsync(_model.EditingVehicleId.Value);
+        _showVehicleForm = true;
+    }
+
+    private async Task RemovePhotoAsync()
+    {
+        if (_model.EditingVehicleId is null)
+        {
+            return;
+        }
+
+        await VehiclePhotoService.RemoveAsync(_model.EditingVehicleId.Value);
+        _model = await VehiclePortalService.GetAsync();
+        _model = await VehiclePortalService.StartEditAsync(_model.EditingVehicleId.Value);
+        _showVehicleForm = true;
     }
 }

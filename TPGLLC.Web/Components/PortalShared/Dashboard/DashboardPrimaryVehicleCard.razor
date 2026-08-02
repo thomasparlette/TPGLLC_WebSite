@@ -1,108 +1,65 @@
 ﻿@using TPGLLC.Data.Entities
 
-<section class="portal-section portal-feature-card">
-    <div class="portal-section-heading">
-        <h2>Primary Vehicle</h2>
-        <a href="/portal/vehicles">Manage</a>
-    </div>
-
-    @if (Vehicle is null)
+<article class="portal-card-link" style="cursor:default;">
+    @if (Vehicle is not null && !string.IsNullOrWhiteSpace(Vehicle.PhotoPath))
     {
-        <div class="portal-activity">
-            <div class="portal-activity-item">
-                <div class="portal-activity-icon">🚗</div>
-                <div>No primary vehicle set yet.</div>
-            </div>
-        </div>
+        <img src="@Vehicle.PhotoPath"
+             alt="Vehicle photo"
+             style="width:100%; max-height:180px; object-fit:cover; border-radius:14px; margin-bottom:0.75rem;" />
     }
     else
     {
-        <div class="portal-primary-vehicle">
-            <div class="portal-primary-vehicle-image">
-                @GetVehicleIcon(Vehicle)
-            </div>
-
-            <div class="portal-primary-vehicle-body">
-                <h3>@GetVehicleTitle(Vehicle)</h3>
-                <p>@GetVehicleDetails(Vehicle)</p>
-
-                <div class="portal-primary-meta">
-                    @if (!string.IsNullOrWhiteSpace(Vehicle.Vin))
-                    {
-                        <span>VIN @Vehicle.Vin</span>
-                    }
-
-                    @if (!string.IsNullOrWhiteSpace(Vehicle.LicensePlate))
-                    {
-                        <span>Plate @Vehicle.LicensePlate</span>
-                    }
-
-                    @if (Vehicle.Mileage.HasValue)
-                    {
-                        <span>@Vehicle.Mileage.Value.ToString("N0") mi</span>
-                    }
-                </div>
-
-                <div class="portal-actions" style="margin-top:1rem;">
-                    <a class="portal-action-button" href="/portal/vehicles">View Vehicles</a>
-                    <a class="portal-action-button" href="/portal/appointments">Schedule Service</a>
-                </div>
-            </div>
-        </div>
+        <div class="portal-card-icon">🚗</div>
     }
-</section>
+
+    <h3>Primary Vehicle</h3>
+
+    @if (Vehicle is null)
+    {
+        <p>No primary vehicle selected.</p>
+    }
+    else
+    {
+        <p>@GetVehicleTitle()</p>
+
+        <div class="portal-primary-meta" style="margin-top:0.75rem;">
+            @if (Vehicle.Mileage.HasValue)
+            {
+                <span>@Vehicle.Mileage.Value.ToString("N0") mi</span>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Vehicle.LicensePlate))
+            {
+                <span>Plate @Vehicle.LicensePlate</span>
+            }
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Vehicle.Nickname))
+        {
+            <p style="margin-top:0.75rem;">@Vehicle.Nickname</p>
+        }
+    }
+</article>
 
 @code {
-    [Parameter] public CustomerVehicle? Vehicle { get; set; }
+    [Parameter]
+    public CustomerVehicle? Vehicle { get; set; }
 
-    private static string GetVehicleTitle(CustomerVehicle vehicle)
+    private string GetVehicleTitle()
     {
+        if (Vehicle is null)
+        {
+            return string.Empty;
+        }
+
         var parts = new[]
         {
-            vehicle.ModelYear?.ToString(),
-            vehicle.Make,
-            vehicle.Model
-        }
-        .Where(x => !string.IsNullOrWhiteSpace(x));
+            Vehicle.ModelYear?.ToString(),
+            Vehicle.Make,
+            Vehicle.Model
+        }.Where(x => !string.IsNullOrWhiteSpace(x));
 
         var title = string.Join(" ", parts);
         return string.IsNullOrWhiteSpace(title) ? "Unnamed Vehicle" : title;
-    }
-
-    private static string GetVehicleDetails(CustomerVehicle vehicle)
-    {
-        var parts = new List<string>();
-
-        if (!string.IsNullOrWhiteSpace(vehicle.Nickname))
-        {
-            parts.Add(vehicle.Nickname);
-        }
-
-        if (vehicle.Mileage.HasValue)
-        {
-            parts.Add($"{vehicle.Mileage.Value:N0} mi");
-        }
-
-        if (!string.IsNullOrWhiteSpace(vehicle.Vin))
-        {
-            parts.Add($"VIN {vehicle.Vin}");
-        }
-
-        return parts.Count == 0 ? "No additional details" : string.Join(" · ", parts);
-    }
-
-    private static string GetVehicleIcon(CustomerVehicle vehicle)
-    {
-        return vehicle.Make?.ToLowerInvariant() switch
-        {
-            "ford" => "🚙",
-            "chevrolet" => "🚙",
-            "gmc" => "🚙",
-            "toyota" => "🚗",
-            "honda" => "🚗",
-            "acura" => "🚗",
-            "harley-davidson" => "🏍️",
-            _ => "🚘"
-        };
     }
 }

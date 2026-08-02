@@ -20,10 +20,10 @@
         <div class="portal-dashboard-grid">
             @foreach (var vehicle in Vehicles)
             {
-                <PortalVehicleCard Item="vehicle"
-                             OnEdit="OnEdit"
-                             OnDelete="OnDelete"
-                             OnMakePrimary="OnMakePrimary" />
+                <PortalVehicleCard Vehicle="vehicle"
+                                   OnEdit="OnEdit"
+                                   OnDelete="OnDelete"
+                                   OnMakePrimary="OnMakePrimary" />
             }
         </div>
     }

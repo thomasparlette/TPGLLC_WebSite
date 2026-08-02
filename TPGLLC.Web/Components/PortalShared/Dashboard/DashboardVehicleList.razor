@@ -1,9 +1,10 @@
-﻿@using TPGLLC.Data.Entities
+﻿@using System.Linq
+@using TPGLLC.Data.Entities
 
 <section class="portal-section">
     <div class="portal-section-heading">
         <h2>My Vehicles</h2>
-        <a href="/portal/vehicles">View all</a>
+        <a href="/portal/vehicles">Manage</a>
     </div>
 
     @if (Vehicles is null || Vehicles.Count == 0)
@@ -18,9 +19,39 @@
     else
     {
         <div class="portal-dashboard-grid">
-            @foreach (var vehicle in Vehicles.Take(3))
+            @foreach (var vehicle in Vehicles)
             {
-                <VehicleCard Vehicle="vehicle" Href="/portal/vehicles" />
+                <article class="portal-card-link" style="cursor:default;">
+                    @if (!string.IsNullOrWhiteSpace(vehicle.PhotoPath))
+                    {
+                        <img src="@vehicle.PhotoPath"
+                             alt="Vehicle photo"
+                             style="width:100%; max-height:180px; object-fit:cover; border-radius:14px; margin-bottom:0.75rem;" />
+                    }
+                    else
+                    {
+                        <div class="portal-card-icon">🚗</div>
+                    }
+
+                    <h3>@GetVehicleTitle(vehicle)</h3>
+                    <p>@GetVehicleDetails(vehicle)</p>
+
+                    <div class="portal-primary-meta" style="margin-top:0.75rem;">
+                        @if (vehicle.IsPrimary)
+                        {
+                            <span>Primary Vehicle</span>
+                        }
+
+                        @if (vehicle.Mileage.HasValue)
+                        {
+                            <span>@vehicle.Mileage.Value.ToString("N0") mi</span>
+                        }
+                    </div>
+
+                    <div class="portal-actions" style="margin-top:0.9rem;">
+                        <a class="portal-action-button" href="@($"/portal/vehicles/{vehicle.Id}")">Details</a>
+                    </div>
+                </article>
             }
         </div>
     }
@@ -28,4 +59,39 @@
 
 @code {
     [Parameter] public IReadOnlyList<CustomerVehicle> Vehicles { get; set; } = Array.Empty<CustomerVehicle>();
+
+    private static string GetVehicleTitle(CustomerVehicle vehicle)
+    {
+        var parts = new[]
+        {
+            vehicle.ModelYear?.ToString(),
+            vehicle.Make,
+            vehicle.Model
+        }.Where(x => !string.IsNullOrWhiteSpace(x));
+
+        var title = string.Join(" ", parts);
+        return string.IsNullOrWhiteSpace(title) ? "Unnamed Vehicle" : title;
+    }
+
+    private static string GetVehicleDetails(CustomerVehicle vehicle)
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(vehicle.Nickname))
+        {
+            parts.Add(vehicle.Nickname!);
+        }
+
+        if (!string.IsNullOrWhiteSpace(vehicle.LicensePlate))
+        {
+            parts.Add($"Plate {vehicle.LicensePlate}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(vehicle.Vin))
+        {
+            parts.Add($"VIN {vehicle.Vin}");
+        }
+
+        return parts.Count == 0 ? "No additional details" : string.Join(" · ", parts);
+    }
 }

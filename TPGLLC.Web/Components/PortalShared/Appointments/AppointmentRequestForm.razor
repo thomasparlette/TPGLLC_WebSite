@@ -2,7 +2,7 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using System.Linq
 
-<div class="auth-card" style="margin-left:0; margin-right:0; width:100%;">
+<div class="auth-card" id="appointment-form" style="margin-left:0; margin-right:0; width:100%;">
     <EditForm Model="Form" OnValidSubmit="HandleSubmitAsync">
         <DataAnnotationsValidator />
         <ValidationSummary />
@@ -105,13 +105,8 @@
         </div>
 
         <div class="portal-actions" style="margin-top:1.25rem;">
-            <button type="submit" class="portal-action-button">
-                Submit Request
-            </button>
-
-            <button type="button" class="portal-action-button" @onclick="HandleCancelAsync">
-                Reset
-            </button>
+            <button type="submit" class="portal-action-button">Submit Request</button>
+            <button type="button" class="portal-action-button" @onclick="HandleCancelAsync">Reset</button>
         </div>
     </EditForm>
 </div>
@@ -159,8 +154,5 @@
         }
     }
 
-    private Task HandleModelChangedAsync()
-    {
-        return Task.CompletedTask;
-    }
+    private Task HandleModelChangedAsync() => Task.CompletedTask;
 }

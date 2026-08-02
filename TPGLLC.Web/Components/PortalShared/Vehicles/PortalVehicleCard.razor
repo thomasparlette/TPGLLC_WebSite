@@ -1,89 +1,137 @@
 ﻿@using TPGLLC.Data.Entities
-@using System.Linq
 
-<article class="portal-card-link" @key="Item.Id">
-    <div class="portal-card-icon">@GetVehicleIcon(Item)</div>
-
-    <h3>@GetVehicleTitle(Item)</h3>
-    <p>@GetVehicleDetails(Item)</p>
-
-    @if (Item.IsPrimary)
+<article class="portal-card vehicle-card">
+    @if (!string.IsNullOrWhiteSpace(Vehicle.PhotoPath))
     {
-        <div class="portal-chip">Primary</div>
+        <img class="vehicle-photo"
+             src="@Vehicle.PhotoPath"
+             alt="@GetVehicleTitle()" />
+    }
+    else
+    {
+        <div class="vehicle-photo-placeholder">
+            🚗
+        </div>
     }
 
-    <div class="portal-actions" style="margin-top:1rem;">
-        <button type="button" class="portal-action-button" @onclick="EditAsync">Edit</button>
+    <div class="vehicle-card-body">
+        <h3>@GetVehicleTitle()</h3>
 
-        <button type="button"
-                class="portal-action-button"
-                @onclick="MakePrimaryAsync"
-                disabled="@Item.IsPrimary">
-            Make Primary
-        </button>
+        @if (Vehicle.IsPrimary)
+        {
+            <span class="portal-badge success">
+                Primary Vehicle
+            </span>
+        }
 
-        <button type="button" class="portal-action-button" @onclick="DeleteAsync">Delete</button>
+        <div class="vehicle-details">
+            @if (Vehicle.Mileage.HasValue)
+            {
+                <div>
+                    <strong>Mileage</strong><br />
+                    @Vehicle.Mileage.Value.ToString("N0") mi
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Vehicle.LicensePlate))
+            {
+                <div>
+                    <strong>Plate</strong><br />
+                    @Vehicle.LicensePlate
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Vehicle.Nickname))
+            {
+                <div>
+                    <strong>Nickname</strong><br />
+                    @Vehicle.Nickname
+                </div>
+            }
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Vehicle.Vin))
+        {
+            <div class="vehicle-vin">
+                VIN
+                <br />
+                @Vehicle.Vin
+            </div>
+        }
+
+        <div class="portal-actions">
+            <a class="portal-action-button" href="@($"/portal/vehicles/{Vehicle.Id}")">
+                Details
+            </a>
+
+            <button type="button"
+                    class="portal-action-button"
+                    @onclick="HandleEditAsync">
+                Edit
+            </button>
+
+            @if (!Vehicle.IsPrimary)
+            {
+                <button type="button"
+                        class="portal-action-button"
+                        @onclick="HandleMakePrimaryAsync">
+                    Make Primary
+                </button>
+            }
+
+            <button type="button"
+                    class="portal-danger-button"
+                    @onclick="HandleDeleteAsync">
+                Delete
+            </button>
+        </div>
     </div>
 </article>
 
 @code {
-    [Parameter, EditorRequired] public CustomerVehicle Item { get; set; } = default!;
-    [Parameter] public EventCallback<Guid> OnEdit { get; set; }
-    [Parameter] public EventCallback<Guid> OnDelete { get; set; }
-    [Parameter] public EventCallback<Guid> OnMakePrimary { get; set; }
+    [Parameter, EditorRequired]
+    public CustomerVehicle Vehicle { get; set; } = default!;
 
-    private Task EditAsync() => OnEdit.InvokeAsync(Item.Id);
-    private Task DeleteAsync() => OnDelete.InvokeAsync(Item.Id);
-    private Task MakePrimaryAsync() => OnMakePrimary.InvokeAsync(Item.Id);
+    [Parameter]
+    public EventCallback<Guid> OnEdit { get; set; }
 
-    private static string GetVehicleTitle(CustomerVehicle vehicle)
+    [Parameter]
+    public EventCallback<Guid> OnDelete { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> OnMakePrimary { get; set; }
+
+    private string GetVehicleTitle()
     {
         var parts = new[]
         {
-            vehicle.ModelYear?.ToString(),
-            vehicle.Make,
-            vehicle.Model
+            Vehicle.ModelYear?.ToString(),
+            Vehicle.Make,
+            Vehicle.Model
         }
         .Where(x => !string.IsNullOrWhiteSpace(x));
 
-        var title = string.Join(" ", parts);
-        return string.IsNullOrWhiteSpace(title) ? "Unnamed Vehicle" : title;
+        return string.Join(" ", parts);
     }
 
-    private static string GetVehicleDetails(CustomerVehicle vehicle)
+    private Task HandleEditAsync()
     {
-        var parts = new List<string>();
-
-        if (!string.IsNullOrWhiteSpace(vehicle.Nickname))
-        {
-            parts.Add(vehicle.Nickname);
-        }
-
-        if (vehicle.Mileage.HasValue)
-        {
-            parts.Add($"{vehicle.Mileage.Value:N0} mi");
-        }
-
-        if (!string.IsNullOrWhiteSpace(vehicle.Vin))
-        {
-            parts.Add($"VIN {vehicle.Vin}");
-        }
-
-        return parts.Count == 0 ? "No additional details" : string.Join(" · ", parts);
+        return OnEdit.HasDelegate
+            ? OnEdit.InvokeAsync(Vehicle.Id)
+            : Task.CompletedTask;
     }
 
-    private static string GetVehicleIcon(CustomerVehicle vehicle)
+    private Task HandleDeleteAsync()
     {
-        return vehicle.Make?.ToLowerInvariant() switch
-        {
-            "ford" => "🚙",
-            "chevrolet" => "🚙",
-            "gmc" => "🚙",
-            "toyota" => "🚗",
-            "honda" => "🚗",
-            "acura" => "🚗",
-            "harley-davidson" => "🏍️",
-            _ => "🚘"
-        };
+        return OnDelete.HasDelegate
+            ? OnDelete.InvokeAsync(Vehicle.Id)
+            : Task.CompletedTask;
+    }
+
+    private Task HandleMakePrimaryAsync()
+    {
+        return OnMakePrimary.HasDelegate
+            ? OnMakePrimary.InvokeAsync(Vehicle.Id)
+            : Task.CompletedTask;
     }
 }

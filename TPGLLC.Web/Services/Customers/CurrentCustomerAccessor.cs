@@ -2,13 +2,7 @@
 
 namespace TPGLLC.Web.Services.Customers;
 
-public interface ICurrentCustomerAccessor
-{
-    CurrentCustomer GetCurrentCustomer();
-}
-
-public sealed class CurrentCustomerAccessor
-    : ICurrentCustomerAccessor
+public sealed class CurrentCustomerAccessor : ICurrentCustomerAccessor
 {
     private readonly IHttpContextAccessor _http;
 
@@ -27,23 +21,11 @@ public sealed class CurrentCustomerAccessor
         return new CurrentCustomer
         {
             IsAuthenticated = user.Identity?.IsAuthenticated ?? false,
-
-            UserId =
-                user.FindFirstValue(ClaimTypes.NameIdentifier)
-                ?? "",
-
-            Email =
-                user.FindFirstValue(ClaimTypes.Email)
-                ?? "",
-
-            IsCustomer =
-                user.IsInRole("Customer"),
-
-            IsEmployee =
-                user.IsInRole("Employee"),
-
-            IsAdministrator =
-                user.IsInRole("Administrator")
+            UserId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "",
+            Email = user.FindFirstValue(ClaimTypes.Email) ?? "",
+            IsCustomer = user.IsInRole("Customer"),
+            IsEmployee = user.IsInRole("Employee"),
+            IsAdministrator = user.IsInRole("Administrator")
         };
     }
 }

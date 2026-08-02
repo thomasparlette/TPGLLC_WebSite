@@ -2,34 +2,107 @@
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
-<PageTitle>Customer Portal</PageTitle>
+@using Microsoft.AspNetCore.Components.Forms
+@using TPGLLC.Web.Services.Portal
+@using TPGLLC.Web.ViewModels.Portal
 
-<section class="section">
-    <div class="section-heading">
+@inject ICustomerAccountService CustomerAccountService
+
+<PageTitle>Customer Account Center</PageTitle>
+
+<section class="portal-dashboard">
+    <div class="portal-header">
         <p class="section-kicker">Customer Portal</p>
-        <h1>Welcome to your portal</h1>
-        <p>Manage your vehicles, appointments, service history, and invoices in one place.</p>
+        <h1>Customer Account Center</h1>
+        <p>Update your personal information, contact details, and mailing address.</p>
     </div>
 
-    <div class="portal-dashboard-grid">
-        <a class="portal-card-link" href="/portal/vehicles">
-            <h3>My Vehicles</h3>
-            <p>Add and view your vehicles.</p>
-        </a>
+    @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
+    {
+        <div class="auth-alert">@_model.ErrorMessage</div>
+    }
 
-        <a class="portal-card-link" href="/portal/appointments">
-            <h3>Appointments</h3>
-            <p>Request and review service visits.</p>
-        </a>
+    @if (!string.IsNullOrWhiteSpace(_model.SuccessMessage))
+    {
+        <div class="auth-success">@_model.SuccessMessage</div>
+    }
 
-        <a class="portal-card-link" href="/portal/history">
-            <h3>History</h3>
-            <p>See completed service records.</p>
-        </a>
+    <div class="portal-section">
+        <div class="auth-card" style="margin-left:0; margin-right:0; width:100%;">
+            <EditForm Model="_model" OnValidSubmit="SaveAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
 
-        <a class="portal-card-link" href="/portal/invoices">
-            <h3>Invoices</h3>
-            <p>Review estimates and invoices.</p>
-        </a>
+                <div class="profile-grid">
+                    <div class="form-field">
+                        <label>First Name</label>
+                        <InputText class="input" @bind-Value="_model.FirstName" />
+                    </div>
+
+                    <div class="form-field">
+                        <label>Last Name</label>
+                        <InputText class="input" @bind-Value="_model.LastName" />
+                    </div>
+
+                    <div class="form-field full">
+                        <label>Company</label>
+                        <InputText class="input" @bind-Value="_model.Company" />
+                    </div>
+
+                    <div class="form-field full">
+                        <label>Email</label>
+                        <InputText class="input" @bind-Value="_model.Email" disabled />
+                    </div>
+
+                    <div class="form-field">
+                        <label>Phone</label>
+                        <InputText class="input" @bind-Value="_model.Phone" />
+                    </div>
+
+                    <div class="form-field full">
+                        <label>Address Line 1</label>
+                        <InputText class="input" @bind-Value="_model.AddressLine1" />
+                    </div>
+
+                    <div class="form-field full">
+                        <label>Address Line 2</label>
+                        <InputText class="input" @bind-Value="_model.AddressLine2" />
+                    </div>
+
+                    <div class="form-field">
+                        <label>City</label>
+                        <InputText class="input" @bind-Value="_model.City" />
+                    </div>
+
+                    <div class="form-field">
+                        <label>State</label>
+                        <InputText class="input" @bind-Value="_model.State" />
+                    </div>
+
+                    <div class="form-field">
+                        <label>ZIP Code</label>
+                        <InputText class="input" @bind-Value="_model.ZipCode" />
+                    </div>
+                </div>
+
+                <div class="portal-actions" style="margin-top:1.25rem;">
+                    <button type="submit" class="portal-action-button">Save Changes</button>
+                </div>
+            </EditForm>
+        </div>
     </div>
 </section>
+
+@code {
+    private CustomerAccountViewModel _model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _model = await CustomerAccountService.GetAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        _model = await CustomerAccountService.SaveAsync(_model);
+    }
+}

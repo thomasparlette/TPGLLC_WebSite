@@ -1,6 +1,8 @@
-﻿@using TPGLLC.Web.Components.PortalShared.Vehicles
+﻿@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Linq
 
-<section class="portal-section" id="vehicle-form">
+<div class="portal-section" id="vehicle-form">
     <div class="portal-section-heading">
         <h2>@(IsEditing ? "Edit Vehicle" : "Add Vehicle")</h2>
         <a href="#top">Top</a>
@@ -90,7 +92,7 @@
             </div>
         </EditForm>
     </div>
-</section>
+</div>
 
 @code {
     [Parameter, EditorRequired] public VehicleFormModel Form { get; set; } = default!;
@@ -101,8 +103,8 @@
 
     [Parameter] public EventCallback OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
-    [Parameter] public EventCallback OnYearChangedCallback { get; set; }
-    [Parameter] public EventCallback OnMakeChangedCallback { get; set; }
+    [Parameter] public EventCallback OnYearChanged { get; set; }
+    [Parameter] public EventCallback OnMakeChanged { get; set; }
 
     private async Task HandleSubmitAsync()
     {
@@ -122,22 +124,19 @@
 
     private async Task HandleYearChangedAsync()
     {
-        if (OnYearChangedCallback.HasDelegate)
+        if (OnYearChanged.HasDelegate)
         {
-            await OnYearChangedCallback.InvokeAsync();
+            await OnYearChanged.InvokeAsync();
         }
     }
 
     private async Task HandleMakeChangedAsync()
     {
-        if (OnMakeChangedCallback.HasDelegate)
+        if (OnMakeChanged.HasDelegate)
         {
-            await OnMakeChangedCallback.InvokeAsync();
+            await OnMakeChanged.InvokeAsync();
         }
     }
 
-    private Task HandleModelChangedAsync()
-    {
-        return Task.CompletedTask;
-    }
+    private Task HandleModelChangedAsync() => Task.CompletedTask;
 }

@@ -30,6 +30,9 @@ public sealed class CustomerVehicleConfiguration
         builder.Property(x => x.LicensePlate)
             .HasMaxLength(25);
 
+        builder.Property(x => x.PhotoPath)
+            .HasMaxLength(400);
+
         builder.HasIndex(x => x.CustomerId);
 
         builder.HasIndex(x => x.Vin);
