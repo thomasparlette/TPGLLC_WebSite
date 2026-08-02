@@ -30,3 +30,41 @@
         grid-template-columns: 1fr;
     }
 }
+.vehicle-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.portal-action-link {
+    font-weight: 700;
+    color: #0d2a63;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.vehicle-details {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+    .vehicle-details div {
+        display: grid;
+        gap: 0.2rem;
+    }
+
+    .vehicle-details strong {
+        color: #0d2a63;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .vehicle-details span {
+        color: #0f172a;
+        font-weight: 600;
+    }

@@ -15,37 +15,43 @@
     }
 
     <div class="vehicle-card-body">
-        <h3>@GetVehicleTitle()</h3>
+        <div class="vehicle-card-header">
+            <div>
+                <h3>@GetVehicleTitle()</h3>
 
-        @if (Vehicle.IsPrimary)
-        {
-            <span class="portal-badge success">
-                Primary Vehicle
-            </span>
-        }
+                @if (Vehicle.IsPrimary)
+                {
+                    <span class="portal-chip">Primary Vehicle</span>
+                }
+            </div>
+
+            <a class="portal-action-link" href="@($"/portal/vehicles/{Vehicle.Id}")">
+                Details
+            </a>
+        </div>
 
         <div class="vehicle-details">
             @if (Vehicle.Mileage.HasValue)
             {
                 <div>
-                    <strong>Mileage</strong><br />
-                    @Vehicle.Mileage.Value.ToString("N0") mi
+                    <strong>Mileage</strong>
+                    <span>@Vehicle.Mileage.Value.ToString("N0") mi</span>
                 </div>
             }
 
             @if (!string.IsNullOrWhiteSpace(Vehicle.LicensePlate))
             {
                 <div>
-                    <strong>Plate</strong><br />
-                    @Vehicle.LicensePlate
+                    <strong>Plate</strong>
+                    <span>@Vehicle.LicensePlate</span>
                 </div>
             }
 
             @if (!string.IsNullOrWhiteSpace(Vehicle.Nickname))
             {
                 <div>
-                    <strong>Nickname</strong><br />
-                    @Vehicle.Nickname
+                    <strong>Nickname</strong>
+                    <span>@Vehicle.Nickname</span>
                 </div>
             }
         </div>
@@ -53,17 +59,11 @@
         @if (!string.IsNullOrWhiteSpace(Vehicle.Vin))
         {
             <div class="vehicle-vin">
-                VIN
-                <br />
-                @Vehicle.Vin
+                VIN: @Vehicle.Vin
             </div>
         }
 
         <div class="portal-actions">
-            <a class="portal-action-button" href="@($"/portal/vehicles/{Vehicle.Id}")">
-                Details
-            </a>
-
             <button type="button"
                     class="portal-action-button"
                     @onclick="HandleEditAsync">
@@ -111,7 +111,8 @@
         }
         .Where(x => !string.IsNullOrWhiteSpace(x));
 
-        return string.Join(" ", parts);
+        var title = string.Join(" ", parts);
+        return string.IsNullOrWhiteSpace(title) ? "Unnamed Vehicle" : title;
     }
 
     private Task HandleEditAsync()

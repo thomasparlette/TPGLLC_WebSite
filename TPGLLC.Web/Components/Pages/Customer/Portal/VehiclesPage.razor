@@ -10,13 +10,20 @@
 @inject IVehiclePortalService VehiclePortalService
 @inject IVehiclePhotoService VehiclePhotoService
 
-<PageTitle>Vehicles</PageTitle>
+<PageTitle>My Garage</PageTitle>
 
 <section class="portal-dashboard" id="top">
-    <div class="portal-header">
-        <p class="section-kicker">Customer Portal</p>
-        <h1>Vehicle Management</h1>
-        <p>Manage all of your registered vehicles.</p>
+    <div class="portal-hero">
+        <div>
+            <p class="section-kicker">Customer Portal</p>
+            <h1>Vehicle Management</h1>
+            <p>Manage all of your registered vehicles in one place.</p>
+        </div>
+
+        <div class="portal-hero-badge">
+            <span>Live Portal</span>
+            <strong>@_model.Vehicles.Count vehicles</strong>
+        </div>
     </div>
 
     @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
@@ -36,7 +43,9 @@
         <div class="portal-section-heading">
             <h2>Your Vehicles</h2>
 
-            <button type="button" class="portal-action-button" @onclick="ToggleAddVehicle">
+            <button type="button"
+                    class="portal-action-button"
+                    @onclick="ToggleAddVehicle">
                 + Add Vehicle
             </button>
         </div>
