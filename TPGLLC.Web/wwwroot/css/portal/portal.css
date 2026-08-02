@@ -10,6 +10,7 @@
     justify-content: flex-end;
 }
 
+/* Legacy customer layout support */
 .customer-shell {
     display: grid;
     grid-template-columns: 280px minmax(0, 1fr);
@@ -131,6 +132,44 @@
 
 .customer-content {
     min-width: 0;
+}
+
+/* New customer layout shell */
+.customer-layout-shell {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 0;
+    align-items: start;
+    min-height: calc(100vh - 88px);
+}
+
+.portal-sidebar {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    background: #ffffff;
+    border-right: 1px solid rgba(15, 23, 42, 0.08);
+    overflow-y: auto;
+    min-height: calc(100vh - 88px);
+}
+
+.portal-content {
+    min-width: 0;
+    padding: 1.25rem;
+}
+
+.portal-mobile-menu-toggle {
+    display: none;
+    border: none;
+    border-radius: 999px;
+    padding: 0.75rem 1rem;
+    background: #0d2a63;
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.portal-sidebar-backdrop {
+    display: none;
 }
 
 .portal-dashboard {
@@ -507,41 +546,10 @@
     .customer-sidebar {
         position: static;
     }
-}
-.customer-layout-shell {
-    display: grid;
-    grid-template-columns: 320px minmax(0, 1fr);
-    gap: 0;
-    align-items: start;
-}
 
-.portal-sidebar {
-    position: sticky;
-    top: 0;
-    align-self: start;
-}
-
-.portal-content {
-    min-width: 0;
-}
-
-.portal-mobile-menu-toggle {
-    display: none;
-    border: none;
-    border-radius: 999px;
-    padding: 0.75rem 1rem;
-    background: #0d2a63;
-    color: #ffffff;
-    font-weight: 700;
-}
-
-.portal-sidebar-backdrop {
-    display: none;
-}
-
-@media (max-width: 900px) {
     .customer-layout-shell {
         display: block;
+        min-height: auto;
     }
 
     .portal-mobile-menu-toggle {
@@ -562,6 +570,7 @@
         overflow-y: auto;
         background: #ffffff;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+        min-height: 100vh;
     }
 
         .portal-sidebar.open {
@@ -583,4 +592,8 @@
             opacity: 1;
             pointer-events: auto;
         }
+
+    .portal-content {
+        padding: 1rem;
+    }
 }
