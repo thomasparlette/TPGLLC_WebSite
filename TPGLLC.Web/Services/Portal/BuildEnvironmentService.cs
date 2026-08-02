@@ -53,7 +53,6 @@ public sealed class BuildEnvironmentService : IBuildEnvironmentService
                 Name = "Thomas Parlette",
                 Email = "thomasparlette@gmail.com",
                 Phone = "555-000-1000",
-                VehicleType = "Automotive",
                 VehicleYear = "2016",
                 VehicleMake = "Acura",
                 VehicleModel = "MDX",
@@ -149,7 +148,6 @@ public sealed class BuildEnvironmentService : IBuildEnvironmentService
                     Name = "Thomas Parlette",
                     Email = "thomasparlette@gmail.com",
                     Phone = "555-000-1000",
-                    VehicleType = "Automotive",
                     VehicleYear = "2016",
                     VehicleMake = "Acura",
                     VehicleModel = "MDX",
@@ -167,7 +165,6 @@ public sealed class BuildEnvironmentService : IBuildEnvironmentService
                     Name = "Thomas Parlette",
                     Email = "thomasparlette@gmail.com",
                     Phone = "555-000-1000",
-                    VehicleType = "Automotive",
                     VehicleYear = "2016",
                     VehicleMake = "Acura",
                     VehicleModel = "MDX",
@@ -183,8 +180,7 @@ public sealed class BuildEnvironmentService : IBuildEnvironmentService
             {
                 Name = "Thomas Parlette",
                 Email = "thomasparlette@gmail.com",
-                Phone = "555-000-1000",
-                VehicleType = "Automotive"
+                Phone = "555-000-1000"
             }
         };
     }

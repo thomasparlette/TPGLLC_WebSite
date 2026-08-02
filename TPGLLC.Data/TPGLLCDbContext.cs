@@ -40,7 +40,6 @@ public sealed class TPGLLCDbContext
             entity.Property(x => x.Name).HasMaxLength(200);
             entity.Property(x => x.Phone).HasMaxLength(50);
             entity.Property(x => x.Email).HasMaxLength(200);
-            entity.Property(x => x.VehicleType).HasMaxLength(30);
             entity.Property(x => x.VehicleYear).HasMaxLength(20);
             entity.Property(x => x.VehicleMake).HasMaxLength(120);
             entity.Property(x => x.VehicleModel).HasMaxLength(120);

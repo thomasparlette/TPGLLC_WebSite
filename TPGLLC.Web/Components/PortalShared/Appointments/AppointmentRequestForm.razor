@@ -7,6 +7,13 @@
         <DataAnnotationsValidator />
         <ValidationSummary />
 
+        @if (!string.IsNullOrWhiteSpace(Form.SelectedVehicleLabel))
+        {
+            <div class="form-status" style="margin-bottom:1rem;">
+                Selected vehicle: <strong>@Form.SelectedVehicleLabel</strong>
+            </div>
+        }
+
         <div class="vehicle-grid">
             <div class="form-field">
                 <label>Model Year</label>
@@ -46,15 +53,6 @@
                     {
                         <option value="@model">@model</option>
                     }
-                </InputSelect>
-            </div>
-
-            <div class="form-field">
-                <label>Vehicle Type</label>
-                <InputSelect class="input" @bind-Value="Form.VehicleType">
-                    <option value="Automotive">Automotive</option>
-                    <option value="Motorcycle">Motorcycle</option>
-                    <option value="Other">Other</option>
                 </InputSelect>
             </div>
 
@@ -105,8 +103,13 @@
         </div>
 
         <div class="portal-actions" style="margin-top:1.25rem;">
-            <button type="submit" class="portal-action-button">Submit Request</button>
-            <button type="button" class="portal-action-button" @onclick="HandleCancelAsync">Reset</button>
+            <button type="submit" class="portal-action-button">
+                Submit Request
+            </button>
+
+            <button type="button" class="portal-action-button" @onclick="HandleCancelAsync">
+                Reset
+            </button>
         </div>
     </EditForm>
 </div>

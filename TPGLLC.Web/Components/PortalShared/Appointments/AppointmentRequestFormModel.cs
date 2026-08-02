@@ -14,7 +14,7 @@ public sealed class AppointmentRequestFormModel
     [Required(ErrorMessage = "Phone is required.")]
     public string Phone { get; set; } = string.Empty;
 
-    public string VehicleType { get; set; } = "Automotive";
+    public string? SelectedVehicleLabel { get; set; }
 
     public string? VehicleYear { get; set; }
 

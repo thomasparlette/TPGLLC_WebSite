@@ -14,8 +14,6 @@ public sealed class AppointmentRequest
     [EmailAddress]
     public string? Email { get; set; }
 
-    public string? VehicleType { get; set; }
-
     public string? VehicleYear { get; set; }
     public string? VehicleMake { get; set; }
     public string? VehicleModel { get; set; }

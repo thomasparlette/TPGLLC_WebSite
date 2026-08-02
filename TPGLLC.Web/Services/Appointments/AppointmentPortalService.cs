@@ -5,8 +5,9 @@ using TPGLLC.Services.Vehicles;
 using TPGLLC.Web.Components.PortalShared.Appointments;
 using TPGLLC.Web.Services.Customers;
 using TPGLLC.Web.ViewModels.Portal;
+using TPGLLC.Web.Services.Portal;
 
-namespace TPGLLC.Web.Services.Portal;
+namespace TPGLLC.Web.Services.Appointments;
 
 public sealed class AppointmentPortalService : IAppointmentPortalService
 {
@@ -159,7 +160,6 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
                 ? (profile?.Phone ?? string.Empty).Trim()
                 : model.Form.Phone.Trim(),
             Company = string.IsNullOrWhiteSpace(profile?.Company) ? null : profile.Company.Trim(),
-            VehicleType = string.IsNullOrWhiteSpace(model.Form.VehicleType) ? "Automotive" : model.Form.VehicleType.Trim(),
             VehicleYear = string.IsNullOrWhiteSpace(model.Form.VehicleYear) ? null : model.Form.VehicleYear.Trim(),
             VehicleMake = string.IsNullOrWhiteSpace(model.Form.VehicleMake) ? null : model.Form.VehicleMake.Trim(),
             VehicleModel = string.IsNullOrWhiteSpace(model.Form.VehicleModel) ? null : model.Form.VehicleModel.Trim(),
@@ -202,8 +202,7 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         {
             Name = BuildDisplayName(profile, email),
             Email = string.IsNullOrWhiteSpace(email) ? string.Empty : email.Trim(),
-            Phone = string.IsNullOrWhiteSpace(profile?.Phone) ? string.Empty : profile.Phone.Trim(),
-            VehicleType = "Automotive"
+            Phone = string.IsNullOrWhiteSpace(profile?.Phone) ? string.Empty : profile.Phone.Trim()
         };
     }
 

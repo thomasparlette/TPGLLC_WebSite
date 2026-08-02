@@ -76,7 +76,6 @@ public sealed class SmtpEmailService : IEmailService
               <p><strong>Name:</strong> {E(request.Name)}</p>
               <p><strong>Phone:</strong> {E(request.Phone)}</p>
               <p><strong>Email:</strong> {E(request.Email)}</p>
-              <p><strong>Vehicle Type:</strong> {E(request.VehicleType)}</p>
               <p><strong>VIN:</strong> {E(request.Vin)}</p>
               <p><strong>Vehicle:</strong> {E(request.VehicleYear)} {E(request.VehicleMake)} {E(request.VehicleModel)}</p>
               <p><strong>Mileage:</strong> {E(request.Mileage)}</p>
@@ -111,7 +110,6 @@ public sealed class SmtpEmailService : IEmailService
               <p><strong>Name:</strong> {E(request.Name)}</p>
               <p><strong>Phone:</strong> {E(request.Phone)}</p>
               <p><strong>Email:</strong> {E(request.Email)}</p>
-              <p><strong>Vehicle Type:</strong> {E(request.VehicleType)}</p>
               <p><strong>VIN:</strong> {E(request.Vin)}</p>
               <p><strong>Vehicle:</strong> {E(request.VehicleYear)} {E(request.VehicleMake)} {E(request.VehicleModel)}</p>
               <p><strong>Mileage:</strong> {E(request.Mileage)}</p>
