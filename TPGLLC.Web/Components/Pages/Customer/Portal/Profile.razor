@@ -11,89 +11,163 @@
 <PageTitle>Customer Account Center</PageTitle>
 
 <section class="portal-dashboard">
+
     <div class="portal-header">
-        <p class="section-kicker">Customer Portal</p>
-        <h1>Customer Account Center</h1>
-        <p>Update your personal information, contact details, and mailing address.</p>
+
+        <p class="section-kicker">
+            Customer Portal
+        </p>
+
+        <h1>
+            Customer Account Center
+        </h1>
+
+        <p>
+            Manage your personal information and contact details.
+        </p>
+
     </div>
 
     @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
     {
-        <div class="auth-alert">@_model.ErrorMessage</div>
+        <div class="auth-alert">
+            @_model.ErrorMessage
+        </div>
     }
 
     @if (!string.IsNullOrWhiteSpace(_model.SuccessMessage))
     {
-        <div class="auth-success">@_model.SuccessMessage</div>
+        <div class="auth-success">
+            @_model.SuccessMessage
+        </div>
     }
 
-    <div class="portal-section">
-        <div class="auth-card" style="margin-left:0; margin-right:0; width:100%;">
-            <EditForm Model="_model" OnValidSubmit="SaveAsync">
+    <div class="portal-dashboard-grid">
+
+        <div class="portal-card-link">
+
+            <h2>Account</h2>
+
+            <div class="portal-primary-meta">
+                <span>@_model.Email</span>
+
+                @if (_model.EmailConfirmed)
+                {
+                    <span>Verified</span>
+                }
+                else
+                {
+                    <span>Unverified</span>
+                }
+            </div>
+
+            @if (_model.LastLoginUtc.HasValue)
+            {
+                <p style="margin-top:1rem;">
+                    Last Login
+
+                    <br />
+
+                    @_model.LastLoginUtc.Value.LocalDateTime.ToString("MMM d, yyyy h:mm tt")
+                </p>
+            }
+
+        </div>
+
+        <div class="portal-card-link">
+
+            <EditForm Model="_model"
+                      OnValidSubmit="SaveAsync">
+
                 <DataAnnotationsValidator />
+
                 <ValidationSummary />
 
                 <div class="profile-grid">
+
                     <div class="form-field">
                         <label>First Name</label>
-                        <InputText class="input" @bind-Value="_model.FirstName" />
+                        <InputText class="input"
+                                   @bind-Value="_model.FirstName" />
                     </div>
 
                     <div class="form-field">
                         <label>Last Name</label>
-                        <InputText class="input" @bind-Value="_model.LastName" />
+                        <InputText class="input"
+                                   @bind-Value="_model.LastName" />
                     </div>
 
                     <div class="form-field full">
                         <label>Company</label>
-                        <InputText class="input" @bind-Value="_model.Company" />
+                        <InputText class="input"
+                                   @bind-Value="_model.Company" />
                     </div>
 
                     <div class="form-field full">
                         <label>Email</label>
-                        <InputText class="input" @bind-Value="_model.Email" disabled />
+                        <InputText class="input"
+                                   @bind-Value="_model.Email"
+                                   disabled />
                     </div>
 
                     <div class="form-field">
                         <label>Phone</label>
-                        <InputText class="input" @bind-Value="_model.Phone" />
+                        <InputText class="input"
+                                   @bind-Value="_model.Phone" />
                     </div>
 
                     <div class="form-field full">
                         <label>Address Line 1</label>
-                        <InputText class="input" @bind-Value="_model.AddressLine1" />
+                        <InputText class="input"
+                                   @bind-Value="_model.AddressLine1" />
                     </div>
 
                     <div class="form-field full">
                         <label>Address Line 2</label>
-                        <InputText class="input" @bind-Value="_model.AddressLine2" />
+                        <InputText class="input"
+                                   @bind-Value="_model.AddressLine2" />
                     </div>
 
                     <div class="form-field">
                         <label>City</label>
-                        <InputText class="input" @bind-Value="_model.City" />
+                        <InputText class="input"
+                                   @bind-Value="_model.City" />
                     </div>
 
                     <div class="form-field">
                         <label>State</label>
-                        <InputText class="input" @bind-Value="_model.State" />
+                        <InputText class="input"
+                                   @bind-Value="_model.State" />
                     </div>
 
                     <div class="form-field">
                         <label>ZIP Code</label>
-                        <InputText class="input" @bind-Value="_model.ZipCode" />
+                        <InputText class="input"
+                                   @bind-Value="_model.ZipCode" />
                     </div>
+
                 </div>
 
-                <div class="portal-actions" style="margin-top:1.25rem;">
-                    <button type="submit" class="portal-action-button">Save Changes</button>
+                <div class="portal-actions"
+                     style="margin-top:2rem;">
+
+                    <button class="portal-action-button"
+                            type="submit">
+                        Save Changes
+                    </button>
+
                 </div>
+
             </EditForm>
+
         </div>
+
     </div>
+
 </section>
 
 @code {
+
     private CustomerAccountViewModel _model = new();
 
     protected override async Task OnInitializedAsync()
@@ -105,4 +179,5 @@
     {
         _model = await CustomerAccountService.SaveAsync(_model);
     }
+
 }

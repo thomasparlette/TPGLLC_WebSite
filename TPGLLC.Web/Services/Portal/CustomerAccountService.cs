@@ -1,6 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using TPGLLC.Data;
 using TPGLLC.Data.Entities;
+using TPGLLC.Shared.Identity;
 using TPGLLC.Web.Services.Customers;
 using TPGLLC.Web.ViewModels.Portal;
 
@@ -11,15 +13,18 @@ public sealed class CustomerAccountService : ICustomerAccountService
     private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
     private readonly IBuildEnvironmentService _buildEnvironmentService;
+    private readonly UserManager<ApplicationUser> _userManager;
 
     public CustomerAccountService(
         IDbContextFactory<TPGLLCDbContext> dbFactory,
         ICurrentCustomerAccessor currentCustomerAccessor,
-        IBuildEnvironmentService buildEnvironmentService)
+        IBuildEnvironmentService buildEnvironmentService,
+        UserManager<ApplicationUser> userManager)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
         _buildEnvironmentService = buildEnvironmentService;
+        _userManager = userManager;
     }
 
     public async Task<CustomerAccountViewModel> GetAsync()
@@ -49,10 +54,12 @@ public sealed class CustomerAccountService : ICustomerAccountService
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
 
+        var user = await _userManager.FindByIdAsync(current.UserId);
+
         return new CustomerAccountViewModel
         {
-            FirstName = profile?.FirstName ?? customer?.FirstName ?? string.Empty,
-            LastName = profile?.LastName ?? customer?.LastName ?? string.Empty,
+            FirstName = user?.FirstName ?? profile?.FirstName ?? customer?.FirstName ?? string.Empty,
+            LastName = user?.LastName ?? profile?.LastName ?? customer?.LastName ?? string.Empty,
             Company = profile?.Company ?? string.Empty,
             Phone = profile?.Phone ?? customer?.Phone ?? string.Empty,
             AddressLine1 = profile?.Address1 ?? customer?.AddressLine1 ?? string.Empty,
@@ -60,7 +67,7 @@ public sealed class CustomerAccountService : ICustomerAccountService
             City = profile?.City ?? customer?.City ?? string.Empty,
             State = profile?.State ?? customer?.State ?? string.Empty,
             ZipCode = profile?.ZipCode ?? customer?.PostalCode ?? string.Empty,
-            Email = current.Email ?? customer?.Email ?? string.Empty
+            Email = current.Email ?? user?.Email ?? customer?.Email ?? string.Empty
         };
     }
 
@@ -79,6 +86,10 @@ public sealed class CustomerAccountService : ICustomerAccountService
             return model;
         }
 
+        var firstName = model.FirstName.Trim();
+        var lastName = model.LastName.Trim();
+        var displayName = string.Join(" ", new[] { firstName, lastName }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
         await using var db = await _dbFactory.CreateDbContextAsync();
 
         var profile = await db.CustomerProfiles
@@ -94,8 +105,8 @@ public sealed class CustomerAccountService : ICustomerAccountService
             db.CustomerProfiles.Add(profile);
         }
 
-        profile.FirstName = model.FirstName.Trim();
-        profile.LastName = model.LastName.Trim();
+        profile.FirstName = firstName;
+        profile.LastName = lastName;
         profile.Company = string.IsNullOrWhiteSpace(model.Company) ? null : model.Company.Trim();
         profile.Phone = string.IsNullOrWhiteSpace(model.Phone) ? null : model.Phone.Trim();
         profile.Address1 = string.IsNullOrWhiteSpace(model.AddressLine1) ? null : model.AddressLine1.Trim();
@@ -117,8 +128,8 @@ public sealed class CustomerAccountService : ICustomerAccountService
             db.Customers.Add(customer);
         }
 
-        customer.FirstName = profile.FirstName;
-        customer.LastName = profile.LastName;
+        customer.FirstName = firstName;
+        customer.LastName = lastName;
         customer.Phone = profile.Phone;
         customer.AddressLine1 = profile.Address1;
         customer.AddressLine2 = profile.Address2;
@@ -126,6 +137,24 @@ public sealed class CustomerAccountService : ICustomerAccountService
         customer.State = profile.State;
         customer.PostalCode = profile.ZipCode;
         customer.Email = string.IsNullOrWhiteSpace(current.Email) ? customer.Email : current.Email.Trim();
+
+        var user = await _userManager.FindByIdAsync(current.UserId);
+        if (user is not null)
+        {
+            user.FirstName = firstName;
+            user.LastName = lastName;
+            user.DisplayName = string.IsNullOrWhiteSpace(displayName) ? "Customer" : displayName;
+
+            if (!string.IsNullOrWhiteSpace(current.Email))
+            {
+                user.Email = current.Email.Trim();
+                user.NormalizedEmail = current.Email.Trim().ToUpperInvariant();
+                user.UserName = current.Email.Trim();
+                user.NormalizedUserName = current.Email.Trim().ToUpperInvariant();
+            }
+
+            await _userManager.UpdateAsync(user);
+        }
 
         await db.SaveChangesAsync();
 
