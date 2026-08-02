@@ -8,11 +8,21 @@
 
 @inject IDashboardService DashboardService
 
-<PageTitle>Customer Portal</PageTitle>
+<PageTitle>My Garage</PageTitle>
 
 <section class="portal-dashboard">
-    <DashboardHero DisplayName="@_model.DisplayName"
-                   VehicleCount="@_model.Vehicles.Count" />
+    <div class="portal-hero">
+        <div>
+            <p class="section-kicker">Customer Portal</p>
+            <h1>Welcome back, @_model.DisplayName</h1>
+            <p>Manage your garage, appointments, service history, and account details in one place.</p>
+        </div>
+
+        <div class="portal-hero-badge">
+            <span>Live Portal</span>
+            <strong>@_model.Vehicles.Count vehicles</strong>
+        </div>
+    </div>
 
     <DashboardStats VehicleCount="@_model.Vehicles.Count"
                     AppointmentRequestCount="@_model.Requests.Count"
@@ -37,7 +47,7 @@
 @code {
     private DashboardViewModel _model = new();
 
-    protected override async Task OnParametersSetAsync()
+    protected override async Task OnInitializedAsync()
     {
         _model = await DashboardService.GetAsync();
     }
