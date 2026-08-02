@@ -56,15 +56,9 @@
 @code {
     private bool _mobileMenuOpen;
 
-    private void ToggleMenu()
-    {
-        _mobileMenuOpen = !_mobileMenuOpen;
-    }
+    private void ToggleMenu() => _mobileMenuOpen = !_mobileMenuOpen;
 
-    private void CloseMenu()
-    {
-        _mobileMenuOpen = false;
-    }
+    private void CloseMenu() => _mobileMenuOpen = false;
 
     private static string GetDisplayName(System.Security.Claims.ClaimsPrincipal user)
     {
