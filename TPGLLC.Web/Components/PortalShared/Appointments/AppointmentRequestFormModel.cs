@@ -14,10 +14,15 @@ public sealed class AppointmentRequestFormModel
     [Required(ErrorMessage = "Phone is required.")]
     public string Phone { get; set; } = string.Empty;
 
+    public string VehicleType { get; set; } = "Automotive";
+
+    [Required(ErrorMessage = "Vehicle year is required.")]
     public string? VehicleYear { get; set; }
 
+    [Required(ErrorMessage = "Vehicle make is required.")]
     public string? VehicleMake { get; set; }
 
+    [Required(ErrorMessage = "Vehicle model is required.")]
     public string? VehicleModel { get; set; }
 
     public string? Vin { get; set; }
@@ -33,5 +38,6 @@ public sealed class AppointmentRequestFormModel
     [Required(ErrorMessage = "Preferred time is required.")]
     public string PreferredTime { get; set; } = string.Empty;
 
+    [Required(ErrorMessage = "Message is required.")]
     public string? Message { get; set; }
 }
