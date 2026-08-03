@@ -1,0 +1,30 @@
+﻿<div class="@CssClass">
+    <div class="portal-notice-icon">@Icon</div>
+
+    <div class="portal-notice-body">
+        @if (!string.IsNullOrWhiteSpace(Title))
+        {
+            <div class="portal-notice-title">@Title</div>
+        }
+
+        <div class="portal-notice-text">
+            @ChildContent
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Type { get; set; } = "info";
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string CssClass => $"portal-notice portal-notice-{Type.Trim().ToLowerInvariant()}";
+
+    private string Icon => Type.Trim().ToLowerInvariant() switch
+    {
+        "success" => "✓",
+        "warning" => "!",
+        "danger" => "⚠",
+        _ => "i"
+    };
+}

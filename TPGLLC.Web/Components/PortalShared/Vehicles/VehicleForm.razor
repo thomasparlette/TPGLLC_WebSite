@@ -1,112 +1,114 @@
-﻿@using Microsoft.AspNetCore.Components
+﻿@using System.Linq.Expressions
 @using Microsoft.AspNetCore.Components.Forms
-@using System.Linq
 
-<div class="portal-section" id="vehicle-form">
-    <div class="portal-section-heading">
-        <h2>@(IsEditing ? "Edit Vehicle" : "Add Vehicle")</h2>
-        <a href="#top">Top</a>
+<EditForm EditContext="@_editContext" OnValidSubmit="@HandleValidSubmitAsync">
+    <DataAnnotationsValidator />
+
+    <div class="portal-form-grid">
+        <div class="form-field">
+            <label>Model Year</label>
+            <InputSelect TValue="string?"
+                         class="@GetFieldCss(() => Form.ModelYear)"
+                         Value="@Form.ModelYear"
+                         ValueChanged="@OnYearChangedInternalAsync"
+                         ValueExpression="@(() => Form.ModelYear)">
+                <option value="">Select year</option>
+                @foreach (var year in Years)
+                {
+                    <option value="@year.ToString()">@year</option>
+                }
+            </InputSelect>
+            <ValidationMessage For="@(() => Form.ModelYear)" />
+        </div>
+
+        <div class="form-field">
+            <label>Make</label>
+            <InputSelect TValue="string?"
+                         class="@GetFieldCss(() => Form.Make)"
+                         Value="@Form.Make"
+                         ValueChanged="@OnMakeChangedInternalAsync"
+                         ValueExpression="@(() => Form.Make)">
+                <option value="">Select make</option>
+                @foreach (var make in Makes)
+                {
+                    <option value="@make">@make</option>
+                }
+            </InputSelect>
+            <ValidationMessage For="@(() => Form.Make)" />
+        </div>
+
+        <div class="form-field">
+            <label>Model</label>
+            <InputSelect TValue="string?"
+                         class="@GetFieldCss(() => Form.Model)"
+                         @bind-Value="Form.Model">
+                <option value="">Select model</option>
+                @foreach (var model in Models)
+                {
+                    <option value="@model">@model</option>
+                }
+            </InputSelect>
+            <ValidationMessage For="@(() => Form.Model)" />
+        </div>
+
+        <div class="form-field">
+            <label>Nickname</label>
+            <InputText class="@GetFieldCss(() => Form.Nickname)" @bind-Value="Form.Nickname" />
+            <ValidationMessage For="@(() => Form.Nickname)" />
+        </div>
+
+        <div class="form-field">
+            <label>License Plate</label>
+            <InputText class="@GetFieldCss(() => Form.LicensePlate)" @bind-Value="Form.LicensePlate" />
+            <ValidationMessage For="@(() => Form.LicensePlate)" />
+        </div>
+
+        <div class="form-field">
+            <label>VIN</label>
+            <InputText class="@GetFieldCss(() => Form.Vin)" @bind-Value="Form.Vin" />
+            <ValidationMessage For="@(() => Form.Vin)" />
+        </div>
+
+        <div class="form-field">
+            <label>Mileage</label>
+            <InputText class="@GetFieldCss(() => Form.Mileage)" @bind-Value="Form.Mileage" />
+            <ValidationMessage For="@(() => Form.Mileage)" />
+        </div>
+
+        <div class="form-field full form-check">
+            <InputCheckbox class="checkbox" @bind-Value="Form.IsPrimary" />
+            <label>Make this my primary vehicle</label>
+        </div>
     </div>
 
-    <div class="auth-card" style="margin-left:0; margin-right:0; width:100%;">
-        <EditForm Model="Form" OnValidSubmit="HandleSubmitAsync">
-            <DataAnnotationsValidator />
-            <ValidationSummary />
-
-            <div class="vehicle-grid">
-                <div class="form-field">
-                    <label>Model Year</label>
-                    <InputSelect class="input"
-                                 @bind-Value="Form.ModelYear"
-                                 @bind-Value:after="HandleYearChangedAsync">
-                        <option value="">Select year</option>
-                        @foreach (var year in Years)
-                        {
-                            <option value="@year">@year</option>
-                        }
-                    </InputSelect>
-                </div>
-
-                <div class="form-field">
-                    <label>Make</label>
-                    <InputSelect class="input"
-                                 @bind-Value="Form.Make"
-                                 @bind-Value:after="HandleMakeChangedAsync"
-                                 disabled="@(!Makes.Any())">
-                        <option value="">Select make</option>
-                        @foreach (var make in Makes)
-                        {
-                            <option value="@make">@make</option>
-                        }
-                    </InputSelect>
-                </div>
-
-                <div class="form-field">
-                    <label>Model</label>
-                    <InputSelect class="input"
-                                 @bind-Value="Form.Model"
-                                 @bind-Value:after="HandleModelChangedAsync"
-                                 disabled="@(!Models.Any())">
-                        <option value="">Select model</option>
-                        @foreach (var model in Models)
-                        {
-                            <option value="@model">@model</option>
-                        }
-                    </InputSelect>
-                </div>
-
-                <div class="form-field">
-                    <label>Nickname</label>
-                    <InputText class="input" @bind-Value="Form.Nickname" />
-                </div>
-
-                <div class="form-field">
-                    <label>License Plate</label>
-                    <InputText class="input" @bind-Value="Form.LicensePlate" />
-                </div>
-
-                <div class="form-field">
-                    <label>VIN</label>
-                    <InputText class="input" @bind-Value="Form.Vin" maxlength="17" />
-                </div>
-
-                <div class="form-field">
-                    <label>Mileage</label>
-                    <InputText class="input" @bind-Value="Form.Mileage" placeholder="e.g. 52,800" />
-                </div>
-
-                <div class="form-check full">
-                    <InputCheckbox @bind-Value="Form.IsPrimary" />
-                    <label>Make this my primary vehicle</label>
-                </div>
-            </div>
-
-            <div class="portal-actions" style="margin-top:1.25rem;">
-                <button type="submit" class="portal-action-button">
-                    @(IsEditing ? "Save Changes" : "Add Vehicle")
-                </button>
-
-                <button type="button" class="portal-action-button" @onclick="HandleCancelAsync">
-                    Cancel
-                </button>
-            </div>
-        </EditForm>
+    <div class="portal-actions" style="margin-top: 1.25rem;">
+        <button type="submit" class="portal-action-button">Save Changes</button>
+        <button type="button" class="portal-action-button" @onclick="HandleCancelAsync">Cancel</button>
     </div>
-</div>
+</EditForm>
 
 @code {
     [Parameter, EditorRequired] public VehicleFormModel Form { get; set; } = default!;
     [Parameter] public IReadOnlyList<int> Years { get; set; } = Array.Empty<int>();
     [Parameter] public IReadOnlyList<string> Makes { get; set; } = Array.Empty<string>();
     [Parameter] public IReadOnlyList<string> Models { get; set; } = Array.Empty<string>();
-    [Parameter] public bool IsEditing { get; set; }
 
-    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter, EditorRequired] public EventCallback OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback OnYearChanged { get; set; }
     [Parameter] public EventCallback OnMakeChanged { get; set; }
 
-    private async Task HandleSubmitAsync()
+    private EditContext _editContext = default!;
+
+    protected override void OnParametersSet()
+    {
+        if (_editContext is null || !ReferenceEquals(_editContext.Model, Form))
+        {
+            _editContext = new EditContext(Form);
+        }
+    }
+
+    private async Task HandleValidSubmitAsync()
     {
         if (OnSave.HasDelegate)
         {
@@ -122,21 +124,43 @@
         }
     }
 
-    private async Task HandleYearChangedAsync()
+    private async Task OnYearChangedInternalAsync(string? value)
     {
+        Form.ModelYear = value;
+        Form.Make = null;
+        Form.Model = null;
+
+        _editContext.NotifyFieldChanged(FieldIdentifier.Create(() => Form.ModelYear));
+
         if (OnYearChanged.HasDelegate)
         {
             await OnYearChanged.InvokeAsync();
         }
     }
 
-    private async Task HandleMakeChangedAsync()
+    private async Task OnMakeChangedInternalAsync(string? value)
     {
+        Form.Make = value;
+        Form.Model = null;
+
+        _editContext.NotifyFieldChanged(FieldIdentifier.Create(() => Form.Make));
+
         if (OnMakeChanged.HasDelegate)
         {
             await OnMakeChanged.InvokeAsync();
         }
     }
 
-    private Task HandleModelChangedAsync() => Task.CompletedTask;
+    private string GetFieldCss<TValue>(Expression<Func<TValue>> accessor)
+    {
+        if (_editContext is null)
+        {
+            return "input";
+        }
+
+        var field = FieldIdentifier.Create(accessor);
+        var hasErrors = _editContext.GetValidationMessages(field).Any();
+
+        return hasErrors ? "input invalid" : "input";
+    }
 }

@@ -1,9 +1,9 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="site-shell">
+<div class="app-shell">
     <header class="site-header">
         <a class="site-brand" href="/">
-            <img src="/images/logo.jpeg" alt="Tom Parlette Garage LLC" />
+            <img class="brand-logo" src="/images/logo.jpeg" alt="Tom Parlette Garage LLC" />
             <div class="brand-copy">
                 <div class="brand-name">Tom Parlette Garage LLC</div>
                 <div class="brand-tagline">Professional service and customer portal</div>
@@ -11,13 +11,11 @@
         </a>
 
         <button type="button"
-                class="hamburger @(_navOpen ? "open" : string.Empty)"
+                class="hamburger"
                 @onclick="ToggleNav"
                 aria-label="Toggle navigation"
                 aria-expanded="@_navOpen">
-            <span></span>
-            <span></span>
-            <span></span>
+            ☰
         </button>
 
         <nav class="site-nav @(_navOpen ? "open" : string.Empty)">
@@ -25,7 +23,7 @@
         </nav>
     </header>
 
-    <main class="site-main">
+    <main class="page-content">
         @Body
     </main>
 </div>

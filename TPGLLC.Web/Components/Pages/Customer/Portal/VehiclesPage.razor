@@ -2,190 +2,228 @@
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
-@using Microsoft.AspNetCore.Components.Forms
-@using TPGLLC.Web.Services.Portal
-@using TPGLLC.Web.ViewModels.Portal
+@using System.Globalization
+@using TPGLLC.Data.Entities
 @using TPGLLC.Web.Components.PortalShared.Vehicles
+@using TPGLLC.Web.Components.Shared
+@using TPGLLC.Web.Services.Portal
 
-@inject IVehiclePortalService VehiclePortalService
-@inject IVehiclePhotoService VehiclePhotoService
+@inject IVehiclePortalService VehicleService
 
-<PageTitle>My Garage</PageTitle>
+<PageTitle>Vehicles</PageTitle>
 
-<section class="portal-dashboard" id="top">
-    <div class="portal-hero">
-        <div>
-            <p class="section-kicker">Customer Portal</p>
-            <h1>Vehicle Management</h1>
-            <p>Manage all of your registered vehicles in one place.</p>
-        </div>
-
-        <div class="portal-hero-badge">
-            <span>Live Portal</span>
-            <strong>@_model.Vehicles.Count vehicles</strong>
-        </div>
+<section class="portal-dashboard">
+    <div class="portal-header">
+        <p class="section-kicker">Customer Portal</p>
+        <h1>Vehicle Management</h1>
+        <p>Add, update, or set a primary vehicle for your account.</p>
     </div>
 
-    @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
+    @if (_loading)
     {
-        <div class="auth-alert">@_model.ErrorMessage</div>
-    }
-
-    @if (!string.IsNullOrWhiteSpace(_model.SuccessMessage))
-    {
-        <div class="auth-success">@_model.SuccessMessage</div>
-    }
-
-    <VehicleStats VehicleCount="@_model.Vehicles.Count"
-                  PrimaryVehicleCount="@_model.Vehicles.Count(x => x.IsPrimary)" />
-
-    <div class="portal-section">
-        <div class="portal-section-heading">
-            <h2>Your Vehicles</h2>
-
-            <button type="button"
-                    class="portal-action-button"
-                    @onclick="ToggleAddVehicle">
-                + Add Vehicle
-            </button>
+        <div class="portal-loading-card">
+            <div class="portal-loading-icon">⏳</div>
+            <div>
+                <div class="portal-loading-title">Loading vehicles</div>
+                <div class="portal-loading-text">Please wait while we load your garage.</div>
+            </div>
         </div>
-
-        <VehiclesList Vehicles="@_model.Vehicles"
-                      OnEdit="EditVehicleAsync"
-                      OnDelete="DeleteVehicleAsync"
-                      OnMakePrimary="SetPrimaryVehicleAsync" />
-    </div>
-
-    @if (_showVehicleForm)
-    {
-        <VehicleForm Form="@_model.Form"
-                     Years="@_model.Years"
-                     Makes="@_model.Makes"
-                     Models="@_model.Models"
-                     IsEditing="@(_model.EditingVehicleId is not null)"
-                     OnSave="@EventCallback.Factory.Create(this, SaveVehicleAsync)"
-                     OnCancel="@EventCallback.Factory.Create(this, CancelVehicleAsync)"
-                     OnYearChanged="@EventCallback.Factory.Create(this, OnVehicleYearChangedAsync)"
-                     OnMakeChanged="@EventCallback.Factory.Create(this, OnVehicleMakeChangedAsync)" />
     }
-
-    @if (_model.EditingVehicleId is not null)
+    else
     {
-        var selectedVehicle = _model.Vehicles.FirstOrDefault(x => x.Id == _model.EditingVehicleId);
+        @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
+        {
+            <PortalNotice Type="danger" Title="Could not load vehicles">
+                @_model.ErrorMessage
+            </PortalNotice>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_model.SuccessMessage))
+        {
+            <PortalNotice Type="success" Title="Saved">
+                @_model.SuccessMessage
+            </PortalNotice>
+        }
+
+        <div class="portal-stats">
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_model.Vehicles.Count</div>
+                <div class="portal-stat-label">Vehicles</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_model.Vehicles.Count(x => x.IsPrimary)</div>
+                <div class="portal-stat-label">Primary</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@(_model.EditingVehicleId is null ? "Add" : "Edit")</div>
+                <div class="portal-stat-label">Mode</div>
+            </div>
+        </div>
 
         <div class="portal-section">
             <div class="portal-section-heading">
-                <h2>Vehicle Photo</h2>
-                <a href="#top">Top</a>
+                <h2>Your Vehicles</h2>
+
+                <a href="/portal/appointments">Request Service</a>
             </div>
 
-            @if (!string.IsNullOrWhiteSpace(selectedVehicle?.PhotoPath))
+            @if (_model.Vehicles.Count == 0)
             {
-                <div style="margin-bottom:1rem;">
-                    <img src="@selectedVehicle.PhotoPath"
-                         alt="Vehicle photo"
-                         style="max-width:320px; width:100%; border-radius:16px; display:block;" />
+                <div class="portal-empty-state">
+                    <div class="portal-empty-icon">🚗</div>
+                    <div>
+                        <div class="portal-empty-title">No vehicles yet</div>
+                        <div class="portal-empty-text">Add your first vehicle using the form below.</div>
+                    </div>
                 </div>
-
-                <button type="button"
-                        class="portal-action-button"
-                        @onclick="RemovePhotoAsync">
-                    Remove Photo
-                </button>
             }
+            else
+            {
+                <div class="portal-dashboard-grid">
+                    @foreach (var vehicle in _model.Vehicles)
+                    {
+                        <article class="portal-card-link vehicle-card" @key="vehicle.Id">
+                            <div class="portal-card-icon">🚙</div>
 
-            <div style="margin-top:1rem;">
-                <InputFile OnChange="UploadPhotoAsync" accept="image/*" />
+                            <h3>@GetVehicleTitle(vehicle)</h3>
+                            <p>@GetVehicleDetails(vehicle)</p>
+
+                            <div style="margin-top:0.75rem; display:flex; flex-wrap:wrap; gap:0.5rem;">
+                                @if (vehicle.IsPrimary)
+                                {
+                                    <span class="portal-chip">Primary vehicle</span>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(vehicle.LicensePlate))
+                                {
+                                    <span class="portal-chip">@vehicle.LicensePlate</span>
+                                }
+                            </div>
+
+                            <div class="portal-actions" style="margin-top:1rem;">
+                                <button type="button" class="portal-action-button" @onclick="() => EditAsync(vehicle.Id)">
+                                    Edit
+                                </button>
+
+                                @if (!vehicle.IsPrimary)
+                                {
+                                    <button type="button" class="portal-action-button" @onclick="() => MakePrimaryAsync(vehicle.Id)">
+                                        Make Primary
+                                    </button>
+                                }
+
+                                <button type="button" class="portal-danger-button" @onclick="() => DeleteAsync(vehicle.Id)">
+                                    Delete
+                                </button>
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="portal-section">
+            <div class="portal-section-heading">
+                <h2>@(_model.EditingVehicleId is null ? "Add Vehicle" : "Edit Vehicle")</h2>
+
+                @if (_model.EditingVehicleId is not null)
+                {
+                    <button type="button" class="portal-action-button" @onclick="ResetAsync">
+                        Cancel Editing
+                    </button>
+                }
             </div>
 
-            <p style="margin-top:0.75rem; color:#6b7280;">
-                Upload a JPG, PNG, or WEBP image. Maximum 5 MB.
-            </p>
+            <VehicleForm Form="@_model.Form"
+                         Years="@_model.Years"
+                         Makes="@_model.Makes"
+                         Models="@_model.Models"
+                         OnSave="@EventCallback.Factory.Create(this, SaveAsync)"
+                         OnCancel="@EventCallback.Factory.Create(this, ResetAsync)"
+                         OnYearChanged="@EventCallback.Factory.Create(this, YearChangedAsync)"
+                         OnMakeChanged="@EventCallback.Factory.Create(this, MakeChangedAsync)" />
         </div>
     }
 </section>
 
 @code {
     private VehiclePageViewModel _model = new();
-    private bool _showVehicleForm;
+    private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        _model = await VehiclePortalService.GetAsync();
+        try
+        {
+            _model = await VehicleService.GetAsync() ?? new VehiclePageViewModel();
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
-    private void ToggleAddVehicle()
+    private async Task EditAsync(Guid vehicleId)
     {
-        if (_model.EditingVehicleId is not null)
+        _model = await VehicleService.StartEditAsync(vehicleId) ?? new VehiclePageViewModel();
+    }
+
+    private async Task ResetAsync()
+    {
+        _model = await VehicleService.ResetAsync() ?? new VehiclePageViewModel();
+    }
+
+    private async Task SaveAsync()
+    {
+        _model = await VehicleService.SaveAsync(_model) ?? new VehiclePageViewModel();
+    }
+
+    private async Task DeleteAsync(Guid vehicleId)
+    {
+        _model = await VehicleService.DeleteAsync(vehicleId) ?? new VehiclePageViewModel();
+    }
+
+    private async Task MakePrimaryAsync(Guid vehicleId)
+    {
+        _model = await VehicleService.MakePrimaryAsync(vehicleId) ?? new VehiclePageViewModel();
+    }
+
+    private async Task YearChangedAsync()
+    {
+        _model = await VehicleService.YearChangedAsync(_model) ?? new VehiclePageViewModel();
+    }
+
+    private async Task MakeChangedAsync()
+    {
+        _model = await VehicleService.MakeChangedAsync(_model) ?? new VehiclePageViewModel();
+    }
+
+    private static string GetVehicleTitle(CustomerVehicle vehicle)
+    {
+        var year = vehicle.ModelYear?.ToString(CultureInfo.InvariantCulture);
+        return string.Join(" ", new[] { year, vehicle.Make, vehicle.Model }.Where(x => !string.IsNullOrWhiteSpace(x)));
+    }
+
+    private static string GetVehicleDetails(CustomerVehicle vehicle)
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(vehicle.Nickname))
         {
-            return;
+            parts.Add(vehicle.Nickname!);
         }
 
-        _showVehicleForm = !_showVehicleForm;
-    }
-
-    private async Task SaveVehicleAsync()
-    {
-        _model = await VehiclePortalService.SaveAsync(_model);
-        _showVehicleForm = false;
-    }
-
-    private async Task CancelVehicleAsync()
-    {
-        _model = await VehiclePortalService.ResetAsync();
-        _showVehicleForm = false;
-    }
-
-    private async Task EditVehicleAsync(Guid id)
-    {
-        _model = await VehiclePortalService.StartEditAsync(id);
-        _showVehicleForm = true;
-    }
-
-    private async Task DeleteVehicleAsync(Guid id)
-    {
-        _model = await VehiclePortalService.DeleteAsync(id);
-        _showVehicleForm = false;
-    }
-
-    private async Task SetPrimaryVehicleAsync(Guid id)
-    {
-        _model = await VehiclePortalService.MakePrimaryAsync(id);
-    }
-
-    private async Task OnVehicleYearChangedAsync()
-    {
-        _model = await VehiclePortalService.YearChangedAsync(_model);
-    }
-
-    private async Task OnVehicleMakeChangedAsync()
-    {
-        _model = await VehiclePortalService.MakeChangedAsync(_model);
-    }
-
-    private async Task UploadPhotoAsync(InputFileChangeEventArgs e)
-    {
-        if (_model.EditingVehicleId is null)
+        if (!string.IsNullOrWhiteSpace(vehicle.Vin))
         {
-            return;
+            parts.Add($"VIN {vehicle.Vin}");
         }
 
-        await VehiclePhotoService.UploadAsync(_model.EditingVehicleId.Value, e.File);
-        _model = await VehiclePortalService.GetAsync();
-        _model = await VehiclePortalService.StartEditAsync(_model.EditingVehicleId.Value);
-        _showVehicleForm = true;
-    }
-
-    private async Task RemovePhotoAsync()
-    {
-        if (_model.EditingVehicleId is null)
+        if (vehicle.Mileage.HasValue)
         {
-            return;
+            parts.Add($"{vehicle.Mileage.Value:N0} mi");
         }
 
-        await VehiclePhotoService.RemoveAsync(_model.EditingVehicleId.Value);
-        _model = await VehiclePortalService.GetAsync();
-        _model = await VehiclePortalService.StartEditAsync(_model.EditingVehicleId.Value);
-        _showVehicleForm = true;
+        return parts.Count == 0 ? "No additional details." : string.Join(" • ", parts);
     }
 }

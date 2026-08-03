@@ -7,6 +7,7 @@
 @using TPGLLC.Data.Entities
 @using TPGLLC.Services.Vehicles
 @using TPGLLC.Web.Components.PortalShared.Appointments
+@using TPGLLC.Web.Components.Shared
 @using TPGLLC.Web.Services.Appointments
 @using TPGLLC.Web.Services.Portal
 
@@ -23,140 +24,175 @@
         <p>Choose one of your vehicles or enter a new one, then send your request.</p>
     </div>
 
-    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    @if (_loading)
     {
-        <div class="auth-alert">@_errorMessage</div>
+        <div class="portal-loading-card">
+            <div class="portal-loading-icon">⏳</div>
+            <div>
+                <div class="portal-loading-title">Loading appointments</div>
+                <div class="portal-loading-text">Please wait while we load your requests and vehicles.</div>
+            </div>
+        </div>
     }
-
-    @if (!string.IsNullOrWhiteSpace(_successMessage))
+    else
     {
-        <div class="auth-success">@_successMessage</div>
-    }
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <PortalNotice Type="danger" Title="Could not submit request">
+                @_errorMessage
+            </PortalNotice>
+        }
 
-    <div class="portal-stats">
-        <div class="portal-stat">
-            <div class="portal-stat-value">@(_portal?.Vehicles.Count ?? 0)</div>
-            <div class="portal-stat-label">Vehicles</div>
+        @if (!string.IsNullOrWhiteSpace(_successMessage))
+        {
+            <PortalNotice Type="success" Title="Request submitted">
+                @_successMessage
+            </PortalNotice>
+        }
+
+        <div class="portal-stats">
+            <div class="portal-stat">
+                <div class="portal-stat-value">@(_portal?.Vehicles.Count ?? 0)</div>
+                <div class="portal-stat-label">Vehicles</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@(_portal?.AppointmentRequests.Count ?? 0)</div>
+                <div class="portal-stat-label">Requests</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@(_selectedVehicle is null ? "None" : "Selected")</div>
+                <div class="portal-stat-label">Vehicle Choice</div>
+            </div>
         </div>
 
-        <div class="portal-stat">
-            <div class="portal-stat-value">@(_portal?.AppointmentRequests.Count ?? 0)</div>
-            <div class="portal-stat-label">Requests</div>
-        </div>
+        <div class="portal-section">
+            <div class="portal-section-heading">
+                <h2>Your Vehicles</h2>
 
-        <div class="portal-stat">
-            <div class="portal-stat-value">@(_selectedVehicle is null ? "None" : "Selected")</div>
-            <div class="portal-stat-label">Vehicle Choice</div>
-        </div>
-    </div>
-
-    <div class="portal-section">
-        <h2>Your Vehicles</h2>
-
-        @if (_portal is null)
-        {
-            <div class="portal-activity">
-                <div class="portal-activity-item">
-                    <div class="portal-activity-icon">⏳</div>
-                    <div>Loading your vehicles...</div>
-                </div>
-            </div>
-        }
-        else if (_portal.Vehicles.Count == 0)
-        {
-            <div class="portal-activity">
-                <div class="portal-activity-item">
-                    <div class="portal-activity-icon">🚗</div>
-                    <div>No vehicles are on file yet. Add one first, then come back here to request service.</div>
-                </div>
+                <a href="/portal/vehicles">Manage Vehicles</a>
             </div>
 
-            <div class="portal-actions" style="margin-top:1rem;">
-                <a class="portal-action-button" href="/portal/vehicles">Go to Vehicle Management</a>
-            </div>
-        }
-        else
-        {
-            <div class="portal-dashboard-grid">
-                @foreach (var vehicle in _portal.Vehicles)
-                {
-                    <article class="portal-card-link" @key="vehicle.Id">
-                        <div class="portal-card-icon">🚙</div>
-
-                        <h3>@GetVehicleTitle(vehicle)</h3>
-                        <p>@GetVehicleDetails(vehicle)</p>
-
-                        @if (vehicle.IsPrimary)
-                        {
-                            <div style="margin-top:0.5rem;font-weight:700;color:#0d2a63;">Primary vehicle</div>
-                        }
-
-                        <div class="portal-actions" style="margin-top:1rem;">
-                            <button type="button"
-                                    class="portal-action-button"
-                                    @onclick="@(async () => await UseVehicleAsync(vehicle.Id))">
-                                Use This Vehicle
-                            </button>
-                        </div>
-                    </article>
-                }
-            </div>
-        }
-    </div>
-
-    <div class="portal-section">
-        <h2>Recent Requests</h2>
-
-        @if (_portal is null)
-        {
-            <div class="portal-activity">
-                <div class="portal-activity-item">
-                    <div class="portal-activity-icon">⏳</div>
-                    <div>Loading requests...</div>
-                </div>
-            </div>
-        }
-        else if (_portal.AppointmentRequests.Count == 0)
-        {
-            <div class="portal-activity">
-                <div class="portal-activity-item">
-                    <div class="portal-activity-icon">📅</div>
-                    <div>No appointment requests found yet.</div>
-                </div>
-            </div>
-        }
-        else
-        {
-            <div class="portal-activity">
-                @foreach (var request in _portal.AppointmentRequests
-                    .OrderByDescending(x => x.SubmittedAtUtc)
-                    .Take(5))
-                {
-                    <div class="portal-activity-item">
-                        <div class="portal-activity-icon">📅</div>
-                        <div>
-                            <strong>@request.ServiceNeeded</strong><br />
-                            @GetRequestVehicleSummary(request)<br />
-                            <span>@request.SubmittedAtUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</span>
-                        </div>
+            @if (_portal is null)
+            {
+                <div class="portal-empty-state">
+                    <div class="portal-empty-icon">🚗</div>
+                    <div>
+                        <div class="portal-empty-title">No portal data yet</div>
+                        <div class="portal-empty-text">Your vehicles will appear here once loaded.</div>
                     </div>
-                }
+                </div>
+            }
+            else if (_portal.Vehicles.Count == 0)
+            {
+                <div class="portal-empty-state">
+                    <div class="portal-empty-icon">🚗</div>
+                    <div>
+                        <div class="portal-empty-title">No vehicles on file</div>
+                        <div class="portal-empty-text">Add a vehicle first, then come back to request service.</div>
+                    </div>
+                </div>
+
+                <div class="portal-actions" style="margin-top: 1rem;">
+                    <a class="portal-action-button" href="/portal/vehicles">Go to Vehicle Management</a>
+                </div>
+            }
+            else
+            {
+                <div class="portal-dashboard-grid">
+                    @foreach (var vehicle in _portal.Vehicles)
+                    {
+                        <article class="portal-card-link" @key="vehicle.Id">
+                            <div class="portal-card-icon">🚙</div>
+
+                            <h3>@GetVehicleTitle(vehicle)</h3>
+                            <p>@GetVehicleDetails(vehicle)</p>
+
+                            @if (vehicle.IsPrimary)
+                            {
+                                <div style="margin-top:0.75rem;">
+                                    <span class="portal-chip">Primary vehicle</span>
+                                </div>
+                            }
+
+                            <div class="portal-actions" style="margin-top: 1rem;">
+                                <button type="button"
+                                        class="portal-action-button"
+                                        @onclick="@(async () => await UseVehicleAsync(vehicle.Id))">
+                                    Use This Vehicle
+                                </button>
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="portal-section">
+            <div class="portal-section-heading">
+                <h2>Recent Requests</h2>
+
+                <a href="#appointment-form">New Request</a>
             </div>
-        }
-    </div>
 
-    <div class="portal-section" id="appointment-form">
-        <h2>Request Details</h2>
+            @if (_portal is null)
+            {
+                <div class="portal-empty-state">
+                    <div class="portal-empty-icon">📅</div>
+                    <div>
+                        <div class="portal-empty-title">Loading requests</div>
+                        <div class="portal-empty-text">Please wait while your appointment history loads.</div>
+                    </div>
+                </div>
+            }
+            else if (_portal.AppointmentRequests.Count == 0)
+            {
+                <div class="portal-empty-state">
+                    <div class="portal-empty-icon">📅</div>
+                    <div>
+                        <div class="portal-empty-title">No appointment requests yet</div>
+                        <div class="portal-empty-text">Submit your first request using the form below.</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="portal-activity">
+                    @foreach (var request in _portal.AppointmentRequests
+                        .OrderByDescending(x => x.SubmittedAtUtc)
+                        .Take(5))
+                    {
+                        <div class="portal-activity-item" @key="request.RequestId">
+                            <div class="portal-activity-icon">📅</div>
+                            <div>
+                                <strong>@request.ServiceNeeded</strong><br />
+                                @GetRequestVehicleSummary(request)<br />
+                                <span class="portal-muted">
+                                    @request.SubmittedAtUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")
+                                </span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
 
-        <AppointmentRequestForm Form="@_form"
-                                Years="@_years"
-                                Makes="@_makes"
-                                Models="@_models"
-                                OnSave="@EventCallback.Factory.Create(this, SaveRequestAsync)"
-                                OnCancel="@EventCallback.Factory.Create(this, ResetFormAsync)"
-                                OnYearChanged="@EventCallback.Factory.Create(this, OnVehicleYearChangedAsync)"
-                                OnMakeChanged="@EventCallback.Factory.Create(this, OnVehicleMakeChangedAsync)" />
-    </div>
+        <div class="portal-section" id="appointment-form">
+            <div class="portal-section-heading">
+                <h2>Request Details</h2>
+            </div>
+
+            <AppointmentRequestForm Form="@_form"
+                                    Years="@_years"
+                                    Makes="@_makes"
+                                    Models="@_models"
+                                    OnSave="@EventCallback.Factory.Create(this, SaveRequestAsync)"
+                                    OnCancel="@EventCallback.Factory.Create(this, ResetFormAsync)"
+                                    OnYearChanged="@EventCallback.Factory.Create(this, OnVehicleYearChangedAsync)"
+                                    OnMakeChanged="@EventCallback.Factory.Create(this, OnVehicleMakeChangedAsync)" />
+        </div>
+    }
 </section>
 
 @code {
@@ -169,24 +205,32 @@
     private string? _errorMessage;
     private string? _successMessage;
     private CustomerVehicle? _selectedVehicle;
+    private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        _portal = await PortalContextService.GetAsync();
-
-        _years = (await VehicleCatalog.GetYearsAsync())
-            .Distinct()
-            .OrderByDescending(x => x)
-            .ToList();
-
-        if (_years.Count == 0)
+        try
         {
-            _years = Enumerable.Range(1995, DateTime.UtcNow.Year - 1995 + 1)
-                .Reverse()
-                .ToList();
-        }
+            _portal = await PortalContextService.GetAsync();
 
-        ResetFormCore();
+            _years = (await VehicleCatalog.GetYearsAsync())
+                .Distinct()
+                .OrderByDescending(x => x)
+                .ToList();
+
+            if (_years.Count == 0)
+            {
+                _years = Enumerable.Range(1995, DateTime.UtcNow.Year - 1995 + 1)
+                    .Reverse()
+                    .ToList();
+            }
+
+            ResetFormCore();
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private async Task UseVehicleAsync(Guid vehicleId)
@@ -217,7 +261,7 @@
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            EnsureSelectedValue(_makes, _selectedVehicle.Make);
+            _makes = EnsureSelectedValue(_makes, _selectedVehicle.Make);
         }
 
         if (_selectedVehicle.ModelYear.HasValue && !string.IsNullOrWhiteSpace(_selectedVehicle.Make))
@@ -226,7 +270,7 @@
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            EnsureSelectedValue(_models, _selectedVehicle.Model);
+            _models = EnsureSelectedValue(_models, _selectedVehicle.Model);
         }
 
         _errorMessage = null;
@@ -270,18 +314,6 @@
     {
         _errorMessage = null;
         _successMessage = null;
-
-        if (string.IsNullOrWhiteSpace(_form.Name) ||
-            string.IsNullOrWhiteSpace(_form.Phone) ||
-            string.IsNullOrWhiteSpace(_form.Email) ||
-            string.IsNullOrWhiteSpace(_form.PreferredDate) ||
-            string.IsNullOrWhiteSpace(_form.PreferredTime) ||
-            string.IsNullOrWhiteSpace(_form.ServiceNeeded) ||
-            string.IsNullOrWhiteSpace(_form.Message))
-        {
-            _errorMessage = "Please complete all required fields.";
-            return;
-        }
 
         var request = new AppointmentRequest
         {
@@ -338,6 +370,21 @@
         _successMessage = null;
     }
 
+    private static IReadOnlyList<string> EnsureSelectedValue(
+        IReadOnlyList<string> values,
+        string? selectedValue)
+    {
+        var list = values.ToList();
+
+        if (!string.IsNullOrWhiteSpace(selectedValue) &&
+            !list.Any(x => string.Equals(x, selectedValue, StringComparison.OrdinalIgnoreCase)))
+        {
+            list.Insert(0, selectedValue);
+        }
+
+        return list;
+    }
+
     private static string GetVehicleTitle(CustomerVehicle vehicle)
     {
         var year = vehicle.ModelYear?.ToString(CultureInfo.InvariantCulture);
@@ -377,18 +424,5 @@
 
         var summary = string.Join(" ", parts);
         return string.IsNullOrWhiteSpace(summary) ? "Vehicle not specified" : summary;
-    }
-
-    private static IReadOnlyList<string> EnsureSelectedValue(IReadOnlyList<string> values,string? selectedValue)
-    {
-        var list = values.ToList();
-
-        if (!string.IsNullOrWhiteSpace(selectedValue) &&
-            !list.Any(x => string.Equals(x, selectedValue, StringComparison.OrdinalIgnoreCase)))
-        {
-            list.Insert(0, selectedValue);
-        }
-
-        return list;
     }
 }

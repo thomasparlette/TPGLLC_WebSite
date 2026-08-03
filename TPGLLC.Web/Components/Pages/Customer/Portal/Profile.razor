@@ -3,176 +3,179 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
 @using Microsoft.AspNetCore.Components.Forms
+@using TPGLLC.Web.Components.Shared
 @using TPGLLC.Web.Services.Portal
 @using TPGLLC.Web.ViewModels.Portal
 
-@inject ICustomerAccountService CustomerAccountService
+@inject ICustomerAccountService AccountService
 
-<PageTitle>Customer Account Center</PageTitle>
+<PageTitle>Customer Account</PageTitle>
 
 <section class="portal-dashboard">
-
     <div class="portal-header">
-
-        <p class="section-kicker">
-            Customer Portal
-        </p>
-
-        <h1>
-            Customer Account Center
-        </h1>
-
-        <p>
-            Manage your personal information and contact details.
-        </p>
-
+        <p class="section-kicker">Customer Portal</p>
+        <h1>Customer Account Center</h1>
+        <p>Update your personal information and contact details.</p>
     </div>
 
-    @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
+    @if (_loading)
     {
-        <div class="auth-alert">
-            @_model.ErrorMessage
+        <div class="portal-loading-card">
+            <div class="portal-loading-icon">⏳</div>
+            <div>
+                <div class="portal-loading-title">Loading account</div>
+                <div class="portal-loading-text">Please wait while we load your account details.</div>
+            </div>
         </div>
     }
-
-    @if (!string.IsNullOrWhiteSpace(_model.SuccessMessage))
+    else
     {
-        <div class="auth-success">
-            @_model.SuccessMessage
-        </div>
-    }
+        @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
+        {
+            <PortalNotice Type="danger" Title="Account unavailable">
+                @_model.ErrorMessage
+            </PortalNotice>
+        }
 
-    <div class="portal-dashboard-grid">
+        @if (!string.IsNullOrWhiteSpace(_model.SuccessMessage))
+        {
+            <PortalNotice Type="success" Title="Saved">
+                @_model.SuccessMessage
+            </PortalNotice>
+        }
 
-        <div class="portal-card-link">
-
-            <h2>Account</h2>
-
-            <div class="portal-primary-meta">
-                <span>@_model.Email</span>
-
-                @if (_model.EmailConfirmed)
-                {
-                    <span>Verified</span>
-                }
-                else
-                {
-                    <span>Unverified</span>
-                }
+        <div class="portal-stats">
+            <div class="portal-stat">
+                <div class="portal-stat-value">@GetDisplayName()</div>
+                <div class="portal-stat-label">Name</div>
             </div>
 
-            @if (_model.LastLoginUtc.HasValue)
-            {
-                <p style="margin-top:1rem;">
-                    Last Login
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_model.Email</div>
+                <div class="portal-stat-label">Email</div>
+            </div>
 
-                    <br />
-
-                    @_model.LastLoginUtc.Value.LocalDateTime.ToString("MMM d, yyyy h:mm tt")
-                </p>
-            }
-
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_model.Phone</div>
+                <div class="portal-stat-label">Phone</div>
+            </div>
         </div>
 
-        <div class="portal-card-link">
+        <div class="portal-section">
+            <div class="portal-section-heading">
+                <h2>Account Details</h2>
 
-            <EditForm Model="_model"
-                      OnValidSubmit="SaveAsync">
+                <button type="button" class="portal-action-button" @onclick="ReloadAsync">
+                    Reset
+                </button>
+            </div>
 
+            <EditForm Model="@_model" OnValidSubmit="@SaveAsync">
                 <DataAnnotationsValidator />
 
-                <ValidationSummary />
-
-                <div class="profile-grid">
-
+                <div class="portal-form-grid">
                     <div class="form-field">
                         <label>First Name</label>
-                        <InputText class="input"
-                                   @bind-Value="_model.FirstName" />
+                        <InputText class="input" @bind-Value="_model.FirstName" />
+                        <ValidationMessage For="@(() => _model.FirstName)" />
                     </div>
 
                     <div class="form-field">
                         <label>Last Name</label>
-                        <InputText class="input"
-                                   @bind-Value="_model.LastName" />
+                        <InputText class="input" @bind-Value="_model.LastName" />
+                        <ValidationMessage For="@(() => _model.LastName)" />
                     </div>
-
 
                     <div class="form-field full">
                         <label>Email</label>
-                        <InputText class="input"
-                                   @bind-Value="_model.Email"
-                                   disabled />
+                        <InputText class="input" type="email" @bind-Value="_model.Email" />
+                        <ValidationMessage For="@(() => _model.Email)" />
                     </div>
 
                     <div class="form-field">
                         <label>Phone</label>
-                        <InputText class="input"
-                                   @bind-Value="_model.Phone" />
+                        <InputText class="input" @bind-Value="_model.Phone" />
+                        <ValidationMessage For="@(() => _model.Phone)" />
                     </div>
 
                     <div class="form-field full">
                         <label>Address Line 1</label>
-                        <InputText class="input"
-                                   @bind-Value="_model.AddressLine1" />
+                        <InputText class="input" @bind-Value="_model.AddressLine1" />
+                        <ValidationMessage For="@(() => _model.AddressLine1)" />
                     </div>
 
                     <div class="form-field full">
                         <label>Address Line 2</label>
-                        <InputText class="input"
-                                   @bind-Value="_model.AddressLine2" />
+                        <InputText class="input" @bind-Value="_model.AddressLine2" />
+                        <ValidationMessage For="@(() => _model.AddressLine2)" />
                     </div>
 
                     <div class="form-field">
                         <label>City</label>
-                        <InputText class="input"
-                                   @bind-Value="_model.City" />
+                        <InputText class="input" @bind-Value="_model.City" />
+                        <ValidationMessage For="@(() => _model.City)" />
                     </div>
 
                     <div class="form-field">
                         <label>State</label>
-                        <InputText class="input"
-                                   @bind-Value="_model.State" />
+                        <InputText class="input" @bind-Value="_model.State" />
+                        <ValidationMessage For="@(() => _model.State)" />
                     </div>
 
                     <div class="form-field">
-                        <label>ZIP Code</label>
-                        <InputText class="input"
-                                   @bind-Value="_model.ZipCode" />
+                        <label>Zip Code</label>
+                        <InputText class="input" @bind-Value="_model.ZipCode" />
+                        <ValidationMessage For="@(() => _model.ZipCode)" />
                     </div>
-
                 </div>
 
-                <div class="portal-actions"
-                     style="margin-top:2rem;">
-
-                    <button class="portal-action-button"
-                            type="submit">
-                        Save Changes
-                    </button>
-
+                <div class="portal-actions" style="margin-top: 1.25rem;">
+                    <button type="submit" class="portal-action-button">Save Changes</button>
                 </div>
-
             </EditForm>
-
         </div>
-
-    </div>
-
+    }
 </section>
 
 @code {
-
     private CustomerAccountViewModel _model = new();
+    private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        _model = await CustomerAccountService.GetAsync();
+        try
+        {
+            _model = await AccountService.GetAsync() ?? new CustomerAccountViewModel();
+
+            if (string.IsNullOrWhiteSpace(_model.ErrorMessage) &&
+                string.IsNullOrWhiteSpace(_model.FirstName) &&
+                string.IsNullOrWhiteSpace(_model.LastName))
+            {
+                _model.FirstName = string.Empty;
+                _model.LastName = string.Empty;
+            }
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private async Task SaveAsync()
     {
-        _model = await CustomerAccountService.SaveAsync(_model);
+        _model = await AccountService.SaveAsync(_model) ?? new CustomerAccountViewModel();
     }
 
+    private async Task ReloadAsync()
+    {
+        _model = await AccountService.GetAsync() ?? new CustomerAccountViewModel();
+    }
+
+    private string GetDisplayName()
+    {
+        var name = string.Join(" ", new[] { _model.FirstName, _model.LastName }
+            .Where(x => !string.IsNullOrWhiteSpace(x)));
+
+        return string.IsNullOrWhiteSpace(name) ? "Customer" : name;
+    }
 }

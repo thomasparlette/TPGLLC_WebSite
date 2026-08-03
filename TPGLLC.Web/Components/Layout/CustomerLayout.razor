@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 
 <div class="customer-layout">
     <header class="portal-topbar">
@@ -39,11 +40,11 @@
     </header>
 
     <div class="customer-layout-shell">
-        <div class="portal-sidebar-backdrop @( _mobileMenuOpen ? "show" : "" )"
+        <div class="portal-sidebar-backdrop @(_mobileMenuOpen ? "show" : string.Empty)"
              @onclick="CloseMenu">
         </div>
 
-        <aside class="portal-sidebar @( _mobileMenuOpen ? "open" : "" )">
+        <aside class="portal-sidebar @(_mobileMenuOpen ? "open" : string.Empty)">
             <SidebarNavigation OnNavigate="CloseMenu" />
         </aside>
 
@@ -60,7 +61,7 @@
 
     private void CloseMenu() => _mobileMenuOpen = false;
 
-    private static string GetDisplayName(System.Security.Claims.ClaimsPrincipal user)
+    private static string GetDisplayName(ClaimsPrincipal user)
     {
         if (user.Identity?.IsAuthenticated != true)
         {
@@ -70,7 +71,7 @@
         var displayName =
             user.FindFirst("display_name")?.Value ??
             user.Identity?.Name ??
-            user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ??
+            user.FindFirst(ClaimTypes.Email)?.Value ??
             "Customer";
 
         return string.IsNullOrWhiteSpace(displayName) ? "Customer" : displayName;
