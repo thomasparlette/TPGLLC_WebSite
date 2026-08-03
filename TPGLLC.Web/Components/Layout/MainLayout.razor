@@ -1,94 +1,40 @@
 ﻿@inherits LayoutComponentBase
-@implements IDisposable
-@inject NavigationManager Navigation
 
-<div class="app-shell">
+<div class="site-shell">
     <header class="site-header">
-        <a class="brand" href="/" @onclick="CloseMenu">
-            <img src="/images/logo.jpeg" alt="TPG LLC" class="brand-logo" />
+        <a class="site-brand" href="/">
+            <img src="/images/logo.jpeg" alt="Tom Parlette Garage LLC" />
             <div class="brand-copy">
-                <div class="brand-name">TPG LLC</div>
+                <div class="brand-name">Tom Parlette Garage LLC</div>
                 <div class="brand-tagline">Professional service and customer portal</div>
             </div>
         </a>
 
         <button type="button"
-                class="hamburger @(_menuOpen ? "open" : "")"
-                @onclick="ToggleMenu"
+                class="hamburger @(_navOpen ? "open" : string.Empty)"
+                @onclick="ToggleNav"
                 aria-label="Toggle navigation"
-                aria-expanded="@_menuOpen"
-                aria-controls="site-nav">
-            
+                aria-expanded="@_navOpen">
             <span></span>
             <span></span>
             <span></span>
         </button>
 
-        <nav id="site-nav" class="site-nav @(_menuOpen ? "open" : "")">
+        <nav class="site-nav @(_navOpen ? "open" : string.Empty)">
             <PublicNavigation />
         </nav>
     </header>
 
-    <main class="page-content">
+    <main class="site-main">
         @Body
     </main>
-
-    <footer class="site-footer">
-        <div class="footer-grid">
-            <div>
-                <div class="footer-brand">TPG LLC</div>
-                <p>Reliable automotive service and customer support.</p>
-            </div>
-            <div>
-                <div class="footer-heading">Quick Links</div>
-                <a href="/">Home</a><br />
-                <a href="/services">Services</a><br />
-                <a href="/contact">Contact</a>
-            </div>
-            <div>
-                <div class="footer-heading">Account</div>
-                <a href="/Identity/Account/Login">Login</a><br />
-                <a href="/Identity/Account/Register">Register</a><br />
-                <a href="/Identity/Account/Logout">Logout</a>
-            </div>
-        </div>
-        <div class="footer-bottom">
-            <span>© @DateTime.Now.Year TPG LLC</span>
-            <span>All rights reserved</span>
-        </div>
-    </footer>
 </div>
 
 @code {
-    private bool _menuOpen;
+    private bool _navOpen;
 
-    protected override void OnInitialized()
+    private void ToggleNav()
     {
-        Navigation.LocationChanged += OnLocationChanged;
-    }
-
-    private void ToggleMenu()
-    {
-        _menuOpen = !_menuOpen;
-    }
-
-    private void CloseMenu()
-    {
-        if (_menuOpen)
-        {
-            _menuOpen = false;
-            StateHasChanged();
-        }
-    }
-
-    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
-    {
-        _menuOpen = false;
-        _ = InvokeAsync(StateHasChanged);
-    }
-
-    public void Dispose()
-    {
-        Navigation.LocationChanged -= OnLocationChanged;
+        _navOpen = !_navOpen;
     }
 }

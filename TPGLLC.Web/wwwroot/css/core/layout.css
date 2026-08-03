@@ -1,4 +1,10 @@
-﻿html {
+﻿:root {
+    --bg: #f4f7fb;
+    --text: #0f172a;
+    --red: #d71920;
+}
+
+html {
     scroll-behavior: smooth;
 }
 
@@ -44,44 +50,24 @@ a {
     backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
-.public-nav {
-    display: flex;
-    align-items: center;
-    gap: 1.25rem;
-    flex-wrap: wrap;
-    padding: 0.25rem 0;
-}
 
-    .public-nav a {
-        color: #ffffff;
-        text-decoration: none;
-        font-weight: 700;
-        white-space: nowrap;
-        padding: 0.35rem 0;
-    }
-
-        .public-nav a:hover {
-            text-decoration: underline;
-        }
-
-        .public-nav a.active {
-            text-decoration: underline;
-        }
-.brand {
+.brand,
+.site-brand {
     display: flex;
     align-items: center;
     gap: 0.8rem;
 }
 
-.brand-logo {
-    width: 48px;
-    height: 48px;
-    object-fit: contain;
-    display: block;
-    background: #ffffff;
-    border-radius: 10px;
-    padding: 3px;
-}
+    .brand-logo,
+    .site-brand img {
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
+        display: block;
+        background: #ffffff;
+        border-radius: 10px;
+        padding: 3px;
+    }
 
 .brand-copy {
     display: flex;
@@ -232,6 +218,30 @@ a {
     resize: vertical;
 }
 
+.primary-button,
+.secondary-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.8rem 1rem;
+    border-radius: 0.8rem;
+    border: 0;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.primary-button {
+    background: #0d2a63;
+    color: #ffffff;
+}
+
+.secondary-button {
+    background: #eef3fb;
+    color: #0d2a63;
+}
+
 .auth-alert,
 .auth-success {
     padding: 0.75rem 0.9rem;
@@ -279,28 +289,51 @@ pre {
     border-radius: 0.75rem;
 }
 
-.profile-grid {
+.vehicle-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1rem;
 }
 
-    .profile-grid .full {
+    .vehicle-grid .full {
         grid-column: 1 / -1;
     }
 
-.primary-button {
-    background: #0d2a63;
-    color: #ffffff;
-    border: none;
-    border-radius: 12px;
-    padding: 0.85rem 1.5rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-    .primary-button:hover {
-        background: #d71920;
-        color: #ffffff;
+@media (max-width: 900px) {
+    .site-header {
+        flex-wrap: wrap;
     }
+
+    .hamburger {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: auto;
+    }
+
+    .site-nav {
+        display: none;
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding-top: 1rem;
+    }
+
+        .site-nav.open {
+            display: flex;
+        }
+
+        .site-nav a {
+            width: 100%;
+            padding: 0.5rem 0;
+        }
+
+    .footer-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .vehicle-grid {
+        grid-template-columns: 1fr;
+    }
+}

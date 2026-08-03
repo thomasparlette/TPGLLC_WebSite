@@ -1,23 +1,16 @@
-﻿<nav class="public-nav">
+﻿@using Microsoft.AspNetCore.Components.Authorization
 
-    <NavLink href="/" Match="NavLinkMatch.All">
-        Home
-    </NavLink>
+<NavLink href="/" Match="NavLinkMatch.All">Home</NavLink>
+<NavLink href="/services">Services</NavLink>
+<NavLink href="/contact">Contact</NavLink>
 
-    <NavLink href="/services">
-        Services
-    </NavLink>
-
-    <NavLink href="/contact">
-        Contact
-    </NavLink>
-
-    <NavLink href="/portal/dashboard">
-        Customer Portal
-    </NavLink>
-
-    <NavLink href="/Identity/Account/Login">
-        Login
-    </NavLink>
-
-</nav>
+<AuthorizeView>
+    <Authorized>
+        <NavLink href="/portal/dashboard">Customer Portal</NavLink>
+        <a href="/logout">Sign Out</a>
+    </Authorized>
+    <NotAuthorized>
+        <NavLink href="/Identity/Account/Register">Register</NavLink>
+        <NavLink href="/Identity/Account/Login">Login</NavLink>
+    </NotAuthorized>
+</AuthorizeView>

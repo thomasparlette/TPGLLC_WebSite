@@ -35,10 +35,6 @@ public sealed class VehiclePhotoService : IVehiclePhotoService
 
     public async Task UploadAsync(Guid vehicleId, IBrowserFile file)
     {
-        if (_buildEnvironmentService.IsBuildEnvironment)
-        {
-            return;
-        }
 
         if (file is null)
         {
@@ -91,11 +87,6 @@ public sealed class VehiclePhotoService : IVehiclePhotoService
 
     public async Task RemoveAsync(Guid vehicleId)
     {
-        if (_buildEnvironmentService.IsBuildEnvironment)
-        {
-            return;
-        }
-
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {

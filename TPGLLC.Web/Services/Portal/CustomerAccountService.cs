@@ -12,24 +12,24 @@ public sealed class CustomerAccountService : ICustomerAccountService
 {
     private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
-    private readonly IBuildEnvironmentService _buildEnvironmentService;
+    private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public CustomerAccountService(
         IDbContextFactory<TPGLLCDbContext> dbFactory,
         ICurrentCustomerAccessor currentCustomerAccessor,
-        IBuildEnvironmentService buildEnvironmentService,
+        SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
-        _buildEnvironmentService = buildEnvironmentService;
+        _signInManager = signInManager;
         _userManager = userManager;
     }
 
     public async Task<CustomerAccountViewModel> GetAsync()
     {
-       var current = _currentCustomerAccessor.GetCurrentCustomer();
+        var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
             return new CustomerAccountViewModel
@@ -141,6 +141,7 @@ public sealed class CustomerAccountService : ICustomerAccountService
             }
 
             await _userManager.UpdateAsync(user);
+            await _signInManager.RefreshSignInAsync(user);
         }
 
         await db.SaveChangesAsync();
@@ -149,5 +150,4 @@ public sealed class CustomerAccountService : ICustomerAccountService
         refreshed.SuccessMessage = "Account details updated.";
         return refreshed;
     }
-
 }
