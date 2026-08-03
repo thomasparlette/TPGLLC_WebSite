@@ -11,10 +11,7 @@ public sealed class CustomerVehicleConfiguration
     {
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.VehicleType)
-            .HasMaxLength(30)
-            .IsRequired();
-
+      
         builder.Property(x => x.Make)
             .HasMaxLength(120);
 

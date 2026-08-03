@@ -6,8 +6,6 @@ public sealed class CustomerVehicle
 
     public Guid CustomerId { get; set; }
 
-    public string VehicleType { get; set; } = string.Empty; // Automotive, Motorcycle, Other
-
     public int? ModelYear { get; set; }
 
     public string? Make { get; set; }

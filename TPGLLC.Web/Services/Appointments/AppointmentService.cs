@@ -53,7 +53,6 @@ public sealed class AppointmentService : IAppointmentService
                 ["PreferredDate"] = request.PreferredDate,
                 ["PreferredTime"] = request.PreferredTime,
                 ["ServiceNeeded"] = request.ServiceNeeded,
-                ["Company"] = string.IsNullOrWhiteSpace(request.Company) ? "Not provided" : request.Company,
                 ["Message"] = request.Message,
                 ["ShopName"] = _options.ShopName,
                 ["Tagline"] = _options.Tagline,

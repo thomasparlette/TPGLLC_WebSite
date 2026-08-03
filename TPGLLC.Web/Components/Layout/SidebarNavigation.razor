@@ -1,57 +1,94 @@
 ﻿@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Authorization
 
-<AuthorizeView>
-    <Authorized>
-        <div class="nav-section">
-            <div class="nav-heading">Customer Portal</div>
+<div class="customer-sidebar">
+    <div class="sidebar-heading">
+        <h3>Navigation</h3>
+    </div>
 
-            <NavLink href="/portal/dashboard" Match="NavLinkMatch.All" class="nav-link" @onclick="HandleNavigate">
-                Dashboard
-            </NavLink>
+    <AuthorizeView>
+        <Authorized>
+            <div class="nav-section">
+                <div class="nav-heading">Customer Portal</div>
 
-            <NavLink href="/portal/vehicles" class="nav-link" @onclick="HandleNavigate">
-                Vehicles
-            </NavLink>
+                <NavLink href="/portal/dashboard"
+                         Match="NavLinkMatch.All"
+                         class="nav-link"
+                         @onclick="HandleNavigate">
+                    Dashboard
+                </NavLink>
 
-            <NavLink href="/portal/appointments" class="nav-link" @onclick="HandleNavigate">
-                Appointments
-            </NavLink>
+                <NavLink href="/portal/vehicles"
+                         class="nav-link"
+                         @onclick="HandleNavigate">
+                    Vehicles
+                </NavLink>
 
-            <NavLink href="/portal/history" class="nav-link" @onclick="HandleNavigate">
-                Service History
-            </NavLink>
+                <NavLink href="/portal/appointments"
+                         class="nav-link"
+                         @onclick="HandleNavigate">
+                    Appointments
+                </NavLink>
 
-            <NavLink href="/portal/profile" class="nav-link" @onclick="HandleNavigate">
-                Customer Account
-            </NavLink>
-        </div>
+                <NavLink href="/portal/history"
+                         class="nav-link"
+                         @onclick="HandleNavigate">
+                    Service History
+                </NavLink>
 
-        <div class="nav-section">
-            <div class="nav-heading">Account</div>
+                <NavLink href="/portal/profile"
+                         class="nav-link"
+                         @onclick="HandleNavigate">
+                    Customer Account
+                </NavLink>
+            </div>
 
-            <a href="/Identity/Account/Logout" class="nav-link danger" @onclick="HandleNavigate">
-                Logout
-            </a>
-        </div>
-    </Authorized>
+            <div class="nav-section">
+                <div class="nav-heading">Account</div>
 
-    <NotAuthorized>
-        <div class="nav-section">
-            <div class="nav-heading">Main</div>
-            <NavLink href="/" Match="NavLinkMatch.All" class="nav-link" @onclick="HandleNavigate">Home</NavLink>
-            <NavLink href="/services" class="nav-link" @onclick="HandleNavigate">Services</NavLink>
-            <NavLink href="/contact" class="nav-link" @onclick="HandleNavigate">Contact</NavLink>
-            <NavLink href="/portal/dashboard" class="nav-link" @onclick="HandleNavigate">Customer Portal</NavLink>
-        </div>
+                <a href="/Identity/Account/Logout"
+                   class="nav-link danger"
+                   @onclick="HandleNavigate">
+                    Logout
+                </a>
+            </div>
+        </Authorized>
 
-        <div class="nav-section">
-            <div class="nav-heading">Account</div>
-            <a href="/Identity/Account/Login" class="nav-link" @onclick="HandleNavigate">Login</a>
-            <a href="/Identity/Account/Register" class="nav-link" @onclick="HandleNavigate">Register</a>
-        </div>
-    </NotAuthorized>
-</AuthorizeView>
+        <NotAuthorized>
+            <div class="nav-section">
+                <div class="nav-heading">Main</div>
+
+                <NavLink href="/" Match="NavLinkMatch.All" class="nav-link" @onclick="HandleNavigate">
+                    Home
+                </NavLink>
+
+                <NavLink href="/services" class="nav-link" @onclick="HandleNavigate">
+                    Services
+                </NavLink>
+
+                <NavLink href="/contact" class="nav-link" @onclick="HandleNavigate">
+                    Contact
+                </NavLink>
+
+                <NavLink href="/portal/dashboard" class="nav-link" @onclick="HandleNavigate">
+                    Customer Portal
+                </NavLink>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-heading">Account</div>
+
+                <a href="/Identity/Account/Login" class="nav-link" @onclick="HandleNavigate">
+                    Login
+                </a>
+
+                <a href="/Identity/Account/Register" class="nav-link" @onclick="HandleNavigate">
+                    Register
+                </a>
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
 
 @code {
     [Parameter]

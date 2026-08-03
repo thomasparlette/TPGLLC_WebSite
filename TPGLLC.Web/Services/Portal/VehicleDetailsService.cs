@@ -85,7 +85,6 @@ public sealed class VehicleDetailsService : IVehicleDetailsService
         {
             Id = vehicleId,
             CustomerId = Guid.NewGuid(),
-            VehicleType = "Automotive",
             ModelYear = 2016,
             Make = "Acura",
             Model = "MDX",

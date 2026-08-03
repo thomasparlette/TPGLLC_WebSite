@@ -4,7 +4,7 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="TPGLLC.Application/TPGLLC.Application.csproj" Id="52e2ed71-8e98-4206-bea6-135ee9ca422c" />
+  <Project Path="TPGLLC.Application/TPGLLC.Application.csproj" />
   <Project Path="TPGLLC.Data/TPGLLC.Data.csproj" Id="2d7d4bbc-0469-42f1-99ab-5f2ba4c0419c" />
   <Project Path="TPGLLC.Services/TPGLLC.Services.csproj" Id="1b01f371-1c4e-4257-86a2-d1a057b57c82" />
   <Project Path="TPGLLC.Shared/TPGLLC.Shared.csproj" Id="84498961-2e9e-44e7-8f41-96c8cb15e3bb" />

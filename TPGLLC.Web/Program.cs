@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Hosting.StaticWebAssets;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.InMemory;
 using System.IO;
 using TPGLLC.Data;
 using TPGLLC.Services.Vehicles;
@@ -71,7 +70,7 @@ if (builder.Environment.IsEnvironment("Build"))
 }
 else
 {
-    builder.Services.AddDbContext<TPGLLCDbContext>(options =>
+   builder.Services.AddDbContext<TPGLLCDbContext>(options =>
         options.UseSqlServer(connectionString,
             sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)));
 
@@ -154,6 +153,9 @@ builder.Services.AddSingleton<IBuildEnvironmentService, BuildEnvironmentService>
 builder.Services.AddScoped<ICustomerAccountService, CustomerAccountService>();
 builder.Services.AddScoped<IVehiclePhotoService, VehiclePhotoService>();
 builder.Services.AddScoped<IVehicleDetailsService, VehicleDetailsService>();
+
+
+builder.Services.AddScoped<IPortalContextService, PortalContextService>();
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(PortalPolicies.Customer, policy =>

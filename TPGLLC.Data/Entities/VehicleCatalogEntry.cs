@@ -4,7 +4,6 @@ public sealed class VehicleCatalogEntry
 {
     public int Id { get; set; }
 
-    public string VehicleType { get; set; } = string.Empty;
     public int ModelYear { get; set; }
 
     public int MakeId { get; set; }

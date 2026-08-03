@@ -81,7 +81,6 @@ public sealed class CustomerProfileService : ICustomerProfileService
         existing.FirstName = profile.FirstName;
         existing.LastName = profile.LastName;
         existing.Phone = profile.Phone;
-        existing.Company = profile.Company;
         existing.Address1 = profile.Address1;
         existing.Address2 = profile.Address2;
         existing.City = profile.City;

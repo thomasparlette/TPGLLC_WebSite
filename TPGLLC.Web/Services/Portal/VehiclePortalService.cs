@@ -194,8 +194,7 @@ public sealed class VehiclePortalService : IVehiclePortalService
             vehicle = new CustomerVehicle
             {
                 CustomerId = customer.Id,
-                CreatedUtc = DateTimeOffset.UtcNow,
-                VehicleType = "Automotive"
+                CreatedUtc = DateTimeOffset.UtcNow
             };
             db.CustomerVehicles.Add(vehicle);
         }

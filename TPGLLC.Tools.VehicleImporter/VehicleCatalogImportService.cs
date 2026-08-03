@@ -24,11 +24,6 @@ public sealed class VehicleCatalogImportService
         "Harley-Davidson","Indian", "Kawasaki", "KTM","Suzuki", "Triumph", "Yamaha"
     };
 
-    private readonly IReadOnlyList<(string VehicleType, string ApiSlug)> _vehicleTypes =
-    [
-        ("Automotive", "car"),
-        ("Motorcycle", "motorcycle")
-    ];
 
     public VehicleCatalogImportService(
         TPGLLCDbContext db,
@@ -61,118 +56,6 @@ public sealed class VehicleCatalogImportService
         var skippedExisting = 0;
         var skippedDuplicateSource = 0;
         var lookupFailures = 0;
-
-        foreach (var vehicleType in _vehicleTypes)
-        {
-            try
-            {
-                
-                _logger.LogInformation("Loading makes for {VehicleType}.", vehicleType.VehicleType);
-
-                var makes = await _vpic.GetMakesForVehicleTypeAsync(vehicleType.ApiSlug, cancellationToken);
-
-                _logger.LogInformation(
-                    "Found {MakeCount} makes for {VehicleType}",
-                    makes.Count,
-                    vehicleType.VehicleType);
-
-                for (var year = StartYear; year <= endYear; year++)
-                {
-                    _logger.LogInformation("Importing {VehicleType} year {Year}", vehicleType.VehicleType, year);
-
-                    foreach (var make in makes)
-                    {
-                        
-
-                        IReadOnlyList<VpicModelDto> models;
-
-                        try
-                        {
-                            if (!AllowedMakes.Contains(make.MakeName))
-                                continue;
-
-                            models = await _vpic.GetModelsForMakeIdYearAsync(
-                                make.MakeId,
-                                year,
-                                cancellationToken);
-                        }
-                        catch (Exception ex)
-                        {
-                            lookupFailures++;
-                            _logger.LogWarning(
-                                ex,
-                                "Skipping {VehicleType} {Year} {MakeName} because model lookup failed",
-                                vehicleType.VehicleType,
-                                year,
-                                make.MakeName);
-
-                            continue;
-                        }
-
-                        if (models.Count == 0)
-                        {
-                            continue;
-                        }
-
-                        _logger.LogInformation(
-                            "{VehicleType} {Year} {MakeName}: {Count} models returned.",
-                            vehicleType.VehicleType,
-                            year,
-                            make.MakeName,
-                            models.Count);
-
-                        foreach (var model in models)
-                        {
-                            if (string.IsNullOrWhiteSpace(model.ModelName))
-                            {
-                                continue;
-                            }
-
-                            var key = new VehicleCatalogKey(
-                                year,
-                                model.MakeId,
-                                model.ModelId);
-
-                            if (!seenThisRun.Add(key))
-                            {
-                                skippedDuplicateSource++;
-                                continue;
-                            }
-
-                            if (existingKeys.Contains(key))
-                            {
-                                skippedExisting++;
-                                continue;
-                            }
-
-                            pending.Add(new VehicleCatalogEntry
-                            {
-                                VehicleType = Truncate(make.VehicleTypeName, 20),
-                                ModelYear = year,
-                                MakeId = model.MakeId,
-                                ModelId = model.ModelId,
-                                Make = Truncate(model.MakeName, 120),
-                                Model = Truncate(model.ModelName, 120),
-                                SyncedAtUtc = DateTimeOffset.UtcNow
-                            });
-
-                            if (pending.Count >= BatchSize)
-                            {
-                                imported += await FlushAsync(pending, cancellationToken);
-                                pending.Clear();
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Vehicle type import failed for {VehicleType}",
-                    vehicleType.VehicleType);
-            }
-        }
 
         if (pending.Count > 0)
         {
@@ -237,8 +120,7 @@ public sealed class VehicleCatalogImportService
                 {
                     _logger.LogWarning(
                         rowEx,
-                        "Skipping bad catalog row {VehicleType} {Year} {MakeId}/{ModelId} {Make} {Model}.",
-                        row.VehicleType,
+                        "Skipping bad catalog row {Year} {MakeId}/{ModelId} {Make} {Model}.",
                         row.ModelYear,
                         row.MakeId,
                         row.ModelId,

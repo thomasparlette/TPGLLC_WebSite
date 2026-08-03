@@ -7,13 +7,6 @@
         <DataAnnotationsValidator />
         <ValidationSummary />
 
-        @if (!string.IsNullOrWhiteSpace(Form.SelectedVehicleLabel))
-        {
-            <div class="form-status" style="margin-bottom:1rem;">
-                Selected vehicle: <strong>@Form.SelectedVehicleLabel</strong>
-            </div>
-        }
-
         <div class="vehicle-grid">
             <div class="form-field">
                 <label>Model Year</label>

@@ -16,9 +16,6 @@ public sealed class CustomerAccountViewModel
     public string DisplayName =>
         $"{FirstName} {LastName}".Trim();
 
-    [Display(Name = "Company")]
-    public string Company { get; set; } = string.Empty;
-
     [Required]
     [Display(Name = "Email")]
     [EmailAddress]

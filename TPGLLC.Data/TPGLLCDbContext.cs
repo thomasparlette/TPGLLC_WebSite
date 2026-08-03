@@ -49,7 +49,6 @@ public sealed class TPGLLCDbContext
             entity.Property(x => x.PreferredTime).HasMaxLength(20);
             entity.Property(x => x.ServiceNeeded).HasMaxLength(100);
             entity.Property(x => x.Status).HasMaxLength(30);
-            entity.Property(x => x.Company).HasMaxLength(200);
 
             entity.HasIndex(x => x.Status);
             entity.HasIndex(x => x.SubmittedAtUtc);
@@ -60,17 +59,12 @@ public sealed class TPGLLCDbContext
             entity.ToTable("VehicleCatalogEntries");
             entity.HasKey(x => x.Id);
 
-            entity.Property(x => x.VehicleType).HasMaxLength(20).IsRequired();
             entity.Property(x => x.Make).HasMaxLength(120).IsRequired();
             entity.Property(x => x.Model).HasMaxLength(120).IsRequired();
 
             entity.Property(x => x.MakeId).IsRequired();
             entity.Property(x => x.ModelId).IsRequired();
 
-            entity.HasIndex(x => new { x.VehicleType, x.ModelYear, x.MakeId, x.ModelId })
-                  .IsUnique();
-
-            entity.HasIndex(x => new { x.VehicleType, x.ModelYear, x.Make, x.Model });
         });
     }
 }

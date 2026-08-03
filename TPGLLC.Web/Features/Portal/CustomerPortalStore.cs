@@ -30,7 +30,6 @@ public sealed class CustomerPortalStore
             new CustomerVehicleDto(
                 Id: Guid.NewGuid(),
                 DisplayName: "2019 Dodge Challenger",
-                VehicleType: "Automotive",
                 Year: "2019",
                 Make: "Dodge",
                 Model: "Challenger",
@@ -43,7 +42,6 @@ public sealed class CustomerPortalStore
             new CustomerVehicleDto(
                 Id: Guid.NewGuid(),
                 DisplayName: "2015 Honda Grom",
-                VehicleType: "Motorcycle",
                 Year: "2015",
                 Make: "Honda",
                 Model: "Grom",

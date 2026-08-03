@@ -14,8 +14,7 @@ public sealed class CreateAppointmentRequest
     [EmailAddress]
     public string? Email { get; set; }
 
-    public string? VehicleType { get; set; }
-
+    
     public string? VehicleYear { get; set; }
     public string? VehicleMake { get; set; }
     public string? VehicleModel { get; set; }
@@ -37,5 +36,4 @@ public sealed class CreateAppointmentRequest
     [Required]
     public string? Message { get; set; }
 
-    public string? Company { get; set; }
 }

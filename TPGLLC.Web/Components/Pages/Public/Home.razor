@@ -361,11 +361,6 @@
                         </InputSelect>
                     </div>
 
-                    <div class="form-field full" style="display:none;">
-                        <label>Company</label>
-                        <InputText class="input" @bind-Value="_appointment.Company" autocomplete="off" />
-                    </div>
-
                     <div class="form-field full">
                         <label>Message</label>
                         <InputTextArea class="input textarea" @bind-Value="_appointment.Message" rows="6" />
@@ -487,7 +482,6 @@
         _appointment.PreferredTime = null;
         _appointment.ServiceNeeded = null;
         _appointment.Message = null;
-        _appointment.Company = null;
 
         _makes = [];
         _models = [];

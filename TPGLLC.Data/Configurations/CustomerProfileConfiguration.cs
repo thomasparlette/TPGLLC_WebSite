@@ -28,8 +28,6 @@ public sealed class CustomerProfileConfiguration : IEntityTypeConfiguration<Cust
         builder.Property(x => x.Phone)
             .HasMaxLength(30);
 
-        builder.Property(x => x.Company)
-            .HasMaxLength(120);
 
         builder.Property(x => x.Address1)
             .HasMaxLength(150);

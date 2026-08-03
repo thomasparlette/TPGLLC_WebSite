@@ -6,7 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TPGLLC.Application\TPGLLC.Application.csproj" />
     <ProjectReference Include="..\TPGLLC.Data\TPGLLC.Data.csproj" />
     <ProjectReference Include="..\TPGLLC.Shared\TPGLLC.Shared.csproj" />
   </ItemGroup>

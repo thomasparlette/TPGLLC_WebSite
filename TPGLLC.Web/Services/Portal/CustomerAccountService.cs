@@ -60,7 +60,6 @@ public sealed class CustomerAccountService : ICustomerAccountService
         {
             FirstName = user?.FirstName ?? profile?.FirstName ?? customer?.FirstName ?? string.Empty,
             LastName = user?.LastName ?? profile?.LastName ?? customer?.LastName ?? string.Empty,
-            Company = profile?.Company ?? string.Empty,
             Phone = profile?.Phone ?? customer?.Phone ?? string.Empty,
             AddressLine1 = profile?.Address1 ?? customer?.AddressLine1 ?? string.Empty,
             AddressLine2 = profile?.Address2 ?? customer?.AddressLine2 ?? string.Empty,
@@ -107,7 +106,6 @@ public sealed class CustomerAccountService : ICustomerAccountService
 
         profile.FirstName = firstName;
         profile.LastName = lastName;
-        profile.Company = string.IsNullOrWhiteSpace(model.Company) ? null : model.Company.Trim();
         profile.Phone = string.IsNullOrWhiteSpace(model.Phone) ? null : model.Phone.Trim();
         profile.Address1 = string.IsNullOrWhiteSpace(model.AddressLine1) ? null : model.AddressLine1.Trim();
         profile.Address2 = string.IsNullOrWhiteSpace(model.AddressLine2) ? null : model.AddressLine2.Trim();
@@ -169,7 +167,6 @@ public sealed class CustomerAccountService : ICustomerAccountService
         {
             FirstName = "Thomas",
             LastName = "Parlette",
-            Company = "TPG LLC",
             Phone = "(765) 346-3354",
             AddressLine1 = "123 Main Street",
             AddressLine2 = string.Empty,

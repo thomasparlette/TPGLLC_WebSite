@@ -35,7 +35,6 @@ public sealed class AppointmentRequest
     [Required]
     public string? Message { get; set; }
 
-    public string? Company { get; set; }
 
     public Guid RequestId { get; set; } = Guid.NewGuid();
     public DateTimeOffset SubmittedAtUtc { get; set; } = DateTimeOffset.UtcNow;

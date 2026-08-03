@@ -159,7 +159,6 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             Phone = string.IsNullOrWhiteSpace(model.Form.Phone)
                 ? (profile?.Phone ?? string.Empty).Trim()
                 : model.Form.Phone.Trim(),
-            Company = string.IsNullOrWhiteSpace(profile?.Company) ? null : profile.Company.Trim(),
             VehicleYear = string.IsNullOrWhiteSpace(model.Form.VehicleYear) ? null : model.Form.VehicleYear.Trim(),
             VehicleMake = string.IsNullOrWhiteSpace(model.Form.VehicleMake) ? null : model.Form.VehicleMake.Trim(),
             VehicleModel = string.IsNullOrWhiteSpace(model.Form.VehicleModel) ? null : model.Form.VehicleModel.Trim(),

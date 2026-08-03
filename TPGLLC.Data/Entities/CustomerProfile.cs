@@ -22,9 +22,6 @@ public sealed class CustomerProfile
     [MaxLength(30)]
     public string? Phone { get; set; }
 
-    [MaxLength(120)]
-    public string? Company { get; set; }
-
     [MaxLength(150)]
     public string? Address1 { get; set; }
 

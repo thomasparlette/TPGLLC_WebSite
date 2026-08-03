@@ -10,14 +10,6 @@ public sealed class CreateAppointmentRequestValidator : AbstractValidator<Create
         RuleFor(x => x.Phone).NotEmpty().MaximumLength(50);
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(200);
 
-        RuleFor(x => x.VehicleType).NotEmpty().MaximumLength(30);
-
-        When(x => !string.Equals(x.VehicleType, "Other", StringComparison.OrdinalIgnoreCase), () =>
-        {
-            RuleFor(x => x.VehicleYear).NotEmpty().MaximumLength(20);
-            RuleFor(x => x.VehicleMake).NotEmpty().MaximumLength(120);
-            RuleFor(x => x.VehicleModel).NotEmpty().MaximumLength(120);
-        });
 
         RuleFor(x => x.Vin).MaximumLength(17);
         RuleFor(x => x.Mileage).MaximumLength(50);
