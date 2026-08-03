@@ -180,10 +180,10 @@ public sealed class LoginModel : PageModel
 
     private string GetReturnUrl(string? returnUrl)
     {
-        var safeReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/portal" : returnUrl;
+        var safeReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/portal/dashboard" : returnUrl;
         if (!Url.IsLocalUrl(safeReturnUrl))
         {
-            return "/portal";
+            return "/portal/dashboard";
         }
 
         return safeReturnUrl;

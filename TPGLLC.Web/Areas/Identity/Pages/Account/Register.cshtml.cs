@@ -22,7 +22,7 @@ public sealed class RegisterModel(
 
     public void OnGet(string? returnUrl = null)
     {
-        Input.ReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/portal" : returnUrl;
+        Input.ReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/portal/dashboard" : returnUrl;
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -75,7 +75,7 @@ public sealed class RegisterModel(
             return returnUrl;
         }
 
-        return "/portal";
+        return "/portal/dashboard";
     }
 
     public sealed class InputModel
