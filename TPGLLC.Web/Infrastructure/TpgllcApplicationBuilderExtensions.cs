@@ -31,12 +31,14 @@ public static class TpgllcApplicationBuilderExtensions
         app.MapRazorComponents<App>()
            .AddInteractiveServerRenderMode();
 
-        app.MapGet("/logout", async (
-            HttpContext context,
-            SignInManager<ApplicationUser> signInManager) =>
+        app.MapGet("/logout", async (HttpContext context, SignInManager<ApplicationUser> signInManager) =>
         {
             await signInManager.SignOutAsync();
-            return Results.LocalRedirect("/Identity/Account/Login");
+
+            context.Response.Cookies.Delete(".AspNetCore.Identity.Application");
+            context.Response.Cookies.Delete("TPGLLC.Identity");
+
+            return Results.LocalRedirect("/");
         }).AllowAnonymous();
 
         app.MapGet("/health", () => Results.Text("OK", "text/plain"))
@@ -48,13 +50,14 @@ public static class TpgllcApplicationBuilderExtensions
             return File.Exists(versionPath)
                 ? Results.File(versionPath, "application/json")
                 : Results.NotFound();
-        })
-        .AllowAnonymous();
+        }).AllowAnonymous();
 
         app.MapGet("/db", (TPGLLCDbContext db) =>
         {
             return db.Database.GetConnectionString();
         });
+
+       
 
         return app;
     }

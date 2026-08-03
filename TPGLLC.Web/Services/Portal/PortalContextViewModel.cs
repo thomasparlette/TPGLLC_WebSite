@@ -21,9 +21,11 @@ public sealed class PortalContextViewModel
         Vehicles.FirstOrDefault(x => x.IsPrimary);
 
     public string DisplayName =>
-        !string.IsNullOrWhiteSpace(Profile?.FirstName) || !string.IsNullOrWhiteSpace(Profile?.LastName)
-            ? string.Join(" ", new[] { Profile?.FirstName, Profile?.LastName }.Where(x => !string.IsNullOrWhiteSpace(x)))
-            : (!string.IsNullOrWhiteSpace(Customer?.FirstName) || !string.IsNullOrWhiteSpace(Customer?.LastName))
-                ? string.Join(" ", new[] { Customer?.FirstName, Customer?.LastName }.Where(x => !string.IsNullOrWhiteSpace(x)))
-                : string.IsNullOrWhiteSpace(CurrentCustomer.Email) ? "Customer" : CurrentCustomer.Email;
+        !string.IsNullOrWhiteSpace(CurrentCustomer.DisplayName)
+            ? CurrentCustomer.DisplayName.Trim()
+            : !string.IsNullOrWhiteSpace(Profile?.FirstName) || !string.IsNullOrWhiteSpace(Profile?.LastName)
+                ? string.Join(" ", new[] { Profile?.FirstName, Profile?.LastName }.Where(x => !string.IsNullOrWhiteSpace(x)))
+                : !string.IsNullOrWhiteSpace(Customer?.FirstName) || !string.IsNullOrWhiteSpace(Customer?.LastName)
+                    ? string.Join(" ", new[] { Customer?.FirstName, Customer?.LastName }.Where(x => !string.IsNullOrWhiteSpace(x)))
+                    : string.IsNullOrWhiteSpace(CurrentCustomer.Email) ? "Customer" : CurrentCustomer.Email;
 }

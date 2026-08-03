@@ -16,13 +16,22 @@ public sealed class CurrentCustomerAccessor : ICurrentCustomerAccessor
         var user = _http.HttpContext?.User;
 
         if (user == null)
+        {
             return new CurrentCustomer();
+        }
+
+        var displayName =
+            user.FindFirst("display_name")?.Value ??
+            user.Identity?.Name ??
+            user.FindFirst(ClaimTypes.Email)?.Value ??
+            string.Empty;
 
         return new CurrentCustomer
         {
             IsAuthenticated = user.Identity?.IsAuthenticated ?? false,
-            UserId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "",
-            Email = user.FindFirstValue(ClaimTypes.Email) ?? "",
+            UserId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty,
+            Email = user.FindFirstValue(ClaimTypes.Email) ?? string.Empty,
+            DisplayName = displayName,
             IsCustomer = user.IsInRole("Customer"),
             IsEmployee = user.IsInRole("Employee"),
             IsAdministrator = user.IsInRole("Administrator")

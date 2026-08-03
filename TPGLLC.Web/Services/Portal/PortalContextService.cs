@@ -1,6 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using TPGLLC.Data;
 using TPGLLC.Data.Entities;
+using TPGLLC.Shared.Identity;
 using TPGLLC.Web.Services.Customers;
 
 namespace TPGLLC.Web.Services.Portal;
@@ -9,43 +11,24 @@ public sealed class PortalContextService : IPortalContextService
 {
     private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
+    private readonly UserManager<ApplicationUser> _userManager;
 
     public PortalContextService(
         IDbContextFactory<TPGLLCDbContext> dbFactory,
-        ICurrentCustomerAccessor currentCustomerAccessor)
+        ICurrentCustomerAccessor currentCustomerAccessor,
+        UserManager<ApplicationUser> userManager)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
+        _userManager = userManager;
     }
 
-    public Task<PortalContextViewModel> GetAsync(CancellationToken cancellationToken = default)
+    public async Task<PortalContextViewModel> GetAsync(
+        CancellationToken cancellationToken = default)
     {
         var current = _currentCustomerAccessor.GetCurrentCustomer();
-        return GetAsync(current.UserId, cancellationToken, current);
-    }
 
-    public async Task<PortalContextViewModel> GetAsync(string userId, CancellationToken cancellationToken = default)
-    {
-        return await GetAsync(userId, cancellationToken, null);
-    }
-
-    public async Task<CustomerVehicle?> GetVehicleAsync(Guid vehicleId, CancellationToken cancellationToken = default)
-    {
-        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-
-        return await db.CustomerVehicles
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == vehicleId, cancellationToken);
-    }
-
-    private async Task<PortalContextViewModel> GetAsync(
-        string userId,
-        CancellationToken cancellationToken,
-        CurrentCustomer? currentOverride)
-    {
-        var current = currentOverride ?? _currentCustomerAccessor.GetCurrentCustomer();
-
-        if (!current.IsAuthenticated || string.IsNullOrWhiteSpace(userId))
+        if (!current.IsAuthenticated || string.IsNullOrWhiteSpace(current.UserId))
         {
             return new PortalContextViewModel
             {
@@ -55,13 +38,15 @@ public sealed class PortalContextService : IPortalContextService
 
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
 
+        var user = await _userManager.FindByIdAsync(current.UserId);
+
         var profile = await db.CustomerProfiles
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.ApplicationUserId == userId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId, cancellationToken);
 
         var customer = await db.Customers
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.ApplicationUserId == userId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId, cancellationToken);
 
         IReadOnlyList<CustomerVehicle> vehicles = Array.Empty<CustomerVehicle>();
         IReadOnlyList<ServiceHistoryEntry> serviceHistory = Array.Empty<ServiceHistoryEntry>();
@@ -92,14 +77,58 @@ public sealed class PortalContextService : IPortalContextService
                 .ToListAsync(cancellationToken);
         }
 
+        var displayName =
+            user?.DisplayName?.Trim()
+            ?? string.Join(" ", new[] { user?.FirstName, user?.LastName }
+                .Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            displayName =
+                string.Join(" ", new[] { profile?.FirstName, profile?.LastName }
+                    .Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            displayName =
+                string.Join(" ", new[] { customer?.FirstName, customer?.LastName }
+                    .Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            displayName = string.IsNullOrWhiteSpace(current.Email) ? "Customer" : current.Email;
+        }
+
         return new PortalContextViewModel
         {
-            CurrentCustomer = current,
+            CurrentCustomer = new CurrentCustomer
+            {
+                IsAuthenticated = current.IsAuthenticated,
+                UserId = current.UserId,
+                Email = current.Email,
+                DisplayName = displayName,
+                IsCustomer = current.IsCustomer,
+                IsEmployee = current.IsEmployee,
+                IsAdministrator = current.IsAdministrator
+            },
             Profile = profile,
             Customer = customer,
             Vehicles = vehicles,
             ServiceHistoryEntries = serviceHistory,
             AppointmentRequests = appointmentRequests
         };
+    }
+
+    public async Task<CustomerVehicle?> GetVehicleAsync(
+        Guid vehicleId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+
+        return await db.CustomerVehicles
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == vehicleId, cancellationToken);
     }
 }

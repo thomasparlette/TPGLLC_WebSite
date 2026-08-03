@@ -29,12 +29,7 @@ public sealed class CustomerAccountService : ICustomerAccountService
 
     public async Task<CustomerAccountViewModel> GetAsync()
     {
-        if (_buildEnvironmentService.IsBuildEnvironment)
-        {
-            return CreateDemoModel();
-        }
-
-        var current = _currentCustomerAccessor.GetCurrentCustomer();
+       var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
             return new CustomerAccountViewModel
@@ -72,12 +67,6 @@ public sealed class CustomerAccountService : ICustomerAccountService
 
     public async Task<CustomerAccountViewModel> SaveAsync(CustomerAccountViewModel model)
     {
-        if (_buildEnvironmentService.IsBuildEnvironment)
-        {
-            model.SuccessMessage = "Build environment does not save account changes.";
-            return model;
-        }
-
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -161,19 +150,4 @@ public sealed class CustomerAccountService : ICustomerAccountService
         return refreshed;
     }
 
-    private static CustomerAccountViewModel CreateDemoModel()
-    {
-        return new CustomerAccountViewModel
-        {
-            FirstName = "Thomas",
-            LastName = "Parlette",
-            Phone = "(765) 346-3354",
-            AddressLine1 = "123 Main Street",
-            AddressLine2 = string.Empty,
-            City = "Indianapolis",
-            State = "IN",
-            ZipCode = "46201",
-            Email = "thomasparlette@gmail.com"
-        };
-    }
 }

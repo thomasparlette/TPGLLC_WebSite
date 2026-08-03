@@ -35,12 +35,12 @@
 
     <div class="portal-stats">
         <div class="portal-stat">
-            <div class="portal-stat-value">@_portal?.Vehicles.Count</div>
+            <div class="portal-stat-value">@(_portal?.Vehicles.Count ?? 0)</div>
             <div class="portal-stat-label">Vehicles</div>
         </div>
 
         <div class="portal-stat">
-            <div class="portal-stat-value">@_portal?.AppointmentRequests.Count</div>
+            <div class="portal-stat-value">@(_portal?.AppointmentRequests.Count ?? 0)</div>
             <div class="portal-stat-label">Requests</div>
         </div>
 
@@ -99,6 +99,47 @@
                             </button>
                         </div>
                     </article>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="portal-section">
+        <h2>Recent Requests</h2>
+
+        @if (_portal is null)
+        {
+            <div class="portal-activity">
+                <div class="portal-activity-item">
+                    <div class="portal-activity-icon">⏳</div>
+                    <div>Loading requests...</div>
+                </div>
+            </div>
+        }
+        else if (_portal.AppointmentRequests.Count == 0)
+        {
+            <div class="portal-activity">
+                <div class="portal-activity-item">
+                    <div class="portal-activity-icon">📅</div>
+                    <div>No appointment requests found yet.</div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="portal-activity">
+                @foreach (var request in _portal.AppointmentRequests
+                    .OrderByDescending(x => x.SubmittedAtUtc)
+                    .Take(5))
+                {
+                    <div class="portal-activity-item">
+                        <div class="portal-activity-icon">📅</div>
+                        <div>
+                            <strong>@request.ServiceNeeded</strong><br />
+                            @GetRequestVehicleSummary(request)<br />
+                            <span>@request.SubmittedAtUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</span>
+                        </div>
+                    </div>
                 }
             </div>
         }
@@ -172,12 +213,20 @@
 
         if (_selectedVehicle.ModelYear.HasValue)
         {
-            _makes = await VehicleCatalog.GetMakesAsync(_selectedVehicle.ModelYear.Value);
+            _makes = (await VehicleCatalog.GetMakesAsync(_selectedVehicle.ModelYear.Value))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            EnsureSelectedValue(_makes, _selectedVehicle.Make);
         }
 
         if (_selectedVehicle.ModelYear.HasValue && !string.IsNullOrWhiteSpace(_selectedVehicle.Make))
         {
-            _models = await VehicleCatalog.GetModelsAsync(_selectedVehicle.ModelYear.Value, _selectedVehicle.Make);
+            _models = (await VehicleCatalog.GetModelsAsync(_selectedVehicle.ModelYear.Value, _selectedVehicle.Make))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            EnsureSelectedValue(_models, _selectedVehicle.Model);
         }
 
         _errorMessage = null;
@@ -267,8 +316,10 @@
             return;
         }
 
-        _successMessage = $"Request submitted. Reference #{result.RequestId:D}";
+        _portal = await PortalContextService.GetAsync();
         ResetFormCore();
+        _successMessage = $"Request submitted. Reference #{result.RequestId:D}";
+        StateHasChanged();
     }
 
     private Task ResetFormAsync()
@@ -313,5 +364,31 @@
         }
 
         return parts.Count == 0 ? "No additional details." : string.Join(" • ", parts);
+    }
+
+    private static string GetRequestVehicleSummary(AppointmentRequest request)
+    {
+        var parts = new[]
+        {
+            request.VehicleYear,
+            request.VehicleMake,
+            request.VehicleModel
+        }.Where(x => !string.IsNullOrWhiteSpace(x));
+
+        var summary = string.Join(" ", parts);
+        return string.IsNullOrWhiteSpace(summary) ? "Vehicle not specified" : summary;
+    }
+
+    private static IReadOnlyList<string> EnsureSelectedValue(IReadOnlyList<string> values,string? selectedValue)
+    {
+        var list = values.ToList();
+
+        if (!string.IsNullOrWhiteSpace(selectedValue) &&
+            !list.Any(x => string.Equals(x, selectedValue, StringComparison.OrdinalIgnoreCase)))
+        {
+            list.Insert(0, selectedValue);
+        }
+
+        return list;
     }
 }

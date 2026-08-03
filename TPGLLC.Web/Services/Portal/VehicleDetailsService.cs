@@ -24,11 +24,6 @@ public sealed class VehicleDetailsService : IVehicleDetailsService
 
     public async Task<VehicleDetailsViewModel> GetAsync(Guid vehicleId)
     {
-        if (_buildEnvironmentService.IsBuildEnvironment)
-        {
-            return CreateDemoModel(vehicleId);
-        }
-
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -76,59 +71,6 @@ public sealed class VehicleDetailsService : IVehicleDetailsService
         {
             Vehicle = vehicle,
             ServiceHistory = history
-        };
-    }
-
-    private static VehicleDetailsViewModel CreateDemoModel(Guid vehicleId)
-    {
-        var vehicle = new CustomerVehicle
-        {
-            Id = vehicleId,
-            CustomerId = Guid.NewGuid(),
-            ModelYear = 2016,
-            Make = "Acura",
-            Model = "MDX",
-            Nickname = "Family SUV",
-            LicensePlate = "DEMO-1",
-            Mileage = 84_521,
-            IsPrimary = true,
-            CreatedUtc = DateTimeOffset.UtcNow.AddDays(-12)
-        };
-
-        return new VehicleDetailsViewModel
-        {
-            Vehicle = vehicle,
-            ServiceHistory =
-            [
-                new ServiceHistoryEntry
-                {
-                    Id = Guid.NewGuid(),
-                    CustomerId = vehicle.CustomerId,
-                    CustomerVehicleId = vehicle.Id,
-                    VehicleName = "2016 Acura MDX",
-                    ServiceDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-18)),
-                    Service = "Brake inspection",
-                    Mileage = 84_101,
-                    Technician = "Demo Tech",
-                    Status = "Completed",
-                    Notes = "Pads and rotors inspected. No issues found.",
-                    CreatedUtc = DateTimeOffset.UtcNow.AddDays(-18)
-                },
-                new ServiceHistoryEntry
-                {
-                    Id = Guid.NewGuid(),
-                    CustomerId = vehicle.CustomerId,
-                    CustomerVehicleId = vehicle.Id,
-                    VehicleName = "2016 Acura MDX",
-                    ServiceDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-45)),
-                    Service = "Oil change",
-                    Mileage = 83_600,
-                    Technician = "Demo Tech",
-                    Status = "Completed",
-                    Notes = "Oil and filter replaced.",
-                    CreatedUtc = DateTimeOffset.UtcNow.AddDays(-45)
-                }
-            ]
         };
     }
 }

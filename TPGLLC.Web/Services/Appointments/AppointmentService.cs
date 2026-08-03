@@ -1,25 +1,38 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System.Net;
 using System.Net.Mail;
+using TPGLLC.Data;
 using TPGLLC.Data.Entities;
 using TPGLLC.Web.Services;
+using TPGLLC.Web.Services.Customers;
+using TPGLLC.Web.Services.Portal;
 
 namespace TPGLLC.Web.Services.Appointments;
 
 public sealed class AppointmentService : IAppointmentService
 {
+    private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
+    private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
     private readonly AppointmentEmailOptions _options;
     private readonly IEmailTemplateRenderer _templates;
     private readonly ILogger<AppointmentService> _logger;
+    private readonly IBuildEnvironmentService _buildEnvironmentService;
 
     public AppointmentService(
+        IDbContextFactory<TPGLLCDbContext> dbFactory,
+        ICurrentCustomerAccessor currentCustomerAccessor,
         IOptions<AppointmentEmailOptions> options,
         IEmailTemplateRenderer templates,
-        ILogger<AppointmentService> logger)
+        ILogger<AppointmentService> logger,
+        IBuildEnvironmentService buildEnvironmentService)
     {
+        _dbFactory = dbFactory;
+        _currentCustomerAccessor = currentCustomerAccessor;
         _options = options.Value;
         _templates = templates;
         _logger = logger;
+        _buildEnvironmentService = buildEnvironmentService;
     }
 
     public async Task<AppointmentSubmissionResult> SubmitAsync(
@@ -28,10 +41,25 @@ public sealed class AppointmentService : IAppointmentService
     {
         try
         {
-            ValidateOptions();
             ValidateRequest(request);
 
+            var current = _currentCustomerAccessor.GetCurrentCustomer();
             var requestId = Guid.NewGuid();
+            var submittedAtUtc = DateTimeOffset.UtcNow;
+
+            await SaveRequestAsync(request, requestId, current, submittedAtUtc, cancellationToken);
+
+            if (_buildEnvironmentService.IsBuildEnvironment)
+            {
+                _logger.LogInformation(
+                    "Build environment: saved appointment request {RequestId} without SMTP.",
+                    requestId);
+
+                return AppointmentSubmissionResult.Ok(requestId);
+            }
+
+            ValidateOptions();
+
             var year = DateTime.UtcNow.Year;
 
             var vehicleSummary = string.Join(" ", new[]
@@ -93,7 +121,7 @@ public sealed class AppointmentService : IAppointmentService
         catch (FileNotFoundException ex)
         {
             _logger.LogError(ex, "Appointment email template missing.");
-            return AppointmentSubmissionResult.Fail("Email template missing. Check the EmailTemplates Folder");
+            return AppointmentSubmissionResult.Fail("Email template missing. Check the EmailTemplates folder.");
         }
         catch (SmtpException ex)
         {
@@ -110,6 +138,40 @@ public sealed class AppointmentService : IAppointmentService
             _logger.LogError(ex, "Failed to submit appointment request.");
             return AppointmentSubmissionResult.Fail("We were unable to send your appointment request right now.");
         }
+    }
+
+    private async Task SaveRequestAsync(
+        AppointmentRequest request,
+        Guid requestId,
+        CurrentCustomer current,
+        DateTimeOffset submittedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+
+        var entity = new AppointmentRequest
+        {
+            RequestId = requestId,
+            Name = request.Name.Trim(),
+            Phone = request.Phone.Trim(),
+            Email = string.IsNullOrWhiteSpace(request.Email)
+                ? current.Email?.Trim()
+                : request.Email.Trim(),
+            VehicleYear = string.IsNullOrWhiteSpace(request.VehicleYear) ? null : request.VehicleYear.Trim(),
+            VehicleMake = string.IsNullOrWhiteSpace(request.VehicleMake) ? null : request.VehicleMake.Trim(),
+            VehicleModel = string.IsNullOrWhiteSpace(request.VehicleModel) ? null : request.VehicleModel.Trim(),
+            Vin = string.IsNullOrWhiteSpace(request.Vin) ? null : request.Vin.Trim(),
+            Mileage = string.IsNullOrWhiteSpace(request.Mileage) ? null : request.Mileage.Trim(),
+            PreferredDate = request.PreferredDate.Trim(),
+            PreferredTime = request.PreferredTime.Trim(),
+            ServiceNeeded = request.ServiceNeeded.Trim(),
+            Message = request.Message.Trim(),
+            Status = string.IsNullOrWhiteSpace(request.Status) ? "Requested" : request.Status.Trim(),
+            SubmittedAtUtc = submittedAtUtc
+        };
+
+        db.AppointmentRequests.Add(entity);
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private async Task SendEmailAsync(
@@ -132,7 +194,8 @@ public sealed class AppointmentService : IAppointmentService
 
         if (!string.IsNullOrWhiteSpace(replyTo))
         {
-            message.ReplyToList.Add(new MailAddress(replyTo, string.IsNullOrWhiteSpace(replyToName) ? replyTo : replyToName));
+            message.ReplyToList.Add(
+                new MailAddress(replyTo, string.IsNullOrWhiteSpace(replyToName) ? replyTo : replyToName));
         }
 
         using var client = new SmtpClient(_options.Host, _options.Port)
@@ -144,6 +207,7 @@ public sealed class AppointmentService : IAppointmentService
 
         await client.SendMailAsync(message, cancellationToken);
     }
+
     private void ValidateOptions()
     {
         if (string.IsNullOrWhiteSpace(_options.Host))
@@ -151,10 +215,10 @@ public sealed class AppointmentService : IAppointmentService
 
         if (_options.Port <= 0)
             throw new InvalidOperationException("Gmail:Port is missing or invalid.");
-        
+
         if (string.IsNullOrWhiteSpace(_options.Username))
             throw new InvalidOperationException("Gmail:Username is missing.");
-        
+
         if (string.IsNullOrWhiteSpace(_options.Password))
             throw new InvalidOperationException("Gmail:Password is missing.");
 

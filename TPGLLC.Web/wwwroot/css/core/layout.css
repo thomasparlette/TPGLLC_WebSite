@@ -44,7 +44,29 @@ a {
     backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
+.public-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    padding: 0.25rem 0;
+}
 
+    .public-nav a {
+        color: #ffffff;
+        text-decoration: none;
+        font-weight: 700;
+        white-space: nowrap;
+        padding: 0.35rem 0;
+    }
+
+        .public-nav a:hover {
+            text-decoration: underline;
+        }
+
+        .public-nav a.active {
+            text-decoration: underline;
+        }
 .brand {
     display: flex;
     align-items: center;

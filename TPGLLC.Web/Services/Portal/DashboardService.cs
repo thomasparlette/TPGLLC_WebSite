@@ -1,94 +1,36 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using TPGLLC.Data;
 using TPGLLC.Data.Entities;
-using TPGLLC.Web.Services.Customers;
 using TPGLLC.Web.ViewModels.Portal;
 
 namespace TPGLLC.Web.Services.Portal;
 
-
-
 public sealed class DashboardService : IDashboardService
 {
-    private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
-    private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
-    private readonly IBuildEnvironmentService _buildEnvironmentService;
+    private readonly IPortalContextService _portalContextService;
 
-    public DashboardService(
-        IDbContextFactory<TPGLLCDbContext> dbFactory,
-        ICurrentCustomerAccessor currentCustomerAccessor,
-        IBuildEnvironmentService buildEnvironmentService)
+    public DashboardService(IPortalContextService portalContextService)
     {
-        _dbFactory = dbFactory;
-        _currentCustomerAccessor = currentCustomerAccessor;
-        _buildEnvironmentService = buildEnvironmentService;
+        _portalContextService = portalContextService;
     }
 
     public async Task<DashboardViewModel> GetAsync()
     {
-        if (_buildEnvironmentService.IsBuildEnvironment)
-        {
-            return _buildEnvironmentService.CreateDashboard();
-        }
+        var portal = await _portalContextService.GetAsync();
 
-        var current = _currentCustomerAccessor.GetCurrentCustomer();
-        if (!current.IsAuthenticated)
+        if (!portal.CurrentCustomer.IsAuthenticated)
         {
             return new DashboardViewModel();
         }
 
-        await using var db = await _dbFactory.CreateDbContextAsync();
-        db.ChangeTracker.Clear();
-
-        var profile = await db.CustomerProfiles
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
-
-        var customer = await db.Customers
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
-
-        var vehicles = new List<CustomerVehicle>();
-        var history = new List<ServiceHistoryEntry>();
-
-        if (customer is not null)
-        {
-            vehicles = await db.CustomerVehicles
-                .AsNoTracking()
-                .Where(x => x.CustomerId == customer.Id)
-                .OrderByDescending(x => x.IsPrimary)
-                .ThenByDescending(x => x.CreatedUtc)
-                .ToListAsync();
-
-            history = await db.ServiceHistoryEntries
-                .AsNoTracking()
-                .Where(x => x.CustomerId == customer.Id)
-                .OrderByDescending(x => x.ServiceDate)
-                .Take(10)
-                .ToListAsync();
-        }
-
-        var requests = new List<AppointmentRequest>();
-        if (!string.IsNullOrWhiteSpace(current.Email))
-        {
-            requests = await db.AppointmentRequests
-                .AsNoTracking()
-                .Where(x => x.Email == current.Email)
-                .OrderByDescending(x => x.SubmittedAtUtc)
-                .Take(10)
-                .ToListAsync();
-        }
-
-        var displayName = "Customer";
-        var name = $"{profile?.FirstName} {profile?.LastName}".Trim();
-        if (!string.IsNullOrWhiteSpace(name))
-        {
-            displayName = name;
-        }
+        var vehicles = portal.Vehicles.ToList();
+        var history = portal.ServiceHistoryEntries.Take(10).ToList();
+        var requests = portal.AppointmentRequests.Take(10).ToList();
 
         var model = new DashboardViewModel
         {
-            DisplayName = displayName,
+            DisplayName = string.IsNullOrWhiteSpace(portal.DisplayName)
+                ? "Customer"
+                : portal.DisplayName,
             Vehicles = vehicles,
             Requests = requests,
             History = history
@@ -111,7 +53,7 @@ public sealed class DashboardService : IDashboardService
             items.Add(new ActivityItem(
                 "🚗",
                 "Vehicle added",
-                $"{newestVehicle.ModelYear} {newestVehicle.Make} {newestVehicle.Model}".Trim() ?? string.Empty,
+                $"{newestVehicle.ModelYear} {newestVehicle.Make} {newestVehicle.Model}".Trim(),
                 newestVehicle.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy")));
         }
 

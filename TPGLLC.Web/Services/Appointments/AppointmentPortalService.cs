@@ -5,7 +5,6 @@ using TPGLLC.Services.Vehicles;
 using TPGLLC.Web.Components.PortalShared.Appointments;
 using TPGLLC.Web.Services.Customers;
 using TPGLLC.Web.ViewModels.Portal;
-using TPGLLC.Web.Services.Portal;
 
 namespace TPGLLC.Web.Services.Appointments;
 
@@ -15,29 +14,21 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
     private readonly ICustomerProfileService _customerProfileService;
     private readonly IVehicleCatalogService _vehicleCatalogService;
-    private readonly IBuildEnvironmentService _buildEnvironmentService;
 
     public AppointmentPortalService(
         IDbContextFactory<TPGLLCDbContext> dbFactory,
         ICurrentCustomerAccessor currentCustomerAccessor,
         ICustomerProfileService customerProfileService,
-        IVehicleCatalogService vehicleCatalogService,
-        IBuildEnvironmentService buildEnvironmentService)
+        IVehicleCatalogService vehicleCatalogService)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
         _customerProfileService = customerProfileService;
         _vehicleCatalogService = vehicleCatalogService;
-        _buildEnvironmentService = buildEnvironmentService;
     }
 
     public async Task<AppointmentPageViewModel> GetAsync()
     {
-        if (_buildEnvironmentService.IsBuildEnvironment)
-        {
-            return _buildEnvironmentService.CreateAppointments();
-        }
-
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -117,12 +108,6 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
 
     public async Task<AppointmentPageViewModel> SaveAsync(AppointmentPageViewModel model)
     {
-        if (_buildEnvironmentService.IsBuildEnvironment)
-        {
-            model.SuccessMessage = "Build environment does not save appointments.";
-            return model;
-        }
-
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {

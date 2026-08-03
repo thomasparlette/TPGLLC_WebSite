@@ -2,15 +2,11 @@
 
 public sealed class CurrentCustomer
 {
-    public string UserId { get; init; } = "";
-
-    public string Email { get; init; } = "";
-
     public bool IsAuthenticated { get; init; }
-
+    public string UserId { get; init; } = string.Empty;
+    public string Email { get; init; } = string.Empty;
+    public string DisplayName { get; init; } = string.Empty;
     public bool IsCustomer { get; init; }
-
     public bool IsEmployee { get; init; }
-
     public bool IsAdministrator { get; init; }
 }

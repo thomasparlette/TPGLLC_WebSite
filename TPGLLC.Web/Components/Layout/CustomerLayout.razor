@@ -67,12 +67,12 @@
             return "Customer";
         }
 
-        var name =
+        var displayName =
+            user.FindFirst("display_name")?.Value ??
             user.Identity?.Name ??
-            user.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ??
             user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ??
             "Customer";
 
-        return string.IsNullOrWhiteSpace(name) ? "Customer" : name;
+        return string.IsNullOrWhiteSpace(displayName) ? "Customer" : displayName;
     }
 }

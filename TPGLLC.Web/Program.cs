@@ -25,6 +25,13 @@ builder.Services.AddTpgllcPlatform(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
 
+if (app.Environment.IsEnvironment("Build"))
+{
+    using var scope = app.Services.CreateScope();
+    var seeder = scope.ServiceProvider.GetRequiredService<BuildEnvironmentSeeder>();
+    await seeder.SeedAsync();
+}
+
 app.UseTpgllcPipeline();
 
 app.Run();

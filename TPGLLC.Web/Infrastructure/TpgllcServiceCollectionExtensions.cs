@@ -64,6 +64,8 @@ public static class TpgllcServiceCollectionExtensions
             .AddEntityFrameworkStores<TPGLLCDbContext>()
             .AddDefaultTokenProviders();
 
+        services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, TPGLLCUserClaimsPrincipalFactory>();
+
         services.Configure<DataProtectionTokenProviderOptions>(options =>
         {
             options.TokenLifespan = TimeSpan.FromHours(24);
@@ -120,6 +122,7 @@ public static class TpgllcServiceCollectionExtensions
         services.AddScoped<IVehiclePhotoService, VehiclePhotoService>();
         services.AddScoped<IVehicleDetailsService, VehicleDetailsService>();
         services.AddScoped<IPortalContextService, PortalContextService>();
+        services.AddScoped<BuildEnvironmentSeeder>();
 
         services.AddAuthorizationBuilder()
             .AddPolicy(PortalPolicies.Customer, policy =>
