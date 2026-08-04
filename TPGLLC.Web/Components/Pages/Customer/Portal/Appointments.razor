@@ -57,7 +57,7 @@
             </div>
 
             <div class="portal-stat">
-                <div class="portal-stat-value">@(_portal?.AppointmentRequests.Count ?? 0)</div>
+                <div class="portal-stat-value">@(_portal?.AppointmentRequests.Count(x => !IsClosedStatus(x.Status)) ?? 0)</div>
                 <div class="portal-stat-label">Requests</div>
             </div>
 
@@ -424,5 +424,18 @@
 
         var summary = string.Join(" ", parts);
         return string.IsNullOrWhiteSpace(summary) ? "Vehicle not specified" : summary;
+    }
+
+    private static bool IsClosedStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return false;
+        }
+
+        return status.Equals("Completed", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Declined", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Closed", StringComparison.OrdinalIgnoreCase);
     }
 }

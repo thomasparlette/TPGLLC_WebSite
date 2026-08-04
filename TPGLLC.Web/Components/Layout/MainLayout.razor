@@ -1,4 +1,5 @@
 ﻿@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
 
 <div class="app-shell">
     <header class="site-header">
@@ -26,6 +27,38 @@
     <main class="page-content">
         @Body
     </main>
+
+    <footer class="site-footer">
+        <div class="footer-grid">
+            <div>
+                <div class="footer-brand">TPG LLC</div>
+                <p>Reliable automotive service and customer support.</p>
+            </div>
+            <div>
+                <div class="footer-heading">Quick Links</div>
+                <a href="/">Home</a><br />
+                <a href="/services">Services</a><br />
+                <a href="/contact">Contact</a>
+            </div>
+            <div>
+                <div class="footer-heading">Account</div>
+                <AuthorizeView>
+                    <Authorized>
+                        <a href="/portal/dashboard">Customer Portal</a><br />
+                        <a href="/logout">Sign Out</a>
+                    </Authorized>
+                    <NotAuthorized>
+                        <a href="/Identity/Account/Login">Login</a><br />
+                        <a href="/Identity/Account/Register">Register</a>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span>© @DateTime.Now.Year TPG LLC</span>
+            <span>All rights reserved</span>
+        </div>
+    </footer>
 </div>
 
 @code {

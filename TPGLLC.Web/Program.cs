@@ -9,7 +9,7 @@ builder.Services
     .AddDataProtection()
     .SetApplicationName("TPGLLC.Web")
     .PersistKeysToFileSystem(
-        new DirectoryInfo(@"D:\Websites\TPGLLC\DataProtectionKeys"));
+        new DirectoryInfo(@"c:\temp\Websites\TPGLLC\DataProtectionKeys"));
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

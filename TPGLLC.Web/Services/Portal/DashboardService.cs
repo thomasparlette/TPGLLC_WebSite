@@ -24,7 +24,10 @@ public sealed class DashboardService : IDashboardService
 
         var vehicles = portal.Vehicles.ToList();
         var history = portal.ServiceHistoryEntries.Take(10).ToList();
-        var requests = portal.AppointmentRequests.Take(10).ToList();
+        var requests = portal.AppointmentRequests
+            .Where(x => !IsClosedStatus(x.Status))
+            .Take(10)
+            .ToList();
 
         var model = new DashboardViewModel
         {
@@ -38,6 +41,19 @@ public sealed class DashboardService : IDashboardService
 
         model.Activity = BuildActivity(model.Vehicles, model.Requests, model.History);
         return model;
+    }
+
+    private static bool IsClosedStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return false;
+        }
+
+        return status.Equals("Completed", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Declined", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Closed", StringComparison.OrdinalIgnoreCase);
     }
 
     private static List<ActivityItem> BuildActivity(

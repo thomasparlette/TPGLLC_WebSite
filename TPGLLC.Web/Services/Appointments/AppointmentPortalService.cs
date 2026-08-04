@@ -165,6 +165,60 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         return refreshed;
     }
 
+    public async Task RescheduleAsync(
+        Guid requestId,
+        AppointmentRescheduleFormModel form,
+        CancellationToken cancellationToken = default)
+    {
+        var current = _currentCustomerAccessor.GetCurrentCustomer();
+        if (!current.IsAuthenticated)
+        {
+            throw new InvalidOperationException("You must be signed in to update appointments.");
+        }
+
+        ValidateRescheduleForm(form);
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var request = await GetOwnedRequestAsync(db, current, requestId, cancellationToken)
+            ?? throw new InvalidOperationException("Appointment request not found.");
+
+        if (IsClosedStatus(request.Status))
+        {
+            throw new InvalidOperationException("This appointment request is already closed.");
+        }
+
+        request.PreferredDate = form.PreferredDate.Trim();
+        request.PreferredTime = form.PreferredTime.Trim();
+        request.ServiceNeeded = form.ServiceNeeded.Trim();
+        request.Message = string.IsNullOrWhiteSpace(form.Message) ? request.Message : form.Message.Trim();
+        request.Status = "Rescheduled";
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task CancelAsync(
+        Guid requestId,
+        CancellationToken cancellationToken = default)
+    {
+        var current = _currentCustomerAccessor.GetCurrentCustomer();
+        if (!current.IsAuthenticated)
+        {
+            throw new InvalidOperationException("You must be signed in to update appointments.");
+        }
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var request = await GetOwnedRequestAsync(db, current, requestId, cancellationToken)
+            ?? throw new InvalidOperationException("Appointment request not found.");
+
+        if (IsClosedStatus(request.Status))
+        {
+            throw new InvalidOperationException("This appointment request is already closed.");
+        }
+
+        request.Status = "Cancelled";
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     private async Task<List<int>> GetYearsAsync()
     {
         var years = await _vehicleCatalogService.GetYearsAsync();
@@ -241,7 +295,7 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             return true;
         }
 
-        var normalized = value.Replace(",", "", StringComparison.Ordinal).Trim();
+        var normalized = value.Replace(",", string.Empty, StringComparison.Ordinal).Trim();
         if (int.TryParse(normalized, out var parsed) && parsed >= 0)
         {
             mileage = parsed;
@@ -249,5 +303,39 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         }
 
         return false;
+    }
+
+    private static void ValidateRescheduleForm(AppointmentRescheduleFormModel form)
+    {
+        if (string.IsNullOrWhiteSpace(form.PreferredDate))
+        {
+            throw new InvalidOperationException("Preferred date is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(form.PreferredTime))
+        {
+            throw new InvalidOperationException("Preferred time is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(form.ServiceNeeded))
+        {
+            throw new InvalidOperationException("Service needed is required.");
+        }
+    }
+
+    private async Task<AppointmentRequest?> GetOwnedRequestAsync(
+        TPGLLCDbContext db,
+        CurrentCustomer current,
+        Guid requestId,
+        CancellationToken cancellationToken)
+    {
+        var email = current.Email?.Trim();
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        return await db.AppointmentRequests
+            .FirstOrDefaultAsync(x => x.RequestId == requestId && x.Email == email, cancellationToken);
     }
 }

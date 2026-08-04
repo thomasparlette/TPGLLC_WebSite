@@ -1,0 +1,88 @@
+﻿@using System.Linq.Expressions
+@using Microsoft.AspNetCore.Components.Forms
+
+<EditForm EditContext="@_editContext" OnValidSubmit="@HandleValidSubmitAsync">
+    <DataAnnotationsValidator />
+
+    <div class="portal-form-grid">
+        <div class="form-field">
+            <label>Preferred Date</label>
+            <InputText type="date"
+                       class="@GetFieldCss(() => Form.PreferredDate)"
+                       @bind-Value="Form.PreferredDate" />
+            <ValidationMessage For="@(() => Form.PreferredDate)" />
+        </div>
+
+        <div class="form-field">
+            <label>Preferred Time</label>
+            <InputText type="time"
+                       class="@GetFieldCss(() => Form.PreferredTime)"
+                       @bind-Value="Form.PreferredTime" />
+            <ValidationMessage For="@(() => Form.PreferredTime)" />
+        </div>
+
+        <div class="form-field full">
+            <label>Service Needed</label>
+            <InputText class="@GetFieldCss(() => Form.ServiceNeeded)"
+                       @bind-Value="Form.ServiceNeeded" />
+            <ValidationMessage For="@(() => Form.ServiceNeeded)" />
+        </div>
+
+        <div class="form-field full">
+            <label>Message</label>
+            <InputTextArea class="@GetFieldCss(() => Form.Message)"
+                           @bind-Value="Form.Message" />
+            <ValidationMessage For="@(() => Form.Message)" />
+        </div>
+    </div>
+
+    <div class="portal-actions" style="margin-top: 1.25rem;">
+        <button type="submit" class="portal-action-button">Save Changes</button>
+        <button type="button" class="portal-danger-button" @onclick="HandleCancelAsync">Close</button>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter, EditorRequired] public AppointmentRescheduleFormModel Form { get; set; } = default!;
+
+    [Parameter, EditorRequired] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private EditContext _editContext = default!;
+
+    protected override void OnParametersSet()
+    {
+        if (_editContext is null || !ReferenceEquals(_editContext.Model, Form))
+        {
+            _editContext = new EditContext(Form);
+        }
+    }
+
+    private async Task HandleValidSubmitAsync()
+    {
+        if (OnSave.HasDelegate)
+        {
+            await OnSave.InvokeAsync();
+        }
+    }
+
+    private async Task HandleCancelAsync()
+    {
+        if (OnCancel.HasDelegate)
+        {
+            await OnCancel.InvokeAsync();
+        }
+    }
+
+    private string GetFieldCss<TValue>(Expression<Func<TValue>> accessor)
+    {
+        if (_editContext is null)
+        {
+            return "input";
+        }
+
+        var field = FieldIdentifier.Create(accessor);
+        var hasErrors = _editContext.GetValidationMessages(field).Any();
+        return hasErrors ? "input invalid" : "input";
+    }
+}
