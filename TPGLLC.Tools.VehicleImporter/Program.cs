@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TPGLLC.Data;
 using TPGLLC.Tools.VehicleImporter;
 
@@ -11,6 +12,11 @@ using TPGLLC.Tools.VehicleImporter;
 Directory.SetCurrentDirectory(AppContext.BaseDirectory);
 
 var builder = Host.CreateApplicationBuilder(args);
+
+builder.Configuration.AddJsonFile(
+    "VehicleImportSettings.json",
+    optional: false,
+    reloadOnChange: false);
 
 // ---------------------------------------------------------------------
 // Diagnostics (remove later if desired)
@@ -81,6 +87,9 @@ builder.Services.AddHttpClient<IVpicApiClient, VpicApiClient>(client =>
 // ---------------------------------------------------------------------
 // Import Services
 // ---------------------------------------------------------------------
+builder.Services.Configure<VehicleImportSettings>(
+    builder.Configuration.GetSection(VehicleImportSettings.SectionName));
+
 builder.Services.AddScoped<VehicleCatalogImportService>();
 
 // ---------------------------------------------------------------------
@@ -91,8 +100,13 @@ using var host = builder.Build();
 using var scope = host.Services.CreateScope();
 
 var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+var settings = scope.ServiceProvider.GetRequiredService<IOptions<VehicleImportSettings>>().Value;
 
-logger.LogInformation("Starting Vehicle Catalog Import...");
+logger.LogInformation(
+    "Starting Vehicle Catalog Import for years {StartYear}-{EndYear} with {AllowedCount} allowed makes.",
+    settings.StartYear,
+    settings.EndYear,
+    settings.AllowedMakes.Count);
 
 var importer =
     scope.ServiceProvider.GetRequiredService<VehicleCatalogImportService>();
