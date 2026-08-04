@@ -1,44 +1,34 @@
 ﻿@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Authorization
+@using TPGLLC.Web.Authorization
 
 <div class="customer-sidebar">
     <div class="sidebar-heading">
         <h3>Navigation</h3>
     </div>
 
-    <AuthorizeView>
+    <AuthorizeView Context="authState">
         <Authorized>
             <div class="nav-section">
                 <div class="nav-heading">Customer Portal</div>
 
-                <NavLink href="/portal/dashboard"
-                         Match="NavLinkMatch.All"
-                         class="nav-link"
-                         @onclick="HandleNavigate">
+                <NavLink href="/portal/dashboard" Match="NavLinkMatch.All" class="nav-link" @onclick="HandleNavigate">
                     Dashboard
                 </NavLink>
 
-                <NavLink href="/portal/vehicles"
-                         class="nav-link"
-                         @onclick="HandleNavigate">
+                <NavLink href="/portal/vehicles" class="nav-link" @onclick="HandleNavigate">
                     Vehicles
                 </NavLink>
 
-                <NavLink href="/portal/appointments"
-                         class="nav-link"
-                         @onclick="HandleNavigate">
+                <NavLink href="/portal/appointments" class="nav-link" @onclick="HandleNavigate">
                     Appointments
                 </NavLink>
 
-                <NavLink href="/portal/history"
-                         class="nav-link"
-                         @onclick="HandleNavigate">
+                <NavLink href="/portal/history" class="nav-link" @onclick="HandleNavigate">
                     Service History
                 </NavLink>
 
-                <NavLink href="/portal/profile"
-                         class="nav-link"
-                         @onclick="HandleNavigate">
+                <NavLink href="/portal/profile" class="nav-link" @onclick="HandleNavigate">
                     Customer Account
                 </NavLink>
             </div>
@@ -46,9 +36,7 @@
             <div class="nav-section">
                 <div class="nav-heading">Account</div>
 
-                <a href="/logout"
-                   class="nav-link danger"
-                   @onclick="HandleNavigate">
+                <a href="/logout" class="nav-link danger" @onclick="HandleNavigate">
                     Logout
                 </a>
             </div>

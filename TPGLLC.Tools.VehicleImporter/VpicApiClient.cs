@@ -54,10 +54,10 @@ public sealed class VpicResponse<T>
 
 public sealed class VpicMakeDto
 {
-    [JsonPropertyName("MakeId")]
+    [JsonPropertyName("Make_ID")]
     public int MakeId { get; set; }
 
-    [JsonPropertyName("MakeName")]
+    [JsonPropertyName("Make_Name")]
     public string MakeName { get; set; } = string.Empty;
 }
 

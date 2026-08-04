@@ -1,0 +1,318 @@
+﻿@page "/portal/admin/users"
+@layout CustomerLayout
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.Administrator)]
+
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TPGLLC.Data
+@using TPGLLC.Shared.Identity
+@using TPGLLC.Web.Authorization
+
+@inject IDbContextFactory<TPGLLCDbContext> DbFactory
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<ApplicationRole> RoleManager
+
+<PageTitle>Admin - User Roles</PageTitle>
+
+<section class="portal-dashboard">
+    <div class="portal-header">
+        <p class="section-kicker">Administration</p>
+        <h1>User Role Management</h1>
+        <p>Assign Customer and Employee access to existing site users. Administrator access remains protected.</p>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="portal-loading-card">
+            <div class="portal-loading-icon">⏳</div>
+            <div>
+                <div class="portal-loading-title">Loading users</div>
+                <div class="portal-loading-text">Please wait while we load accounts and roles.</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="auth-alert">@_errorMessage</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_successMessage))
+        {
+            <div class="auth-success">@_successMessage</div>
+        }
+
+        <div class="portal-stats">
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_users.Count</div>
+                <div class="portal-stat-label">Total Users</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_users.Count(x => x.IsCustomer)</div>
+                <div class="portal-stat-label">Customers</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_users.Count(x => x.IsEmployee)</div>
+                <div class="portal-stat-label">Employees</div>
+            </div>
+        </div>
+
+        <div class="portal-section">
+            <div class="portal-section-heading">
+                <h2>Users</h2>
+
+                <div class="portal-actions">
+                    <button type="button" class="portal-action-button" @onclick="ReloadAsync">
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="admin-toolbar">
+                <input class="input admin-search"
+                       placeholder="Search by name, email, or username"
+                       @bind="_searchText"
+                       @bind:event="oninput" />
+
+                <span class="portal-chip">@FilteredUsers.Count user(s)</span>
+            </div>
+
+            @if (FilteredUsers.Count == 0)
+            {
+                <div class="portal-empty-state">
+                    <div class="portal-empty-icon">👥</div>
+                    <div>
+                        <div class="portal-empty-title">No users found</div>
+                        <div class="portal-empty-text">Try a different search term.</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="admin-user-grid">
+                    @foreach (var user in FilteredUsers)
+                    {
+                        <article class="portal-card-link admin-user-card" @key="user.UserId">
+                            <div class="portal-card-icon">👤</div>
+
+                            <h3>@user.DisplayName</h3>
+                            <p>@user.Email</p>
+
+                            <div class="admin-role-badges">
+                                @if (user.IsAdministrator)
+                                {
+                                    <span class="portal-chip admin-chip">Administrator</span>
+                                }
+
+                                @if (user.IsCustomer)
+                                {
+                                    <span class="portal-chip">Customer</span>
+                                }
+
+                                @if (user.IsEmployee)
+                                {
+                                    <span class="portal-chip">Employee</span>
+                                }
+
+                                @if (!user.IsAdministrator && !user.IsCustomer && !user.IsEmployee)
+                                {
+                                    <span class="portal-chip">No portal roles</span>
+                                }
+                            </div>
+
+                            <div class="admin-role-options">
+                                <label class="admin-role-option">
+                                    <input type="checkbox" @bind="user.IsCustomer" />
+                                    Customer access
+                                </label>
+
+                                <label class="admin-role-option">
+                                    <input type="checkbox" @bind="user.IsEmployee" />
+                                    Employee access
+                                </label>
+                            </div>
+
+                            <div class="portal-actions admin-actions">
+                                <button type="button"
+                                        class="portal-action-button"
+                                        @onclick="() => SaveRolesAsync(user)">
+                                    Save Roles
+                                </button>
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private IReadOnlyList<AdminUserRow> _users = [];
+    private string _searchText = string.Empty;
+    private string? _errorMessage;
+    private string? _successMessage;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsersAsync();
+        _loading = false;
+    }
+
+    private async Task ReloadAsync()
+    {
+        _errorMessage = null;
+        _successMessage = null;
+        await LoadUsersAsync();
+        _successMessage = "User list refreshed.";
+        StateHasChanged();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var users = await db.Users
+                .AsNoTracking()
+                .OrderBy(x => x.Email ?? x.UserName ?? x.Id)
+                .ToListAsync();
+
+            var rows = new List<AdminUserRow>(users.Count);
+
+            foreach (var user in users)
+            {
+                var roles = await UserManager.GetRolesAsync(user);
+
+                rows.Add(new AdminUserRow
+                {
+                    UserId = user.Id,
+                    Email = user.Email ?? user.UserName ?? string.Empty,
+                    DisplayName = BuildDisplayName(user),
+                    IsCustomer = roles.Contains("Customer"),
+                    IsEmployee = roles.Contains("Employee"),
+                    IsAdministrator = roles.Contains("Administrator")
+                });
+            }
+
+            _users = rows;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            _users = [];
+        }
+    }
+
+    private async Task SaveRolesAsync(AdminUserRow row)
+    {
+        _errorMessage = null;
+        _successMessage = null;
+
+        try
+        {
+            await EnsureRoleAsync("Customer");
+            await EnsureRoleAsync("Employee");
+
+            var user = await UserManager.FindByIdAsync(row.UserId);
+            if (user is null)
+            {
+                _errorMessage = "User not found.";
+                return;
+            }
+
+            await SyncRoleAsync(user, "Customer", row.IsCustomer);
+            await SyncRoleAsync(user, "Employee", row.IsEmployee);
+
+            await LoadUsersAsync();
+
+            _successMessage = $"Updated roles for {row.DisplayName}.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task EnsureRoleAsync(string roleName)
+    {
+        if (!await RoleManager.RoleExistsAsync(roleName))
+        {
+            var create = await RoleManager.CreateAsync(new ApplicationRole { Name = roleName });
+            if (!create.Succeeded)
+            {
+                var errors = string.Join(" ", create.Errors.Select(x => x.Description));
+                throw new InvalidOperationException(errors);
+            }
+        }
+    }
+
+    private async Task SyncRoleAsync(ApplicationUser user, string roleName, bool shouldHaveRole)
+    {
+        var roles = await UserManager.GetRolesAsync(user);
+        var hasRole = roles.Contains(roleName, StringComparer.OrdinalIgnoreCase);
+
+        if (shouldHaveRole && !hasRole)
+        {
+            var add = await UserManager.AddToRoleAsync(user, roleName);
+            if (!add.Succeeded)
+            {
+                var errors = string.Join(" ", add.Errors.Select(x => x.Description));
+                throw new InvalidOperationException(errors);
+            }
+        }
+        else if (!shouldHaveRole && hasRole)
+        {
+            var remove = await UserManager.RemoveFromRoleAsync(user, roleName);
+            if (!remove.Succeeded)
+            {
+                var errors = string.Join(" ", remove.Errors.Select(x => x.Description));
+                throw new InvalidOperationException(errors);
+            }
+        }
+    }
+
+    private static string BuildDisplayName(ApplicationUser user)
+    {
+        var displayName = user.DisplayName?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(displayName))
+        {
+            return displayName;
+        }
+
+        var name = string.Join(" ", new[] { user.FirstName, user.LastName }
+            .Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            return name;
+        }
+
+        return user.Email ?? user.UserName ?? user.Id;
+    }
+
+    private IReadOnlyList<AdminUserRow> FilteredUsers =>
+        _users
+            .Where(user =>
+                string.IsNullOrWhiteSpace(_searchText) ||
+                user.Email.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
+                user.DisplayName.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(user => user.DisplayName)
+            .ToList();
+
+    private sealed class AdminUserRow
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public bool IsCustomer { get; set; }
+        public bool IsEmployee { get; set; }
+        public bool IsAdministrator { get; set; }
+    }
+}
