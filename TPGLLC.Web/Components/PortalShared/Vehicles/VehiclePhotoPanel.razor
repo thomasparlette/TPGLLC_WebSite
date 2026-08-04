@@ -1,0 +1,173 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+@using TPGLLC.Web.Services.Portal
+
+@inject IVehiclePhotoService VehiclePhotoService
+
+<div class="vehicle-photo-panel" id="vehicle-photo">
+    <div class="portal-section-heading">
+        <h2>Vehicle Photo</h2>
+
+        @if (!string.IsNullOrWhiteSpace(PhotoPath))
+        {
+            <span class="portal-chip">@GetPhotoStatus()</span>
+        }
+        else
+        {
+            <span class="portal-muted">No photo uploaded</span>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_message))
+    {
+        <div class="@(_isError ? "auth-alert" : "auth-success")" style="margin-bottom:1rem;">
+            @_message
+        </div>
+    }
+
+    <div class="vehicle-photo-panel-grid">
+        <div class="vehicle-photo-preview">
+            @if (!string.IsNullOrWhiteSpace(PhotoPath))
+            {
+                <img src="@PhotoPath" alt="Vehicle photo" />
+            }
+            else
+            {
+                <div class="vehicle-photo-placeholder-large">
+                    🚗
+                </div>
+            }
+        </div>
+
+        <div class="vehicle-photo-actions">
+            <p class="portal-muted" style="margin:0;">
+                Upload a JPG, PNG, or WEBP image up to 5 MB.
+            </p>
+
+            <InputFile OnChange="HandleFileSelectedAsync"
+                       accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" />
+
+            <div class="vehicle-photo-filename">
+                @(_selectedFile?.Name ?? "No file selected")
+            </div>
+
+            <div class="portal-actions">
+                <button type="button"
+                        class="portal-action-button"
+                        disabled="@(_isBusy || _selectedFile is null)"
+                        @onclick="UploadAsync">
+                    @(_isBusy ? "Uploading..." : "Upload Photo")
+                </button>
+
+                @if (!string.IsNullOrWhiteSpace(PhotoPath))
+                {
+                    <button type="button"
+                            class="portal-danger-button"
+                            disabled="@_isBusy"
+                            @onclick="RemoveAsync">
+                        @(_isBusy ? "Working..." : "Remove Photo")
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Guid VehicleId { get; set; }
+
+    [Parameter]
+    public string? PhotoPath { get; set; }
+
+    [Parameter]
+    public DateTimeOffset? PhotoUpdatedUtc { get; set; }
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private IBrowserFile? _selectedFile;
+    private string? _message;
+    private bool _isError;
+    private bool _isBusy;
+
+    private Task HandleFileSelectedAsync(InputFileChangeEventArgs args)
+    {
+        _selectedFile = args.File;
+        _message = null;
+        _isError = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task UploadAsync()
+    {
+        if (_selectedFile is null)
+        {
+            _message = "Choose a photo first.";
+            _isError = true;
+            return;
+        }
+
+        try
+        {
+            _isBusy = true;
+            _message = null;
+            _isError = false;
+
+            await VehiclePhotoService.UploadAsync(VehicleId, _selectedFile);
+
+            _selectedFile = null;
+            _message = "Photo uploaded successfully.";
+            _isError = false;
+
+            if (OnChanged.HasDelegate)
+            {
+                await OnChanged.InvokeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _message = ex.Message;
+            _isError = true;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task RemoveAsync()
+    {
+        try
+        {
+            _isBusy = true;
+            _message = null;
+            _isError = false;
+
+            await VehiclePhotoService.RemoveAsync(VehicleId);
+            _selectedFile = null;
+            _message = "Photo removed.";
+            _isError = false;
+
+            if (OnChanged.HasDelegate)
+            {
+                await OnChanged.InvokeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _message = ex.Message;
+            _isError = true;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private string GetPhotoStatus()
+    {
+        return PhotoUpdatedUtc.HasValue
+            ? $"Updated {PhotoUpdatedUtc.Value.ToLocalTime():MMM d, yyyy h:mm tt}"
+            : "Photo on file";
+    }
+}

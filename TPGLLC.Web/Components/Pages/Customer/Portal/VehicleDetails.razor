@@ -7,6 +7,7 @@
 @using TPGLLC.Web.ViewModels.Portal
 
 @inject IVehicleDetailsService VehicleDetailsService
+@inject NavigationManager Navigation
 
 <PageTitle>Vehicle Details</PageTitle>
 
@@ -15,6 +16,14 @@
         <p class="section-kicker">Customer Portal</p>
         <h1>@_model.VehicleTitle</h1>
         <p>View details and service history for this vehicle.</p>
+    </div>
+
+
+    <div class="portal-section">
+        <VehiclePhotoPanel VehicleId="VehicleId"
+                           PhotoPath="_model.Vehicle?.PhotoPath"
+                           PhotoUpdatedUtc="_model.Vehicle?.PhotoUpdatedUtc"
+                           OnChanged="ReloadAsync" />
     </div>
 
     @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
@@ -86,15 +95,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="portal-section">
-            <div class="portal-section-heading">
-                <h2>Vehicle Photo</h2>
-            </div>
-
-            <VehiclePhotoUploader Vehicle="@_model.Vehicle"
-                                  OnChanged="@ReloadAsync" />
         </div>
 
         <div class="portal-section">

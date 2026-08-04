@@ -2,6 +2,8 @@
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
+@using System.Globalization
+@using TPGLLC.Data.Entities
 @using TPGLLC.Web.Components.PortalShared.Vehicles
 @using TPGLLC.Web.Components.Shared
 @using TPGLLC.Web.Services.Portal
@@ -63,6 +65,7 @@
         <div class="portal-section">
             <div class="portal-section-heading">
                 <h2>Your Vehicles</h2>
+
                 <a href="/portal/appointments">Request Service</a>
             </div>
 
@@ -81,11 +84,45 @@
                 <div class="portal-dashboard-grid">
                     @foreach (var vehicle in _model.Vehicles)
                     {
-                        <PortalVehicleCard @key="vehicle.Id"
-                                           Vehicle="vehicle"
-                                           OnEdit="EditAsync"
-                                           OnDelete="DeleteAsync"
-                                           OnMakePrimary="MakePrimaryAsync" />
+                        <article class="portal-card-link vehicle-card" @key="vehicle.Id">
+                            <div class="portal-card-icon">🚙</div>
+
+                            <h3>@GetVehicleTitle(vehicle)</h3>
+                            <p>@GetVehicleDetails(vehicle)</p>
+
+                            <div style="margin-top:0.75rem; display:flex; flex-wrap:wrap; gap:0.5rem;">
+                                @if (vehicle.IsPrimary)
+                                {
+                                    <span class="portal-chip">Primary vehicle</span>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(vehicle.LicensePlate))
+                                {
+                                    <span class="portal-chip">@vehicle.LicensePlate</span>
+                                }
+                            </div>
+
+                            <div class="portal-actions" style="margin-top:1rem;">
+                                <a class="portal-action-button" href="@($"/portal/vehicles/{vehicle.Id}#vehicle-photo")">
+                                    Photo
+                                </a>
+
+                                <button type="button" class="portal-action-button" @onclick="() => EditAsync(vehicle.Id)">
+                                    Edit
+                                </button>
+
+                                @if (!vehicle.IsPrimary)
+                                {
+                                    <button type="button" class="portal-action-button" @onclick="() => MakePrimaryAsync(vehicle.Id)">
+                                        Make Primary
+                                    </button>
+                                }
+
+                                <button type="button" class="portal-danger-button" @onclick="() => DeleteAsync(vehicle.Id)">
+                                    Delete
+                                </button>
+                            </div>
+                        </article>
                     }
                 </div>
             }
@@ -164,5 +201,33 @@
     private async Task MakeChangedAsync()
     {
         _model = await VehicleService.MakeChangedAsync(_model) ?? new VehiclePageViewModel();
+    }
+
+    private static string GetVehicleTitle(CustomerVehicle vehicle)
+    {
+        var year = vehicle.ModelYear?.ToString(CultureInfo.InvariantCulture);
+        return string.Join(" ", new[] { year, vehicle.Make, vehicle.Model }.Where(x => !string.IsNullOrWhiteSpace(x)));
+    }
+
+    private static string GetVehicleDetails(CustomerVehicle vehicle)
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(vehicle.Nickname))
+        {
+            parts.Add(vehicle.Nickname!);
+        }
+
+        if (!string.IsNullOrWhiteSpace(vehicle.Vin))
+        {
+            parts.Add($"VIN {vehicle.Vin}");
+        }
+
+        if (vehicle.Mileage.HasValue)
+        {
+            parts.Add($"{vehicle.Mileage.Value:N0} mi");
+        }
+
+        return parts.Count == 0 ? "No additional details." : string.Join(" • ", parts);
     }
 }
