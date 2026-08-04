@@ -3,6 +3,122 @@
     background: #f5f7fb;
 }
 
+
+.customer-sidebar {
+    display: flex;
+    flex-direction: column;
+    padding: 1.25rem;
+    background: #ffffff;
+    border-right: 1px solid rgba(15, 23, 42, 0.08);
+    min-height: calc(100vh - 88px);
+}
+
+.sidebar-heading {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eef2f7;
+}
+
+    .sidebar-heading h3 {
+        margin: 0;
+        color: #0d2a63;
+    }
+
+.customer-sidebar .nav-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 1.25rem;
+}
+
+.customer-sidebar .nav-heading {
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
+}
+
+.customer-sidebar .nav-link {
+    display: block;
+    width: 100%;
+    padding: 0.72rem 0.9rem;
+    border-radius: 12px;
+    color: #0f172a;
+    text-decoration: none;
+    line-height: 1.2;
+    white-space: normal;
+    word-break: break-word;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+    .customer-sidebar .nav-link:hover {
+        background: #eef4ff;
+        color: #0d2a63;
+    }
+
+    .customer-sidebar .nav-link.active {
+        background: #0d2a63;
+        color: #ffffff;
+        font-weight: 700;
+    }
+
+    .customer-sidebar .nav-link.danger {
+        color: #b91c1c;
+    }
+
+        .customer-sidebar .nav-link.danger:hover {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+.customer-sidebar .nav-user {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.9rem;
+    border-radius: 16px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 1rem;
+}
+
+.customer-sidebar .nav-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #0d2a63;
+    color: #ffffff;
+    font-weight: 800;
+    flex: 0 0 auto;
+}
+
+.customer-sidebar .nav-user-copy {
+    display: grid;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.customer-sidebar .nav-user-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.customer-sidebar .nav-user-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #0f172a;
+    word-break: break-word;
+}
+
+.customer-content {
+    min-width: 0;
+}
+
 .customer-layout-shell {
     display: grid;
     grid-template-columns: 320px minmax(0, 1fr);

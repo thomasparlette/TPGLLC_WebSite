@@ -9,12 +9,32 @@
 
     <div class="portal-primary-meta" style="margin-top:0.75rem;">
         <span>@FormatAppointmentRequest()</span>
-        <span>@Request.Status</span>
+        @if (!string.IsNullOrWhiteSpace(Request.Status))
+        {
+            <span>@Request.Status</span>
+        }
     </div>
 
     @if (!string.IsNullOrWhiteSpace(Request.Message))
     {
         <p style="margin-top:0.9rem;">@Request.Message</p>
+    }
+
+    @if (CanShowActions)
+    {
+        <div class="portal-actions" style="margin-top:0.9rem;">
+            <button type="button"
+                    class="portal-action-button"
+                    @onclick="HandleRescheduleAsync">
+                Reschedule
+            </button>
+
+            <button type="button"
+                    class="portal-danger-button"
+                    @onclick="HandleCancelAsync">
+                Cancel
+            </button>
+        </div>
     }
 
     <div style="margin-top:0.9rem; color:#6b7280; font-size:0.9rem;">
@@ -25,6 +45,37 @@
 @code {
     [Parameter, EditorRequired]
     public AppointmentRequest Request { get; set; } = default!;
+
+    [Parameter]
+    public bool ShowActions { get; set; }
+
+    [Parameter]
+    public EventCallback<AppointmentRequest> OnReschedule { get; set; }
+
+    [Parameter]
+    public EventCallback<AppointmentRequest> OnCancel { get; set; }
+
+    private bool CanShowActions => ShowActions && !IsClosedStatus(Request.Status);
+
+    private Task HandleRescheduleAsync()
+    {
+        if (!OnReschedule.HasDelegate)
+        {
+            return Task.CompletedTask;
+        }
+
+        return OnReschedule.InvokeAsync(Request);
+    }
+
+    private Task HandleCancelAsync()
+    {
+        if (!OnCancel.HasDelegate)
+        {
+            return Task.CompletedTask;
+        }
+
+        return OnCancel.InvokeAsync(Request);
+    }
 
     private string GetVehicleSummary()
     {
@@ -51,5 +102,18 @@
         return string.IsNullOrWhiteSpace(when)
             ? "No preferred date/time provided"
             : when;
+    }
+
+    private static bool IsClosedStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return false;
+        }
+
+        return status.Equals("Completed", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Declined", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Closed", StringComparison.OrdinalIgnoreCase);
     }
 }
