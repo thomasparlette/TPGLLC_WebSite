@@ -2,18 +2,14 @@
 
 <AuthorizeView>
     <Authorized>
-        <NavLink href="/" Match="NavLinkMatch.All">Home</NavLink>
-        <NavLink href="/services">Services</NavLink>
-        <NavLink href="/contact">Contact</NavLink>
-        <NavLink href="/portal/dashboard">Customer Portal</NavLink>
+        <NavLink href="/portal/dashboard" Match="NavLinkMatch.All">Customer Portal</NavLink>
         <a href="/logout">Sign Out</a>
     </Authorized>
-
     <NotAuthorized>
-        <NavLink href="/" Match="NavLinkMatch.All">Home</NavLink>
+        <NavLink href="/">Home</NavLink>
         <NavLink href="/services">Services</NavLink>
         <NavLink href="/contact">Contact</NavLink>
         <NavLink href="/Identity/Account/Register">Register</NavLink>
-        <a href="/Identity/Account/Login">Login</a>
+        <NavLink href="/Identity/Account/Login">Login</NavLink>
     </NotAuthorized>
 </AuthorizeView>
