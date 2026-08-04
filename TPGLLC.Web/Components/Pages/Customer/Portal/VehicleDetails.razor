@@ -2,11 +2,11 @@
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
+@using TPGLLC.Web.Components.PortalShared.Vehicles
 @using TPGLLC.Web.Services.Portal
 @using TPGLLC.Web.ViewModels.Portal
 
 @inject IVehicleDetailsService VehicleDetailsService
-@inject NavigationManager Navigation
 
 <PageTitle>Vehicle Details</PageTitle>
 
@@ -90,6 +90,15 @@
 
         <div class="portal-section">
             <div class="portal-section-heading">
+                <h2>Vehicle Photo</h2>
+            </div>
+
+            <VehiclePhotoUploader Vehicle="@_model.Vehicle"
+                                  OnChanged="@ReloadAsync" />
+        </div>
+
+        <div class="portal-section">
+            <div class="portal-section-heading">
                 <h2>Service History</h2>
                 <a href="/portal/history">View full history</a>
             </div>
@@ -144,6 +153,11 @@
     private VehicleDetailsViewModel _model = new();
 
     protected override async Task OnParametersSetAsync()
+    {
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
     {
         _model = await VehicleDetailsService.GetAsync(VehicleId);
     }

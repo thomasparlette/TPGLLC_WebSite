@@ -1,0 +1,182 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+@using TPGLLC.Data.Entities
+@using TPGLLC.Web.Components.Shared
+@using TPGLLC.Web.Services.Portal
+
+@inject IVehiclePhotoService VehiclePhotoService
+
+<div class="portal-photo-panel">
+    <div class="portal-photo-preview">
+        @if (Vehicle is not null && !string.IsNullOrWhiteSpace(Vehicle.PhotoPath))
+        {
+            <img class="portal-photo-image"
+                 src="@Vehicle.PhotoPath"
+                 alt="@GetVehicleTitle()" />
+        }
+        else
+        {
+            <div class="portal-photo-placeholder">
+                <div class="portal-photo-placeholder-icon">🚗</div>
+                <div class="portal-photo-placeholder-text">No vehicle photo uploaded</div>
+            </div>
+        }
+    </div>
+
+    <div class="portal-photo-body">
+        <div>
+            <div class="portal-photo-title">Vehicle Photo</div>
+            <div class="portal-photo-text">
+                Upload a JPG, PNG, or WEBP image. Maximum size is 5 MB.
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(_message))
+        {
+            if (_isError)
+            {
+                <PortalNotice Type="danger" Title="Photo update failed">
+                    @_message
+                </PortalNotice>
+            }
+            else
+            {
+                <PortalNotice Type="success" Title="Photo updated">
+                    @_message
+                </PortalNotice>
+            }
+        }
+
+        <div class="form-field full">
+            <label>Select image</label>
+            <InputFile class="portal-photo-input"
+                       OnChange="OnFileSelected"
+                       accept="image/jpeg,image/png,image/webp" />
+            <div class="portal-muted">
+                @(_selectedFile is null
+                    ? "Choose an image to upload."
+                    : $"Selected: {_selectedFile.Name}")
+            </div>
+        </div>
+
+        <div class="portal-actions">
+            <button type="button"
+                    class="portal-action-button"
+                    disabled="@(_busy || _selectedFile is null || Vehicle is null)"
+                    @onclick="UploadAsync">
+                Upload Photo
+            </button>
+
+            <button type="button"
+                    class="portal-danger-button"
+                    disabled="@(_busy || Vehicle is null || string.IsNullOrWhiteSpace(Vehicle.PhotoPath))"
+                    @onclick="RemoveAsync">
+                Remove Photo
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public CustomerVehicle? Vehicle { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private IBrowserFile? _selectedFile;
+    private bool _busy;
+    private bool _isError;
+    private string? _message;
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _selectedFile = e.File;
+        _message = null;
+    }
+
+    private async Task UploadAsync()
+    {
+        if (Vehicle is null || _selectedFile is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _busy = true;
+            _message = null;
+
+            await VehiclePhotoService.UploadAsync(Vehicle.Id, _selectedFile);
+
+            _isError = false;
+            _message = "Vehicle photo uploaded successfully.";
+            _selectedFile = null;
+
+            if (OnChanged.HasDelegate)
+            {
+                await OnChanged.InvokeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task RemoveAsync()
+    {
+        if (Vehicle is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _busy = true;
+            _message = null;
+
+            await VehiclePhotoService.RemoveAsync(Vehicle.Id);
+
+            _isError = false;
+            _message = "Vehicle photo removed successfully.";
+            _selectedFile = null;
+
+            if (OnChanged.HasDelegate)
+            {
+                await OnChanged.InvokeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private string GetVehicleTitle()
+    {
+        if (Vehicle is null)
+        {
+            return "Vehicle photo";
+        }
+
+        var parts = new[]
+        {
+            Vehicle.ModelYear?.ToString(),
+            Vehicle.Make,
+            Vehicle.Model
+        }.Where(x => !string.IsNullOrWhiteSpace(x));
+
+        var title = string.Join(" ", parts);
+        return string.IsNullOrWhiteSpace(title) ? "Vehicle photo" : title;
+    }
+}

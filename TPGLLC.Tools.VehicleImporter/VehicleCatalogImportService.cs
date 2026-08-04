@@ -16,12 +16,13 @@ public sealed class VehicleCatalogImportService
 
     private static readonly HashSet<string> AllowedMakes = new(StringComparer.OrdinalIgnoreCase)
     {
-        "Acura","Audi","BMW","Buick","Cadillac","Chevrolet","Chrysler",
-        "Dodge","Ford","GMC","Honda","Hyundai","Infiniti","Jeep","Kia",
+        "Acura","Alfa Romeo","Aston Martin","Audi","BMW","Buick","Bentley","Bugatti","Buick","Cadillac","Chevrolet","Chrysler",
+        "Dodge","Ferrari","Fiat","Ford","GMC","Hino","Honda","Hyundai","Infiniti","Isuzu","Jaguar","Jeep","Kia",
         "Lexus","Lincoln"," Mazda","Mercedes-Benc","Mitsubishi","Nissan",
-        "Ram","Subaru","Toyota","Volkswagen","Volvo",
+        "Lamborghini","Land Rover","Lexus","Lincoln","Lotus","Lucid","Maserati","Mazda","McLaren","Mercedes-Benz","Mini","Mitsubishi","Nissan","Porsche",
+        "Ram","Rivian","Rolls-Royce","Subaru","Tesla","Toyota","Volkswagen","Volvo",
 
-        "Harley-Davidson","Indian", "Kawasaki", "KTM","Suzuki", "Triumph", "Yamaha"
+        "CFMOTO","Can-Am","Ducati","Gas Gas","Harley-Davidson","Husqvarna","Indian","KTM","Kawasaki","Polaris","Suzuki", "Triumph","Vespa", "Yamaha",
     };
 
 
