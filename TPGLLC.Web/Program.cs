@@ -5,11 +5,16 @@ using TPGLLC.Web.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var keyPath = builder.Configuration["DataProtection:KeyPath"]
+    ?? throw new InvalidOperationException(
+        "Missing DataProtection:KeyPath configuration.");
+
+Directory.CreateDirectory(keyPath);
+
 builder.Services
     .AddDataProtection()
     .SetApplicationName("TPGLLC.Web")
-    .PersistKeysToFileSystem(
-        new DirectoryInfo(@"c:\temp\Websites\TPGLLC\DataProtectionKeys"));
+    .PersistKeysToFileSystem(new DirectoryInfo(keyPath));
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

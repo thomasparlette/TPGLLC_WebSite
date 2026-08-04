@@ -2,16 +2,17 @@
 
 <section class="portal-section">
     <div class="portal-section-heading">
-        <h2>Your Requests</h2>
-        <a href="#appointment-form">New Request</a>
+        <h2>@Title</h2>
+        <a href="@NewRequestHref">@NewRequestText</a>
     </div>
 
     @if (Requests is null || Requests.Count == 0)
     {
-        <div class="portal-activity">
-            <div class="portal-activity-item">
-                <div class="portal-activity-icon">📅</div>
-                <div>No appointment requests are on file yet.</div>
+        <div class="portal-empty-state">
+            <div class="portal-empty-icon">📅</div>
+            <div>
+                <div class="portal-empty-title">No appointment requests are on file yet.</div>
+                <div class="portal-empty-text">Submit your first request using the form below.</div>
             </div>
         </div>
     }
@@ -20,12 +21,22 @@
         <div class="portal-dashboard-grid">
             @foreach (var request in Requests)
             {
-                <AppointmentRequestCard Request="request" />
+                <AppointmentRequestCard Request="request"
+                                        ShowActions="ShowActions"
+                                        OnReschedule="OnReschedule"
+                                        OnCancel="OnCancel" />
             }
         </div>
     }
 </section>
 
 @code {
+    [Parameter] public string Title { get; set; } = "Your Requests";
+    [Parameter] public string NewRequestHref { get; set; } = "#appointment-form";
+    [Parameter] public string NewRequestText { get; set; } = "New Request";
+    [Parameter] public bool ShowActions { get; set; }
+
     [Parameter] public IReadOnlyList<AppointmentRequest> Requests { get; set; } = Array.Empty<AppointmentRequest>();
+    [Parameter] public EventCallback<AppointmentRequest> OnReschedule { get; set; }
+    [Parameter] public EventCallback<AppointmentRequest> OnCancel { get; set; }
 }

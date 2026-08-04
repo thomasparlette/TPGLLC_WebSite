@@ -14,6 +14,7 @@
 @inject IPortalContextService PortalContextService
 @inject IVehicleCatalogService VehicleCatalog
 @inject IAppointmentService AppointmentService
+@inject IAppointmentPortalService AppointmentPortalService
 
 <PageTitle>Appointments</PageTitle>
 
@@ -38,14 +39,14 @@
     {
         @if (!string.IsNullOrWhiteSpace(_errorMessage))
         {
-            <PortalNotice Type="danger" Title="Could not submit request">
+            <PortalNotice Type="danger" Title="Could not complete request">
                 @_errorMessage
             </PortalNotice>
         }
 
         @if (!string.IsNullOrWhiteSpace(_successMessage))
         {
-            <PortalNotice Type="success" Title="Request submitted">
+            <PortalNotice Type="success" Title="Success">
                 @_successMessage
             </PortalNotice>
         }
@@ -129,54 +130,35 @@
             }
         </div>
 
-        <div class="portal-section">
-            <div class="portal-section-heading">
-                <h2>Recent Requests</h2>
+        <AppointmentRequestsList Requests="@RecentRequests"
+                                 Title="Recent Requests"
+                                 NewRequestHref="#appointment-form"
+                                 NewRequestText="New Request"
+                                 ShowActions="true"
+                                 OnReschedule="OnRescheduleRequestAsync"
+                                 OnCancel="OnCancelRequestAsync" />
 
-                <a href="#appointment-form">New Request</a>
+        @if (_reschedulingRequest is not null)
+        {
+            <div class="portal-section" id="reschedule-form">
+                <div class="portal-section-heading">
+                    <div>
+                        <h2>Reschedule Request</h2>
+                        <div class="portal-muted">@GetRequestVehicleSummary(_reschedulingRequest)</div>
+                    </div>
+
+                    <button type="button"
+                            class="portal-action-button"
+                            @onclick="CloseRescheduleAsync">
+                        Close
+                    </button>
+                </div>
+
+                <AppointmentRescheduleForm Form="@_rescheduleForm"
+                                           OnSave="@EventCallback.Factory.Create(this, SaveRescheduleAsync)"
+                                           OnCancel="@EventCallback.Factory.Create(this, CloseRescheduleAsync)" />
             </div>
-
-            @if (_portal is null)
-            {
-                <div class="portal-empty-state">
-                    <div class="portal-empty-icon">📅</div>
-                    <div>
-                        <div class="portal-empty-title">Loading requests</div>
-                        <div class="portal-empty-text">Please wait while your appointment history loads.</div>
-                    </div>
-                </div>
-            }
-            else if (_portal.AppointmentRequests.Count == 0)
-            {
-                <div class="portal-empty-state">
-                    <div class="portal-empty-icon">📅</div>
-                    <div>
-                        <div class="portal-empty-title">No appointment requests yet</div>
-                        <div class="portal-empty-text">Submit your first request using the form below.</div>
-                    </div>
-                </div>
-            }
-            else
-            {
-                <div class="portal-activity">
-                    @foreach (var request in _portal.AppointmentRequests
-                        .OrderByDescending(x => x.SubmittedAtUtc)
-                        .Take(5))
-                    {
-                        <div class="portal-activity-item" @key="request.RequestId">
-                            <div class="portal-activity-icon">📅</div>
-                            <div>
-                                <strong>@request.ServiceNeeded</strong><br />
-                                @GetRequestVehicleSummary(request)<br />
-                                <span class="portal-muted">
-                                    @request.SubmittedAtUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")
-                                </span>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
-        </div>
+        }
 
         <div class="portal-section" id="appointment-form">
             <div class="portal-section-heading">
@@ -202,6 +184,9 @@
     private IReadOnlyList<string> _models = Array.Empty<string>();
 
     private AppointmentRequestFormModel _form = new();
+    private AppointmentRescheduleFormModel _rescheduleForm = new();
+    private AppointmentRequest? _reschedulingRequest;
+
     private string? _errorMessage;
     private string? _successMessage;
     private CustomerVehicle? _selectedVehicle;
@@ -232,6 +217,12 @@
             _loading = false;
         }
     }
+
+    private IReadOnlyList<AppointmentRequest> RecentRequests =>
+        (_portal?.AppointmentRequests ?? [])
+            .OrderByDescending(x => x.SubmittedAtUtc)
+            .Take(5)
+            .ToList();
 
     private async Task UseVehicleAsync(Guid vehicleId)
     {
@@ -352,6 +343,83 @@
         ResetFormCore();
         _successMessage = $"Request submitted. Reference #{result.RequestId:D}";
         StateHasChanged();
+    }
+
+    private async Task OnRescheduleRequestAsync(AppointmentRequest request)
+    {
+        _errorMessage = null;
+        _successMessage = null;
+
+        _reschedulingRequest = request;
+        _rescheduleForm = new AppointmentRescheduleFormModel
+        {
+            PreferredDate = request.PreferredDate ?? string.Empty,
+            PreferredTime = request.PreferredTime ?? string.Empty,
+            ServiceNeeded = request.ServiceNeeded ?? string.Empty,
+            Message = request.Message ?? string.Empty
+        };
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SaveRescheduleAsync()
+    {
+        if (_reschedulingRequest is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await AppointmentPortalService.RescheduleAsync(_reschedulingRequest.RequestId, _rescheduleForm);
+            _portal = await PortalContextService.GetAsync();
+            _successMessage = "Appointment request rescheduled.";
+            _errorMessage = null;
+            CloseRescheduleCore();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            _successMessage = null;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnCancelRequestAsync(AppointmentRequest request)
+    {
+        try
+        {
+            await AppointmentPortalService.CancelAsync(request.RequestId);
+            _portal = await PortalContextService.GetAsync();
+            _successMessage = "Appointment request cancelled.";
+            _errorMessage = null;
+
+            if (_reschedulingRequest?.RequestId == request.RequestId)
+            {
+                CloseRescheduleCore();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            _successMessage = null;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task CloseRescheduleAsync()
+    {
+        CloseRescheduleCore();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void CloseRescheduleCore()
+    {
+        _reschedulingRequest = null;
+        _rescheduleForm = new AppointmentRescheduleFormModel();
     }
 
     private Task ResetFormAsync()
