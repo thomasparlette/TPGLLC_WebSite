@@ -2,12 +2,14 @@
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
+@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Forms
 @using TPGLLC.Web.Components.Shared
 @using TPGLLC.Web.Services.Portal
 @using TPGLLC.Web.ViewModels.Portal
 
 @inject ICustomerAccountService AccountService
+@inject NavigationManager Navigation
 
 <PageTitle>Customer Account</PageTitle>
 
@@ -164,6 +166,7 @@
     private async Task SaveAsync()
     {
         _model = await AccountService.SaveAsync(_model) ?? new CustomerAccountViewModel();
+        Navigation.NavigateTo("/portal/dashboard", forceLoad: true);
     }
 
     private async Task ReloadAsync()

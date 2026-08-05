@@ -4,7 +4,6 @@ using TPGLLC.Data.Entities;
 using TPGLLC.Services.Vehicles;
 using TPGLLC.Web.Components.PortalShared.Appointments;
 using TPGLLC.Web.Services.Customers;
-using TPGLLC.Web.Services.Portal;
 using TPGLLC.Web.ViewModels.Portal;
 
 namespace TPGLLC.Web.Services.Appointments;
@@ -15,29 +14,21 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
     private readonly ICustomerProfileService _customerProfileService;
     private readonly IVehicleCatalogService _vehicleCatalogService;
-    private readonly IBuildEnvironmentService _buildEnvironmentService;
 
     public AppointmentPortalService(
         IDbContextFactory<TPGLLCDbContext> dbFactory,
         ICurrentCustomerAccessor currentCustomerAccessor,
         ICustomerProfileService customerProfileService,
-        IVehicleCatalogService vehicleCatalogService,
-        IBuildEnvironmentService buildEnvironmentService)
+        IVehicleCatalogService vehicleCatalogService)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
         _customerProfileService = customerProfileService;
         _vehicleCatalogService = vehicleCatalogService;
-        _buildEnvironmentService = buildEnvironmentService;
     }
 
     public async Task<AppointmentPageViewModel> GetAsync()
     {
-        if (_buildEnvironmentService.IsBuildEnvironment)
-        {
-            return _buildEnvironmentService.CreateAppointments();
-        }
-
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -76,11 +67,6 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
 
     public async Task<AppointmentPageViewModel> ResetAsync()
     {
-        if (_buildEnvironmentService.IsBuildEnvironment)
-        {
-            return _buildEnvironmentService.CreateAppointments();
-        }
-
         return await GetAsync();
     }
 
@@ -122,28 +108,6 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
 
     public async Task<AppointmentPageViewModel> SaveAsync(AppointmentPageViewModel model)
     {
-        if (_buildEnvironmentService.IsBuildEnvironment)
-        {
-            var buildModel = _buildEnvironmentService.CreateAppointments();
-            buildModel.Form = new AppointmentRequestFormModel
-            {
-                Name = model.Form.Name,
-                Email = model.Form.Email,
-                Phone = model.Form.Phone,
-                VehicleYear = model.Form.VehicleYear,
-                VehicleMake = model.Form.VehicleMake,
-                VehicleModel = model.Form.VehicleModel,
-                Vin = model.Form.Vin,
-                Mileage = model.Form.Mileage,
-                ServiceNeeded = model.Form.ServiceNeeded,
-                PreferredDate = model.Form.PreferredDate,
-                PreferredTime = model.Form.PreferredTime,
-                Message = model.Form.Message
-            };
-            buildModel.SuccessMessage = "Appointment request submitted.";
-            return buildModel;
-        }
-
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -201,60 +165,118 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         return refreshed;
     }
 
-    public async Task<AppointmentPageViewModel> RescheduleAsync(
-        Guid requestId,
-        AppointmentRescheduleFormModel form,
-        CancellationToken cancellationToken = default)
+
+    public async Task<AppointmentPageViewModel> RescheduleAsync(Guid requestId,AppointmentRescheduleFormModel form,CancellationToken cancellationToken = default)
     {
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
-            throw new InvalidOperationException("You must be signed in to update appointments.");
+            return new AppointmentPageViewModel
+            {
+                ErrorMessage = "You must be signed in to manage appointments."
+            };
         }
 
-        ValidateRescheduleForm(form);
+        if (string.IsNullOrWhiteSpace(current.Email))
+        {
+            return new AppointmentPageViewModel
+            {
+                ErrorMessage = "Your account does not have an email address on file."
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(form.PreferredDate))
+        {
+            return new AppointmentPageViewModel
+            {
+                ErrorMessage = "Preferred date is required."
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(form.PreferredTime))
+        {
+            return new AppointmentPageViewModel
+            {
+                ErrorMessage = "Preferred time is required."
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(form.ServiceNeeded))
+        {
+            return new AppointmentPageViewModel
+            {
+                ErrorMessage = "Service needed is required."
+            };
+        }
 
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-        var request = await GetOwnedRequestAsync(db, current, requestId, cancellationToken)
-            ?? throw new InvalidOperationException("Appointment request not found.");
 
-        if (IsClosedStatus(request.Status))
+        var request = await db.AppointmentRequests
+            .FirstOrDefaultAsync(x => x.RequestId == requestId
+                && x.Email != null
+                && x.Email.ToLower() == current.Email.ToLower(), cancellationToken);
+
+        if (request is null)
         {
-            throw new InvalidOperationException("This appointment request is already closed.");
+            return new AppointmentPageViewModel
+            {
+                ErrorMessage = "Appointment request not found."
+            };
         }
 
         request.PreferredDate = form.PreferredDate.Trim();
         request.PreferredTime = form.PreferredTime.Trim();
         request.ServiceNeeded = form.ServiceNeeded.Trim();
-        request.Message = string.IsNullOrWhiteSpace(form.Message) ? request.Message : form.Message.Trim();
+        request.Message = string.IsNullOrWhiteSpace(form.Message) ? null : form.Message.Trim();
         request.Status = "Rescheduled";
 
         await db.SaveChangesAsync(cancellationToken);
-        return await GetAsync();
+
+        var refreshed = await GetAsync();
+        refreshed.SuccessMessage = "Appointment request rescheduled.";
+        return refreshed;
     }
 
-    public async Task<AppointmentPageViewModel> CancelAsync(
-        Guid requestId,
-        CancellationToken cancellationToken = default)
+    public async Task<AppointmentPageViewModel> CancelAsync(Guid requestId, CancellationToken cancellationToken = default)
     {
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
-            throw new InvalidOperationException("You must be signed in to update appointments.");
+            return new AppointmentPageViewModel
+            {
+                ErrorMessage = "You must be signed in to manage appointments."
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(current.Email))
+        {
+            return new AppointmentPageViewModel
+            {
+                ErrorMessage = "Your account does not have an email address on file."
+            };
         }
 
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-        var request = await GetOwnedRequestAsync(db, current, requestId, cancellationToken)
-            ?? throw new InvalidOperationException("Appointment request not found.");
 
-        if (IsClosedStatus(request.Status))
+        var request = await db.AppointmentRequests
+            .FirstOrDefaultAsync(x => x.RequestId == requestId
+                && x.Email != null
+                && x.Email.ToLower() == current.Email.ToLower(), cancellationToken);
+
+        if (request is null)
         {
-            throw new InvalidOperationException("This appointment request is already closed.");
+            return new AppointmentPageViewModel
+            {
+                ErrorMessage = "Appointment request not found."
+            };
         }
 
         request.Status = "Cancelled";
         await db.SaveChangesAsync(cancellationToken);
-        return await GetAsync();
+
+        var refreshed = await GetAsync();
+        refreshed.SuccessMessage = "Appointment request cancelled.";
+        return refreshed;
     }
 
     private async Task<List<int>> GetYearsAsync()
@@ -341,39 +363,5 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         }
 
         return false;
-    }
-
-    private static void ValidateRescheduleForm(AppointmentRescheduleFormModel form)
-    {
-        if (string.IsNullOrWhiteSpace(form.PreferredDate))
-        {
-            throw new InvalidOperationException("Preferred date is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(form.PreferredTime))
-        {
-            throw new InvalidOperationException("Preferred time is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(form.ServiceNeeded))
-        {
-            throw new InvalidOperationException("Service needed is required.");
-        }
-    }
-
-    private async Task<AppointmentRequest?> GetOwnedRequestAsync(
-        TPGLLCDbContext db,
-        CurrentCustomer current,
-        Guid requestId,
-        CancellationToken cancellationToken)
-    {
-        var email = current.Email?.Trim();
-        if (string.IsNullOrWhiteSpace(email))
-        {
-            return null;
-        }
-
-        return await db.AppointmentRequests
-            .FirstOrDefaultAsync(x => x.RequestId == requestId && x.Email == email, cancellationToken);
     }
 }

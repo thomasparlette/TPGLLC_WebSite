@@ -109,6 +109,7 @@ public static class TpgllcServiceCollectionExtensions
             configuration.GetSection("Gmail"));
 
         services.AddScoped<IVehicleCatalogService, VehicleCatalogService>();
+        services.AddScoped<IPortalSessionState, PortalSessionState>();
         services.AddScoped<ICurrentCustomerAccessor, CurrentCustomerAccessor>();
         services.AddScoped<ICustomerProfileService, CustomerProfileService>();
         services.AddScoped<IEmailSender, SmtpEmailSender>();

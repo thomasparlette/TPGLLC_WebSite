@@ -6,7 +6,6 @@ using TPGLLC.Data;
 using TPGLLC.Data.Entities;
 using TPGLLC.Web.Services;
 using TPGLLC.Web.Services.Customers;
-using TPGLLC.Web.Services.Portal;
 
 namespace TPGLLC.Web.Services.Appointments;
 
@@ -17,22 +16,19 @@ public sealed class AppointmentService : IAppointmentService
     private readonly AppointmentEmailOptions _options;
     private readonly IEmailTemplateRenderer _templates;
     private readonly ILogger<AppointmentService> _logger;
-    private readonly IBuildEnvironmentService _buildEnvironmentService;
 
     public AppointmentService(
         IDbContextFactory<TPGLLCDbContext> dbFactory,
         ICurrentCustomerAccessor currentCustomerAccessor,
         IOptions<AppointmentEmailOptions> options,
         IEmailTemplateRenderer templates,
-        ILogger<AppointmentService> logger,
-        IBuildEnvironmentService buildEnvironmentService)
+        ILogger<AppointmentService> logger)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
         _options = options.Value;
         _templates = templates;
         _logger = logger;
-        _buildEnvironmentService = buildEnvironmentService;
     }
 
     public async Task<AppointmentSubmissionResult> SubmitAsync(
@@ -48,15 +44,6 @@ public sealed class AppointmentService : IAppointmentService
             var submittedAtUtc = DateTimeOffset.UtcNow;
 
             await SaveRequestAsync(request, requestId, current, submittedAtUtc, cancellationToken);
-
-            if (_buildEnvironmentService.IsBuildEnvironment)
-            {
-                _logger.LogInformation(
-                    "Build environment: saved appointment request {RequestId} without SMTP.",
-                    requestId);
-
-                return AppointmentSubmissionResult.Ok(requestId);
-            }
 
             ValidateOptions();
 

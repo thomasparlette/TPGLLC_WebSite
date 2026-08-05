@@ -12,18 +12,18 @@ public sealed class CustomerAccountService : ICustomerAccountService
 {
     private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
-    private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly IPortalSessionState _portalSessionState;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public CustomerAccountService(
         IDbContextFactory<TPGLLCDbContext> dbFactory,
         ICurrentCustomerAccessor currentCustomerAccessor,
-        SignInManager<ApplicationUser> signInManager,
+        IPortalSessionState portalSessionState,
         UserManager<ApplicationUser> userManager)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
-        _signInManager = signInManager;
+        _portalSessionState = portalSessionState;
         _userManager = userManager;
     }
 
@@ -141,10 +141,10 @@ public sealed class CustomerAccountService : ICustomerAccountService
             }
 
             await _userManager.UpdateAsync(user);
-            await _signInManager.RefreshSignInAsync(user);
         }
 
         await db.SaveChangesAsync();
+        _portalSessionState.SetDisplayName(displayName);
 
         var refreshed = await GetAsync();
         refreshed.SuccessMessage = "Account details updated.";

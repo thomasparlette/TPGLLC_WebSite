@@ -10,25 +10,17 @@ public sealed class VehicleDetailsService : IVehicleDetailsService
 {
     private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
-    private readonly IBuildEnvironmentService _buildEnvironmentService;
 
     public VehicleDetailsService(
         IDbContextFactory<TPGLLCDbContext> dbFactory,
-        ICurrentCustomerAccessor currentCustomerAccessor,
-        IBuildEnvironmentService buildEnvironmentService)
+        ICurrentCustomerAccessor currentCustomerAccessor)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
-        _buildEnvironmentService = buildEnvironmentService;
     }
 
     public async Task<VehicleDetailsViewModel> GetAsync(Guid vehicleId)
     {
-        if (_buildEnvironmentService.IsBuildEnvironment)
-        {
-            return _buildEnvironmentService.CreateVehicleDetails(vehicleId);
-        }
-
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {

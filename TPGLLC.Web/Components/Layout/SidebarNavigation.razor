@@ -2,6 +2,9 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
 
+@inject IPortalSessionState PortalSessionState
+@implements IDisposable
+
 <div class="customer-sidebar">
     <div class="sidebar-heading">
         <h3>Navigation</h3>
@@ -96,6 +99,16 @@
 @code {
     [Parameter] public EventCallback OnNavigate { get; set; }
 
+    protected override void OnInitialized()
+    {
+        PortalSessionState.Changed += HandlePortalSessionChanged;
+    }
+
+    private void HandlePortalSessionChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
     private async Task HandleNavigate()
     {
         if (OnNavigate.HasDelegate)
@@ -104,8 +117,18 @@
         }
     }
 
-    private static string GetDisplayName(ClaimsPrincipal user)
+    public void Dispose()
     {
+        PortalSessionState.Changed -= HandlePortalSessionChanged;
+    }
+
+    private string GetDisplayName(ClaimsPrincipal user)
+    {
+        if (!string.IsNullOrWhiteSpace(PortalSessionState.DisplayName))
+        {
+            return PortalSessionState.DisplayName!;
+        }
+
         var displayName =
             user.FindFirst("display_name")?.Value ??
             user.Identity?.Name ??
@@ -115,7 +138,7 @@
         return string.IsNullOrWhiteSpace(displayName) ? "Customer" : displayName;
     }
 
-    private static string GetInitials(ClaimsPrincipal user)
+    private string GetInitials(ClaimsPrincipal user)
     {
         var name = GetDisplayName(user);
         var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

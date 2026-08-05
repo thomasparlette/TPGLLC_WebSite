@@ -1,6 +1,8 @@
 ﻿@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@inject IPortalSessionState PortalSessionState
+@implements IDisposable
 
 <div class="customer-layout">
     <header class="portal-topbar">
@@ -65,12 +67,32 @@
 @code {
     private bool _mobileMenuOpen;
 
+    protected override void OnInitialized()
+    {
+        PortalSessionState.Changed += HandlePortalSessionChanged;
+    }
+
+    private void HandlePortalSessionChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
     private void ToggleMenu() => _mobileMenuOpen = !_mobileMenuOpen;
 
     private void CloseMenu() => _mobileMenuOpen = false;
 
-    private static string GetDisplayName(ClaimsPrincipal user)
+    public void Dispose()
     {
+        PortalSessionState.Changed -= HandlePortalSessionChanged;
+    }
+
+    private string GetDisplayName(ClaimsPrincipal user)
+    {
+        if (!string.IsNullOrWhiteSpace(PortalSessionState.DisplayName))
+        {
+            return PortalSessionState.DisplayName!;
+        }
+
         if (user.Identity?.IsAuthenticated != true)
         {
             return "Customer";

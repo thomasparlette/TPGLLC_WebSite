@@ -10,7 +10,6 @@ public interface IAppointmentPortalService
     Task<AppointmentPageViewModel> YearChangedAsync(AppointmentPageViewModel model);
     Task<AppointmentPageViewModel> MakeChangedAsync(AppointmentPageViewModel model);
     Task<AppointmentPageViewModel> SaveAsync(AppointmentPageViewModel model);
-
     Task<AppointmentPageViewModel> RescheduleAsync(Guid requestId, AppointmentRescheduleFormModel form, CancellationToken cancellationToken = default);
     Task<AppointmentPageViewModel> CancelAsync(Guid requestId, CancellationToken cancellationToken = default);
 }

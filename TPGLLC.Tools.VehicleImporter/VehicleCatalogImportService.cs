@@ -77,23 +77,29 @@ public sealed class VehicleCatalogImportService
             return;
         }
 
-        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        var strategy = _db.Database.CreateExecutionStrategy();
+        var inserted = 0;
 
-        if (_settings.ReplaceExisting)
+        await strategy.ExecuteAsync(async () =>
         {
-            var deleted = await _db.VehicleCatalogEntries
-                .Where(x => x.ModelYear >= _settings.StartYear && x.ModelYear <= _settings.EndYear)
-                .ExecuteDeleteAsync(cancellationToken);
+            await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
 
-            _logger.LogInformation(
-                "Removed {DeletedCount} existing catalog rows for years {StartYear} through {EndYear}.",
-                deleted,
-                _settings.StartYear,
-                _settings.EndYear);
-        }
+            if (_settings.ReplaceExisting)
+            {
+                var deleted = await _db.VehicleCatalogEntries
+                    .Where(x => x.ModelYear >= _settings.StartYear && x.ModelYear <= _settings.EndYear)
+                    .ExecuteDeleteAsync(cancellationToken);
 
-        var inserted = await FlushAsync(rows, cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+                _logger.LogInformation(
+                    "Removed {DeletedCount} existing catalog rows for years {StartYear} through {EndYear}.",
+                    deleted,
+                    _settings.StartYear,
+                    _settings.EndYear);
+            }
+
+            inserted = await FlushAsync(rows, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        });
 
         _logger.LogInformation(
             "vPIC import complete. Imported {Imported} rows for {MakeCount} makes across {StartYear}-{EndYear}.",

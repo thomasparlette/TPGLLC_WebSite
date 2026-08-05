@@ -5,10 +5,14 @@ namespace TPGLLC.Web.Services.Customers;
 public sealed class CurrentCustomerAccessor : ICurrentCustomerAccessor
 {
     private readonly IHttpContextAccessor _http;
+    private readonly IPortalSessionState _portalSessionState;
 
-    public CurrentCustomerAccessor(IHttpContextAccessor http)
+    public CurrentCustomerAccessor(
+        IHttpContextAccessor http,
+        IPortalSessionState portalSessionState)
     {
         _http = http;
+        _portalSessionState = portalSessionState;
     }
 
     public CurrentCustomer GetCurrentCustomer()
@@ -21,6 +25,7 @@ public sealed class CurrentCustomerAccessor : ICurrentCustomerAccessor
         }
 
         var displayName =
+            _portalSessionState.DisplayName ??
             user.FindFirst("display_name")?.Value ??
             user.Identity?.Name ??
             user.FindFirst(ClaimTypes.Email)?.Value ??
