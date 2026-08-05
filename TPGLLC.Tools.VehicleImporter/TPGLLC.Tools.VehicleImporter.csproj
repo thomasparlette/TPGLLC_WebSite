@@ -7,10 +7,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Content Include="VehicleImportSettings.json">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-		</Content>
+		<None Remove="appsettings.json" />
+		<None Remove="VehicleImportSettings.json" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -23,6 +21,10 @@
 			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 		</Content>
 		<Content Update="appsettings.Production.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+		</Content>
+		<Content Include="VehicleImportSettings.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 		</Content>
@@ -45,7 +47,7 @@
 		<None Update="appsettings .json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="appsettings.Build.json">
+		<None Update="appsettings.Development.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="appsettings.Production.json">

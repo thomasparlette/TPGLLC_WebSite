@@ -2,15 +2,13 @@
 
 public sealed class VehicleImportSettings
 {
-    public const string SectionName = "VehicleImport";
-
     public int StartYear { get; set; } = 1996;
 
     public int EndYear { get; set; } = DateTime.UtcNow.Year;
 
-    public int MaxDegreeOfParallelism { get; set; } = Math.Max(4, Environment.ProcessorCount);
+    public int MaxDegreeOfParallelism { get; set; } = Math.Max(1, Environment.ProcessorCount / 2);
 
-    public string VehicleType { get; set; } = "Automotive";
+    public bool ReplaceExisting { get; set; } = true;
 
     public List<string> AllowedMakes { get; set; } = [];
 }

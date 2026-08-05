@@ -1,39 +1,92 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using TPGLLC.Data;
 using TPGLLC.Data.Entities;
+using TPGLLC.Web.Services.Customers;
 using TPGLLC.Web.ViewModels.Portal;
 
 namespace TPGLLC.Web.Services.Portal;
 
 public sealed class DashboardService : IDashboardService
 {
-    private readonly IPortalContextService _portalContextService;
+    private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
+    private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
+    private readonly IBuildEnvironmentService _buildEnvironmentService;
 
-    public DashboardService(IPortalContextService portalContextService)
+    public DashboardService(
+        IDbContextFactory<TPGLLCDbContext> dbFactory,
+        ICurrentCustomerAccessor currentCustomerAccessor,
+        IBuildEnvironmentService buildEnvironmentService)
     {
-        _portalContextService = portalContextService;
+        _dbFactory = dbFactory;
+        _currentCustomerAccessor = currentCustomerAccessor;
+        _buildEnvironmentService = buildEnvironmentService;
     }
 
     public async Task<DashboardViewModel> GetAsync()
     {
-        var portal = await _portalContextService.GetAsync();
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            return _buildEnvironmentService.CreateDashboard();
+        }
 
-        if (!portal.CurrentCustomer.IsAuthenticated)
+        var current = _currentCustomerAccessor.GetCurrentCustomer();
+        if (!current.IsAuthenticated)
         {
             return new DashboardViewModel();
         }
 
-        var vehicles = portal.Vehicles.ToList();
-        var history = portal.ServiceHistoryEntries.Take(10).ToList();
-        var requests = portal.AppointmentRequests
-            .Where(x => !IsClosedStatus(x.Status))
-            .Take(10)
-            .ToList();
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        db.ChangeTracker.Clear();
+
+        var profile = await db.CustomerProfiles
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
+
+        var customer = await db.Customers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
+
+        var vehicles = new List<CustomerVehicle>();
+        var history = new List<ServiceHistoryEntry>();
+
+        if (customer is not null)
+        {
+            vehicles = await db.CustomerVehicles
+                .AsNoTracking()
+                .Where(x => x.CustomerId == customer.Id)
+                .OrderByDescending(x => x.IsPrimary)
+                .ThenByDescending(x => x.CreatedUtc)
+                .ToListAsync();
+
+            history = await db.ServiceHistoryEntries
+                .AsNoTracking()
+                .Where(x => x.CustomerId == customer.Id)
+                .OrderByDescending(x => x.ServiceDate)
+                .Take(10)
+                .ToListAsync();
+        }
+
+        var requests = new List<AppointmentRequest>();
+        if (!string.IsNullOrWhiteSpace(current.Email))
+        {
+            requests = await db.AppointmentRequests
+                .AsNoTracking()
+                .Where(x => x.Email == current.Email)
+                .OrderByDescending(x => x.SubmittedAtUtc)
+                .Take(10)
+                .ToListAsync();
+        }
+
+        var displayName = "Customer";
+        var name = $"{profile?.FirstName} {profile?.LastName}".Trim();
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            displayName = name;
+        }
 
         var model = new DashboardViewModel
         {
-            DisplayName = string.IsNullOrWhiteSpace(portal.DisplayName)
-                ? "Customer"
-                : portal.DisplayName,
+            DisplayName = displayName,
             Vehicles = vehicles,
             Requests = requests,
             History = history
@@ -41,19 +94,6 @@ public sealed class DashboardService : IDashboardService
 
         model.Activity = BuildActivity(model.Vehicles, model.Requests, model.History);
         return model;
-    }
-
-    private static bool IsClosedStatus(string? status)
-    {
-        if (string.IsNullOrWhiteSpace(status))
-        {
-            return false;
-        }
-
-        return status.Equals("Completed", StringComparison.OrdinalIgnoreCase)
-            || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
-            || status.Equals("Declined", StringComparison.OrdinalIgnoreCase)
-            || status.Equals("Closed", StringComparison.OrdinalIgnoreCase);
     }
 
     private static List<ActivityItem> BuildActivity(
@@ -69,7 +109,7 @@ public sealed class DashboardService : IDashboardService
             items.Add(new ActivityItem(
                 "🚗",
                 "Vehicle added",
-                $"{newestVehicle.ModelYear} {newestVehicle.Make} {newestVehicle.Model}".Trim(),
+                $"{newestVehicle.ModelYear} {newestVehicle.Make} {newestVehicle.Model}".Trim() ?? string.Empty,
                 newestVehicle.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy")));
         }
 

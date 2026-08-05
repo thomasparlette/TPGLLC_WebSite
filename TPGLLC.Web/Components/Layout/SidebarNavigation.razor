@@ -1,6 +1,6 @@
 ﻿@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Authorization
-@using TPGLLC.Web.Authorization
+@using System.Security.Claims
 
 <div class="customer-sidebar">
     <div class="sidebar-heading">
@@ -9,6 +9,14 @@
 
     <AuthorizeView Context="authState">
         <Authorized>
+            <div class="nav-user">
+                <div class="nav-avatar">@GetInitials(authState.User)</div>
+                <div class="nav-user-copy">
+                    <div class="nav-user-label">Signed in as</div>
+                    <div class="nav-user-name">@GetDisplayName(authState.User)</div>
+                </div>
+            </div>
+
             <div class="nav-section">
                 <div class="nav-heading">Customer Portal</div>
 
@@ -31,11 +39,18 @@
                 <NavLink href="/portal/profile" class="nav-link" @onclick="HandleNavigate">
                     Customer Account
                 </NavLink>
+
+                <AuthorizeView Roles="Administrator" Context="adminState">
+                    <Authorized>
+                        <NavLink href="/portal/admin" class="nav-link" @onclick="HandleNavigate">
+                            Administration
+                        </NavLink>
+                    </Authorized>
+                </AuthorizeView>
             </div>
 
             <div class="nav-section">
                 <div class="nav-heading">Account</div>
-
                 <a href="/logout" class="nav-link danger" @onclick="HandleNavigate">
                     Logout
                 </a>
@@ -79,8 +94,7 @@
 </div>
 
 @code {
-    [Parameter]
-    public EventCallback OnNavigate { get; set; }
+    [Parameter] public EventCallback OnNavigate { get; set; }
 
     private async Task HandleNavigate()
     {
@@ -88,5 +102,33 @@
         {
             await OnNavigate.InvokeAsync();
         }
+    }
+
+    private static string GetDisplayName(ClaimsPrincipal user)
+    {
+        var displayName =
+            user.FindFirst("display_name")?.Value ??
+            user.Identity?.Name ??
+            user.FindFirst(ClaimTypes.Email)?.Value ??
+            "Customer";
+
+        return string.IsNullOrWhiteSpace(displayName) ? "Customer" : displayName;
+    }
+
+    private static string GetInitials(ClaimsPrincipal user)
+    {
+        var name = GetDisplayName(user);
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length == 0)
+        {
+            return "C";
+        }
+
+        if (parts.Length == 1)
+        {
+            return parts[0].Substring(0, 1).ToUpperInvariant();
+        }
+
+        return string.Concat(parts[0][0], parts[^1][0]).ToUpperInvariant();
     }
 }

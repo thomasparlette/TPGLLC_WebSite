@@ -5,7 +5,9 @@ namespace TPGLLC.Tools.VehicleImporter;
 
 public interface IVpicApiClient
 {
-    Task<IReadOnlyList<VpicMakeDto>> GetAllMakesAsync(
+    Task<IReadOnlyList<VpicModelDto>> GetModelsForMakeYearAsync(
+        string make,
+        int modelYear,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<VpicModelDto>> GetModelsForMakeIdYearAsync(
@@ -23,12 +25,14 @@ public sealed class VpicApiClient : IVpicApiClient
         _http = http;
     }
 
-    public async Task<IReadOnlyList<VpicMakeDto>> GetAllMakesAsync(
+    public async Task<IReadOnlyList<VpicModelDto>> GetModelsForMakeYearAsync(
+        string make,
+        int modelYear,
         CancellationToken cancellationToken = default)
     {
-        const string url = "vehicles/GetAllMakes?format=json";
+        var url = $"vehicles/GetModelsForMakeYear/make/{Uri.EscapeDataString(make)}/modelyear/{modelYear}?format=json";
 
-        var response = await _http.GetFromJsonAsync<VpicResponse<VpicMakeDto>>(url, cancellationToken);
+        var response = await _http.GetFromJsonAsync<VpicResponse<VpicModelDto>>(url, cancellationToken);
         return response?.Results ?? [];
     }
 

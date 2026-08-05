@@ -13,11 +13,18 @@
         </a>
 
         <div class="portal-topbar-actions">
-            <AuthorizeView>
-                <Authorized Context="authState">
+            <AuthorizeView Context="authState">
+                <Authorized>
                     <div class="portal-topbar-welcome">
                         Welcome, @(GetDisplayName(authState.User))
                     </div>
+
+                    @if (authState.User.IsInRole("Administrator"))
+                    {
+                        <a class="portal-admin-link" href="/portal/admin">
+                            Administration
+                        </a>
+                    }
                 </Authorized>
                 <NotAuthorized>
                     <div class="portal-topbar-welcome">
@@ -29,7 +36,8 @@
             <button type="button"
                     class="portal-mobile-menu-toggle"
                     @onclick="ToggleMenu"
-                    aria-label="Open navigation menu">
+                    aria-label="Open navigation menu"
+                    aria-expanded="@_mobileMenuOpen">
                 ☰
             </button>
 

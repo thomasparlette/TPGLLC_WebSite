@@ -4,6 +4,7 @@ using TPGLLC.Data.Entities;
 using TPGLLC.Services.Vehicles;
 using TPGLLC.Web.Components.PortalShared.Appointments;
 using TPGLLC.Web.Services.Customers;
+using TPGLLC.Web.Services.Portal;
 using TPGLLC.Web.ViewModels.Portal;
 
 namespace TPGLLC.Web.Services.Appointments;
@@ -14,21 +15,29 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
     private readonly ICustomerProfileService _customerProfileService;
     private readonly IVehicleCatalogService _vehicleCatalogService;
+    private readonly IBuildEnvironmentService _buildEnvironmentService;
 
     public AppointmentPortalService(
         IDbContextFactory<TPGLLCDbContext> dbFactory,
         ICurrentCustomerAccessor currentCustomerAccessor,
         ICustomerProfileService customerProfileService,
-        IVehicleCatalogService vehicleCatalogService)
+        IVehicleCatalogService vehicleCatalogService,
+        IBuildEnvironmentService buildEnvironmentService)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
         _customerProfileService = customerProfileService;
         _vehicleCatalogService = vehicleCatalogService;
+        _buildEnvironmentService = buildEnvironmentService;
     }
 
     public async Task<AppointmentPageViewModel> GetAsync()
     {
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            return _buildEnvironmentService.CreateAppointments();
+        }
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -67,6 +76,11 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
 
     public async Task<AppointmentPageViewModel> ResetAsync()
     {
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            return _buildEnvironmentService.CreateAppointments();
+        }
+
         return await GetAsync();
     }
 
@@ -108,6 +122,28 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
 
     public async Task<AppointmentPageViewModel> SaveAsync(AppointmentPageViewModel model)
     {
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            var buildModel = _buildEnvironmentService.CreateAppointments();
+            buildModel.Form = new AppointmentRequestFormModel
+            {
+                Name = model.Form.Name,
+                Email = model.Form.Email,
+                Phone = model.Form.Phone,
+                VehicleYear = model.Form.VehicleYear,
+                VehicleMake = model.Form.VehicleMake,
+                VehicleModel = model.Form.VehicleModel,
+                Vin = model.Form.Vin,
+                Mileage = model.Form.Mileage,
+                ServiceNeeded = model.Form.ServiceNeeded,
+                PreferredDate = model.Form.PreferredDate,
+                PreferredTime = model.Form.PreferredTime,
+                Message = model.Form.Message
+            };
+            buildModel.SuccessMessage = "Appointment request submitted.";
+            return buildModel;
+        }
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -165,7 +201,7 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         return refreshed;
     }
 
-    public async Task RescheduleAsync(
+    public async Task<AppointmentPageViewModel> RescheduleAsync(
         Guid requestId,
         AppointmentRescheduleFormModel form,
         CancellationToken cancellationToken = default)
@@ -194,9 +230,10 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         request.Status = "Rescheduled";
 
         await db.SaveChangesAsync(cancellationToken);
+        return await GetAsync();
     }
 
-    public async Task CancelAsync(
+    public async Task<AppointmentPageViewModel> CancelAsync(
         Guid requestId,
         CancellationToken cancellationToken = default)
     {
@@ -217,6 +254,7 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
 
         request.Status = "Cancelled";
         await db.SaveChangesAsync(cancellationToken);
+        return await GetAsync();
     }
 
     private async Task<List<int>> GetYearsAsync()

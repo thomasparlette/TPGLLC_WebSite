@@ -14,21 +14,29 @@ public sealed class VehiclePortalService : IVehiclePortalService
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
     private readonly ICustomerProfileService _customerProfileService;
     private readonly IVehicleCatalogService _vehicleCatalogService;
+    private readonly IBuildEnvironmentService _buildEnvironmentService;
 
     public VehiclePortalService(
         IDbContextFactory<TPGLLCDbContext> dbFactory,
         ICurrentCustomerAccessor currentCustomerAccessor,
         ICustomerProfileService customerProfileService,
-        IVehicleCatalogService vehicleCatalogService)
+        IVehicleCatalogService vehicleCatalogService,
+        IBuildEnvironmentService buildEnvironmentService)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
         _customerProfileService = customerProfileService;
         _vehicleCatalogService = vehicleCatalogService;
+        _buildEnvironmentService = buildEnvironmentService;
     }
 
     public async Task<VehiclePageViewModel> GetAsync()
     {
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            return _buildEnvironmentService.CreateVehicles();
+        }
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -59,6 +67,11 @@ public sealed class VehiclePortalService : IVehiclePortalService
 
     public async Task<VehiclePageViewModel> StartEditAsync(Guid vehicleId)
     {
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            return _buildEnvironmentService.CreateVehicles(vehicleId);
+        }
+
         var model = await GetAsync();
         if (!string.IsNullOrWhiteSpace(model.ErrorMessage))
         {
@@ -107,6 +120,11 @@ public sealed class VehiclePortalService : IVehiclePortalService
 
     public async Task<VehiclePageViewModel> ResetAsync()
     {
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            return _buildEnvironmentService.CreateVehicles();
+        }
+
         var model = await GetAsync();
         model.EditingVehicleId = null;
         model.Form = new VehicleFormModel();
@@ -148,6 +166,25 @@ public sealed class VehiclePortalService : IVehiclePortalService
 
     public async Task<VehiclePageViewModel> SaveAsync(VehiclePageViewModel model)
     {
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            var buildSaveVehicleModel = _buildEnvironmentService.CreateVehicles(model.EditingVehicleId);
+            buildSaveVehicleModel.Form = new VehicleFormModel
+            {
+                ModelYear = model.Form.ModelYear,
+                Make = model.Form.Make,
+                Model = model.Form.Model,
+                Vin = model.Form.Vin,
+                Nickname = model.Form.Nickname,
+                LicensePlate = model.Form.LicensePlate,
+                Mileage = model.Form.Mileage,
+                IsPrimary = model.Form.IsPrimary
+            };
+            buildSaveVehicleModel.EditingVehicleId = model.EditingVehicleId;
+            buildSaveVehicleModel.SuccessMessage = model.EditingVehicleId is null ? "Vehicle added." : "Vehicle updated.";
+            return buildSaveVehicleModel;
+        }
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -214,13 +251,20 @@ public sealed class VehiclePortalService : IVehiclePortalService
 
         await db.SaveChangesAsync();
 
-        var refreshed = await GetAsync();
-        refreshed.SuccessMessage = isNew ? "Vehicle added." : "Vehicle updated.";
-        return refreshed;
+        var savedVehicleModel = await GetAsync();
+        savedVehicleModel.SuccessMessage = isNew ? "Vehicle added." : "Vehicle updated.";
+        return savedVehicleModel;
     }
 
     public async Task<VehiclePageViewModel> DeleteAsync(Guid vehicleId)
     {
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            var buildDeleteVehicleModel = _buildEnvironmentService.CreateVehicles();
+            buildDeleteVehicleModel.SuccessMessage = "Vehicle deleted.";
+            return buildDeleteVehicleModel;
+        }
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -256,13 +300,20 @@ public sealed class VehiclePortalService : IVehiclePortalService
             }
         }
 
-        var refreshed = await GetAsync();
-        refreshed.SuccessMessage = "Vehicle deleted.";
-        return refreshed;
+        var deletedVehicleModel = await GetAsync();
+        deletedVehicleModel.SuccessMessage = "Vehicle deleted.";
+        return deletedVehicleModel;
     }
 
     public async Task<VehiclePageViewModel> MakePrimaryAsync(Guid vehicleId)
     {
+        if (_buildEnvironmentService.IsBuildEnvironment)
+        {
+            var buildPrimaryVehicleModel = _buildEnvironmentService.CreateVehicles(vehicleId);
+            buildPrimaryVehicleModel.SuccessMessage = "Primary vehicle updated.";
+            return buildPrimaryVehicleModel;
+        }
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -294,9 +345,9 @@ public sealed class VehiclePortalService : IVehiclePortalService
 
         await db.SaveChangesAsync();
 
-        var refreshed = await GetAsync();
-        refreshed.SuccessMessage = "Primary vehicle updated.";
-        return refreshed;
+        var primaryVehicleModel = await GetAsync();
+        primaryVehicleModel.SuccessMessage = "Primary vehicle updated.";
+        return primaryVehicleModel;
     }
 
     private async Task<List<int>> GetYearsAsync()

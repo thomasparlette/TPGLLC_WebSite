@@ -1,4 +1,6 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using TPGLLC.Data;
@@ -30,13 +32,8 @@ public sealed class BuildEnvironmentSeeder
     {
         await _db.Database.EnsureCreatedAsync();
 
-        foreach (var roleName in new[] { "Customer", "Employee", "Administrator" })
-        {
-            if (!await _roleManager.RoleExistsAsync(roleName))
-            {
-                await _roleManager.CreateAsync(new ApplicationRole { Name = roleName });
-            }
-        }
+        await EnsureRolesAsync();
+        await SeedVehicleCatalogAsync();
 
         var email = "thomasparlette@gmail.com";
         var user = await _userManager.FindByEmailAsync(email);
@@ -72,22 +69,20 @@ public sealed class BuildEnvironmentSeeder
             {
                 Id = Guid.NewGuid(),
                 ApplicationUserId = user.Id,
+                FirstName = "Thomas",
+                LastName = "Parlette",
+                Email = email,
+                Phone = "(765) 346-3354",
+                AddressLine1 = "2203 Mcclennan Ct S",
+                AddressLine2 = null,
+                City = "Columbus",
+                State = "IN",
+                PostalCode = "47203",
+                Notes = "Build demo customer",
                 CreatedUtc = DateTimeOffset.UtcNow
             };
-
             _db.Customers.Add(customer);
         }
-
-        customer.FirstName = "Thomas";
-        customer.LastName = "Parlette";
-        customer.Email = email;
-        customer.Phone = "(765) 346-3354";
-        customer.AddressLine1 = "2203 Mcclennan Ct S";
-        customer.AddressLine2 = null;
-        customer.City = "Columbus";
-        customer.State = "IN";
-        customer.PostalCode = "47203";
-        customer.Notes = "Build demo customer";
 
         var profile = await _db.CustomerProfiles.FirstOrDefaultAsync(x => x.ApplicationUserId == user.Id);
         if (profile is null)
@@ -96,20 +91,22 @@ public sealed class BuildEnvironmentSeeder
             {
                 Id = Guid.NewGuid(),
                 ApplicationUserId = user.Id,
+                FirstName = "Thomas",
+                LastName = "Parlette",
+                Phone = "(765) 346-3354",
+                Address1 = "2203 Mcclennan Ct S",
+                Address2 = null,
+                City = "Columbus",
+                State = "IN",
+                ZipCode = "47203",
+                Country = "USA",
+                PreferredContactMethod = "Email",
+                ReceiveEmail = true,
+                ReceiveSms = false,
                 CreatedUtc = DateTimeOffset.UtcNow
             };
-
             _db.CustomerProfiles.Add(profile);
         }
-
-        profile.FirstName = "Thomas";
-        profile.LastName = "Parlette";
-        profile.Phone = "(765) 346-3354";
-        profile.Address1 = "2203 Mcclennan Ct S";
-        profile.Address2 = null;
-        profile.City = "Columbus";
-        profile.State = "IN";
-        profile.ZipCode = "47203";
 
         var primaryVehicle = await _db.CustomerVehicles
             .FirstOrDefaultAsync(x => x.CustomerId == customer.Id && x.IsPrimary);
@@ -135,42 +132,44 @@ public sealed class BuildEnvironmentSeeder
 
         if (!await _db.CustomerVehicles.AnyAsync(x => x.CustomerId == customer.Id && !x.IsPrimary))
         {
-            _db.CustomerVehicles.Add(new CustomerVehicle
-            {
-                Id = Guid.NewGuid(),
-                CustomerId = customer.Id,
-                ModelYear = 2015,
-                Make = "Honda",
-                Model = "Grom",
-                Vin = "JH2JC75K5FK123456",
-                Nickname = "Commuter bike",
-                LicensePlate = "DEMO-2",
-                Mileage = 6200,
-                IsPrimary = false,
-                CreatedUtc = DateTimeOffset.UtcNow
-            });
+            _db.CustomerVehicles.Add(
+                new CustomerVehicle
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerId = customer.Id,
+                    ModelYear = 2015,
+                    Make = "Honda",
+                    Model = "Grom",
+                    Vin = "JH2JC75K5FK123456",
+                    Nickname = "Commuter bike",
+                    LicensePlate = "DEMO-2",
+                    Mileage = 6200,
+                    IsPrimary = false,
+                    CreatedUtc = DateTimeOffset.UtcNow
+                });
         }
 
         if (!await _db.AppointmentRequests.AnyAsync(x => x.Email == email))
         {
-            _db.AppointmentRequests.Add(new AppointmentRequest
-            {
-                RequestId = Guid.NewGuid(),
-                Name = "Thomas Parlette",
-                Phone = "(765) 346-3354",
-                Email = email,
-                VehicleYear = "2019",
-                VehicleMake = "Dodge",
-                VehicleModel = "Challenger",
-                Vin = "2C3CDZC94KH123456",
-                Mileage = "52800",
-                PreferredDate = DateTime.Today.AddDays(4).ToString("yyyy-MM-dd"),
-                PreferredTime = "09:00",
-                ServiceNeeded = "Oil change and inspection",
-                Message = "Please check brakes and tire wear.",
-                Status = "Requested",
-                SubmittedAtUtc = DateTimeOffset.UtcNow
-            });
+            _db.AppointmentRequests.Add(
+                new AppointmentRequest
+                {
+                    RequestId = Guid.NewGuid(),
+                    Name = "Thomas Parlette",
+                    Phone = "(765) 346-3354",
+                    Email = email,
+                    VehicleYear = "2019",
+                    VehicleMake = "Dodge",
+                    VehicleModel = "Challenger",
+                    Vin = "2C3CDZC94KH123456",
+                    Mileage = "52800",
+                    PreferredDate = DateTime.Today.AddDays(4).ToString("yyyy-MM-dd"),
+                    PreferredTime = "09:00",
+                    ServiceNeeded = "Oil change and inspection",
+                    Message = "Please check brakes and tire wear.",
+                    Status = "Requested",
+                    SubmittedAtUtc = DateTimeOffset.UtcNow
+                });
         }
 
         if (!await _db.ServiceHistoryEntries.AnyAsync(x => x.CustomerId == customer.Id))
@@ -207,52 +206,152 @@ public sealed class BuildEnvironmentSeeder
                 }
             ]);
         }
-        await SeedVehicleCatalogAsync();
 
         await _db.SaveChangesAsync();
     }
 
+    private async Task EnsureRolesAsync()
+    {
+        foreach (var roleName in new[] { "Customer", "Employee", "Administrator" })
+        {
+            if (!await _roleManager.RoleExistsAsync(roleName))
+            {
+                await _roleManager.CreateAsync(new ApplicationRole { Name = roleName });
+            }
+        }
+    }
+
     private async Task SeedVehicleCatalogAsync()
     {
-        var seedPath = Path.Combine(_environment.ContentRootPath, "Services", "Portal", "VehicleSeedData.json");
-        if (!File.Exists(seedPath))
+        if (await _db.VehicleCatalogEntries.AnyAsync())
+        {
+            return;
+        }
+
+        var seedPath = GetVehicleSeedDataPath();
+        if (seedPath is null || !File.Exists(seedPath))
         {
             return;
         }
 
         var json = await File.ReadAllTextAsync(seedPath);
-        var records = JsonSerializer.Deserialize<List<VehicleSeedRecord>>(
+        var rows = JsonSerializer.Deserialize<List<VehicleSeedRow>>(
             json,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
+            new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
 
-        foreach (var record in records)
+        if (rows is null || rows.Count == 0)
         {
-            var existing = await _db.VehicleCatalogEntries.FirstOrDefaultAsync(x =>
-                x.ModelYear == record.ModelYear &&
-                x.MakeId == record.MakeId &&
-                x.ModelId == record.ModelId);
-
-            if (existing is null)
-            {
-                _db.VehicleCatalogEntries.Add(new VehicleCatalogEntry
-                {
-                    ModelYear = record.ModelYear,
-                    MakeId = record.MakeId,
-                    ModelId = record.ModelId,
-                    Make = record.Make,
-                    Model = record.Model,
-                    SyncedAtUtc = record.SyncedAtUtc
-                });
-            }
-            else
-            {
-                existing.ModelYear = record.ModelYear;
-                existing.MakeId = record.MakeId;
-                existing.ModelId = record.ModelId;
-                existing.Make = record.Make;
-                existing.Model = record.Model;
-                existing.SyncedAtUtc = record.SyncedAtUtc;
-            }
+            return;
         }
+
+        var entries = rows
+            .Where(row => row.ModelYear > 0)
+            .Select(row => new VehicleCatalogEntry
+            {
+                Id = row.Id,
+                ModelYear = row.ModelYear,
+                MakeId = row.MakeId,
+                ModelId = row.ModelId,
+                Make = Normalize(row.Make),
+                Model = Normalize(row.Model),
+                SyncedAtUtc = row.SyncedAtUtc
+            })
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.Make) && !string.IsNullOrWhiteSpace(entry.Model))
+            .ToList();
+
+        if (entries.Count == 0)
+        {
+            return;
+        }
+
+        await _db.VehicleCatalogEntries.AddRangeAsync(entries);
+        await _db.SaveChangesAsync();
+    }
+
+    private string? GetVehicleSeedDataPath()
+    {
+        var candidates = new[]
+        {
+            Path.Combine(_environment.ContentRootPath, "Services", "Portal", "VehicleSeedData.json"),
+            Path.Combine(AppContext.BaseDirectory, "Services", "Portal", "VehicleSeedData.json"),
+            Path.Combine(Directory.GetCurrentDirectory(), "Services", "Portal", "VehicleSeedData.json")
+        };
+
+        return candidates.FirstOrDefault(File.Exists) ?? candidates[0];
+    }
+
+    private static string ResolveVehicleType(string? make, string? model)
+    {
+        var text = string.Join(' ', new[] { make, model }
+            .Where(x => !string.IsNullOrWhiteSpace(x)))
+            .Trim();
+
+        var motorcycleHints = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Can-Am",
+            "CFMOTO",
+            "Ducati",
+            "Gas Gas",
+            "Harley-Davidson",
+            "Husqvarna",
+            "Indian",
+            "KTM",
+            "Kawasaki",
+            "Polaris",
+            "Suzuki",
+            "Triumph",
+            "Vespa",
+            "Yamaha",
+            "Honda"
+        };
+
+        if (!string.IsNullOrWhiteSpace(make) && motorcycleHints.Contains(make.Trim()))
+        {
+            return "Motorcycle";
+        }
+
+        if (text.Contains("Moto", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("ATV", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("SxS", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("UTV", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Motorcycle";
+        }
+
+        return "Automotive";
+    }
+
+    private static string Normalize(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : value.Trim();
+    }
+
+    private sealed class VehicleSeedRow
+    {
+        [JsonPropertyName("Id")]
+        public int Id { get; set; }
+
+        [JsonPropertyName("ModelYear")]
+        public int ModelYear { get; set; }
+
+        [JsonPropertyName("MakeId")]
+        public int MakeId { get; set; }
+
+        [JsonPropertyName("ModelId")]
+        public int ModelId { get; set; }
+
+        [JsonPropertyName("Make")]
+        public string Make { get; set; } = string.Empty;
+
+        [JsonPropertyName("Model")]
+        public string Model { get; set; } = string.Empty;
+
+        [JsonPropertyName("SyncedAtUtc")]
+        public DateTimeOffset SyncedAtUtc { get; set; }
     }
 }
