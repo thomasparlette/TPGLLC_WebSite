@@ -1,8 +1,7 @@
 ﻿@page "/portal/appointments"
 @layout CustomerLayout
-@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.Customer)]
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
-@using TPGLLC.Web.Authorization
 @using System.Globalization
 @using Microsoft.AspNetCore.Components
 @using TPGLLC.Data.Entities
@@ -431,12 +430,33 @@
 
     private void ResetFormCore()
     {
-        _form = new AppointmentRequestFormModel();
+        _form = CreateDefaultForm();
         _makes = Array.Empty<string>();
         _models = Array.Empty<string>();
         _selectedVehicle = null;
         _errorMessage = null;
         _successMessage = null;
+    }
+
+    private AppointmentRequestFormModel CreateDefaultForm()
+    {
+        var currentCustomer = _portal?.CurrentCustomer;
+        var profile = _portal?.Profile;
+
+        var displayName = !string.IsNullOrWhiteSpace(currentCustomer?.DisplayName)
+            ? currentCustomer.DisplayName.Trim()
+            : !string.IsNullOrWhiteSpace(profile?.FirstName) || !string.IsNullOrWhiteSpace(profile?.LastName)
+                ? string.Join(" ", new[] { profile?.FirstName, profile?.LastName }.Where(x => !string.IsNullOrWhiteSpace(x)))
+                : !string.IsNullOrWhiteSpace(currentCustomer?.Email)
+                    ? currentCustomer.Email.Trim()
+                    : "Customer";
+
+        return new AppointmentRequestFormModel
+        {
+            Name = displayName,
+            Email = string.IsNullOrWhiteSpace(currentCustomer?.Email) ? string.Empty : currentCustomer.Email.Trim(),
+            Phone = string.IsNullOrWhiteSpace(profile?.Phone) ? string.Empty : profile.Phone.Trim()
+        };
     }
 
     private static IReadOnlyList<string> EnsureSelectedValue(
