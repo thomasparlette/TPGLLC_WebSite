@@ -1,16 +1,15 @@
 ﻿using System.Security.Claims;
+using TPGLLC.Web.Authorization;
 
 namespace TPGLLC.Web.Services.Customers;
 
 public sealed class CurrentCustomerAccessor : ICurrentCustomerAccessor
 {
     private readonly IHttpContextAccessor _http;
-    private readonly IPortalSessionState _portalSessionState;
 
-    public CurrentCustomerAccessor(IHttpContextAccessor http, IPortalSessionState portalSessionState)
+    public CurrentCustomerAccessor(IHttpContextAccessor http)
     {
         _http = http;
-        _portalSessionState = portalSessionState;
     }
 
     public CurrentCustomer GetCurrentCustomer()
@@ -22,27 +21,15 @@ public sealed class CurrentCustomerAccessor : ICurrentCustomerAccessor
             return new CurrentCustomer();
         }
 
-        var displayName =
-            _portalSessionState.DisplayName ??
-            user.FindFirst("display_name")?.Value ??
-            user.Identity?.Name ??
-            user.FindFirst(ClaimTypes.Email)?.Value ??
-            string.Empty;
-
-        var email =
-            _portalSessionState.Email ??
-            user.FindFirstValue(ClaimTypes.Email) ??
-            string.Empty;
-
         return new CurrentCustomer
         {
             IsAuthenticated = user.Identity?.IsAuthenticated ?? false,
             UserId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty,
-            Email = email,
-            DisplayName = displayName,
-            IsCustomer = user.IsInRole("Customer"),
-            IsEmployee = user.IsInRole("Employee") || user.IsInRole("ServiceAdvisor") || user.IsInRole("Technician") || user.IsInRole("Finance"),
-            IsAdministrator = user.IsInRole("Administrator")
+            Email = user.FindFirstValue(ClaimTypes.Email) ?? string.Empty,
+            DisplayName = user.GetDisplayName(),
+            IsCustomer = user.IsInRole(PortalPolicies.Customer),
+            IsEmployee = user.IsEmployeePortalUser(),
+            IsAdministrator = user.IsAdministrator()
         };
     }
 }

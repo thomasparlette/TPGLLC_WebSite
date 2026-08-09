@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using TPGLLC.Shared.Identity;
+using TPGLLC.Web.Authorization;
 
 namespace TPGLLC.Web.Areas.Identity.Pages.Account;
 
@@ -36,12 +37,12 @@ public sealed class LoginModel : PageModel
 
     public void OnGet(string? returnUrl = null)
     {
-        Input.ReturnUrl = GetReturnUrl(returnUrl);
+        Input.ReturnUrl = ResolveInitialReturnUrl(returnUrl);
     }
 
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
-        Input.ReturnUrl = GetReturnUrl(returnUrl ?? Input.ReturnUrl);
+        Input.ReturnUrl = ResolveInitialReturnUrl(returnUrl ?? Input.ReturnUrl);
 
         if (!ModelState.IsValid)
         {
@@ -56,7 +57,14 @@ public sealed class LoginModel : PageModel
 
         if (result.Succeeded)
         {
-            return LocalRedirect(Input.ReturnUrl!);
+            var user = await _userManager.FindByEmailAsync(Input.Email.Trim());
+            if (user is null)
+            {
+                return LocalRedirect(ResolvePostLoginRedirectUrl(Input.ReturnUrl, Array.Empty<string>()));
+            }
+
+            var roles = await _userManager.GetRolesAsync(user);
+            return LocalRedirect(ResolvePostLoginRedirectUrl(Input.ReturnUrl, roles));
         }
 
         if (result.RequiresTwoFactor)
@@ -82,7 +90,7 @@ public sealed class LoginModel : PageModel
     {
         var callbackUrl = Url.Page("./Login", pageHandler: "Callback", values: new
         {
-            returnUrl = GetReturnUrl(returnUrl)
+            returnUrl = ResolveInitialReturnUrl(returnUrl)
         });
 
         var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, callbackUrl!);
@@ -91,7 +99,7 @@ public sealed class LoginModel : PageModel
 
     public async Task<IActionResult> OnGetCallbackAsync(string? returnUrl = null, string? remoteError = null)
     {
-        var safeReturnUrl = GetReturnUrl(returnUrl);
+        var safeReturnUrl = ResolveInitialReturnUrl(returnUrl);
 
         if (!string.IsNullOrWhiteSpace(remoteError))
         {
@@ -116,6 +124,13 @@ public sealed class LoginModel : PageModel
 
         if (externalSignIn.Succeeded)
         {
+            var linkedUser = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
+            if (linkedUser is not null)
+            {
+                var roles = await _userManager.GetRolesAsync(linkedUser);
+                return LocalRedirect(ResolvePostLoginRedirectUrl(safeReturnUrl, roles));
+            }
+
             return LocalRedirect(safeReturnUrl);
         }
 
@@ -175,18 +190,31 @@ public sealed class LoginModel : PageModel
         }
 
         await _signInManager.SignInAsync(user, isPersistent: true);
-        return LocalRedirect(safeReturnUrl);
+
+        var rolesAfterSignIn = await _userManager.GetRolesAsync(user);
+        return LocalRedirect(ResolvePostLoginRedirectUrl(safeReturnUrl, rolesAfterSignIn));
     }
 
-    private string GetReturnUrl(string? returnUrl)
+    private string ResolveInitialReturnUrl(string? returnUrl)
     {
-        var safeReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/portal/dashboard" : returnUrl;
-        if (!Url.IsLocalUrl(safeReturnUrl))
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
         {
-            return "/portal/dashboard";
+            return returnUrl;
         }
 
-        return safeReturnUrl;
+        return PortalNavigationHelper.CustomerDashboardPath;
+    }
+
+    private string ResolvePostLoginRedirectUrl(string? returnUrl, IEnumerable<string> roles)
+    {
+        if (!string.IsNullOrWhiteSpace(returnUrl) &&
+            Url.IsLocalUrl(returnUrl) &&
+            !returnUrl.Equals(PortalNavigationHelper.CustomerDashboardPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return returnUrl;
+        }
+
+        return PortalNavigationHelper.GetDefaultPortalPath(roles);
     }
 
     private bool IsConfigured(params string[] keys)

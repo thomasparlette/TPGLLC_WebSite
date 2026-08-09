@@ -1,21 +1,25 @@
 ﻿@page "/portal/employee/work-orders"
+@page "/portal/employee/service-advisor/work-orders"
 @layout CustomerLayout
-@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Employee,ServiceAdvisor,Technician,Finance,Administrator")]
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Employee,ServiceAdvisor,Administrator")]
 
+@using System.Globalization
 @using Microsoft.AspNetCore.Components.Forms
+@using TPGLLC.Data.Entities
+@using TPGLLC.Web.Components.PortalShared.History
 @using TPGLLC.Web.Components.Shared
 @using TPGLLC.Web.Services.WorkOrders
 @using TPGLLC.Web.ViewModels.Portal
 
 @inject IWorkOrderPortalService WorkOrderService
 
-<PageTitle>Employee Work Orders</PageTitle>
+<PageTitle>Service Advisor Work Orders</PageTitle>
 
 <section class="portal-dashboard">
     <div class="portal-header">
-        <p class="section-kicker">Employee Portal</p>
+        <p class="section-kicker">Service Advisor Portal</p>
         <h1>Work Orders</h1>
-        <p>Update estimates, approvals, diagnoses, and invoices from the shop side.</p>
+        <p>Manage customer repair orders, estimates, approvals, diagnoses, and invoices.</p>
     </div>
 
     @if (_loading)
@@ -32,12 +36,16 @@
     {
         @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
         {
-            <PortalNotice Type="danger" Title="Work orders unavailable">@_model.ErrorMessage</PortalNotice>
+            <PortalNotice Type="danger" Title="Work orders unavailable">
+                @_model.ErrorMessage
+            </PortalNotice>
         }
 
         @if (!string.IsNullOrWhiteSpace(_model.SuccessMessage))
         {
-            <PortalNotice Type="success" Title="Saved">@_model.SuccessMessage</PortalNotice>
+            <PortalNotice Type="success" Title="Saved">
+                @_model.SuccessMessage
+            </PortalNotice>
         }
 
         <div class="portal-stats">
@@ -45,10 +53,12 @@
                 <div class="portal-stat-value">@_model.WorkOrders.Count</div>
                 <div class="portal-stat-label">Total Orders</div>
             </div>
+
             <div class="portal-stat">
                 <div class="portal-stat-value">@_model.WorkOrders.Count(x => !IsClosedStatus(x.Status))</div>
                 <div class="portal-stat-label">Active</div>
             </div>
+
             <div class="portal-stat">
                 <div class="portal-stat-value">@_model.WorkOrders.Count(x => x.InvoiceAmount.HasValue)</div>
                 <div class="portal-stat-label">Billed</div>
@@ -58,10 +68,7 @@
         <div class="portal-section">
             <div class="portal-section-heading">
                 <h2>All Work Orders</h2>
-                @if (_model.EditingWorkOrderId is not null)
-                {
-                    <button type="button" class="portal-action-button" @onclick="ResetEditorAsync">Close Editor</button>
-                }
+                <button type="button" class="portal-action-button" @onclick="ResetEditorAsync">Close Editor</button>
             </div>
 
             @if (_model.WorkOrders.Count == 0)
@@ -83,6 +90,7 @@
                             <div class="portal-card-icon">🛠️</div>
                             <h3>@workOrder.VehicleName</h3>
                             <p>@workOrder.Service</p>
+
                             <div class="portal-primary-meta" style="margin-top:0.75rem;">
                                 <span>@workOrder.ServiceDate.ToString("MMM d, yyyy")</span>
                                 <span>@workOrder.Status</span>
@@ -91,22 +99,30 @@
                                     <span>@workOrder.ApprovalStatus</span>
                                 }
                             </div>
+
                             <div style="margin-top:0.75rem; display:flex; flex-wrap:wrap; gap:0.5rem;">
                                 @if (!string.IsNullOrWhiteSpace(workOrder.WorkOrderNumber))
                                 {
                                     <span class="portal-chip">@workOrder.WorkOrderNumber</span>
                                 }
+
                                 @if (workOrder.EstimateAmount.HasValue)
                                 {
                                     <span class="portal-chip">Estimate @workOrder.EstimateAmount.Value.ToString("C")</span>
                                 }
+
                                 @if (workOrder.InvoiceAmount.HasValue)
                                 {
                                     <span class="portal-chip">Invoice @workOrder.InvoiceAmount.Value.ToString("C")</span>
                                 }
                             </div>
+
                             <div class="portal-actions" style="margin-top: 1rem;">
-                                <button type="button" class="portal-action-button" @onclick="() => BeginEditAsync(workOrder.Id)">Edit</button>
+                                <button type="button"
+                                        class="portal-action-button"
+                                        @onclick="@(async () => await BeginEditAsync(workOrder.Id))">
+                                    Edit
+                                </button>
                             </div>
                         </article>
                     }
@@ -124,40 +140,94 @@
                     </div>
                 </div>
 
-                <EditForm Model="@_model.Form" OnValidSubmit="@SaveAsync">
+                <EditForm Model="@_model.Form" OnValidSubmit="SaveAsync">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
 
                     <div class="portal-dashboard-grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1rem;">
-                        <div><label class="portal-field-label">Work order number</label><InputText class="portal-input" @bind-Value="_model.Form.WorkOrderNumber" /></div>
-                        <div><label class="portal-field-label">Service date</label><InputDate TValue="DateTime" class="portal-input" @bind-Value="_model.Form.ServiceDate" /></div>
-                        <div><label class="portal-field-label">Vehicle</label><InputText class="portal-input" @bind-Value="_model.Form.VehicleName" /></div>
-                        <div><label class="portal-field-label">Primary concern</label><InputText class="portal-input" @bind-Value="_model.Form.Service" /></div>
-                        <div><label class="portal-field-label">Mileage</label><InputText class="portal-input" @bind-Value="_model.Form.Mileage" /></div>
-                        <div><label class="portal-field-label">Technician</label><InputText class="portal-input" @bind-Value="_model.Form.Technician" /></div>
+                        <div>
+                            <label class="portal-field-label">Work order number</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.WorkOrderNumber" />
+                        </div>
+
+                        <div>
+                            <label class="portal-field-label">Service date</label>
+                            <InputDate class="portal-input" @bind-Value="_model.Form.ServiceDate" />
+                        </div>
+
+                        <div>
+                            <label class="portal-field-label">Vehicle</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.VehicleName" />
+                        </div>
+
+                        <div>
+                            <label class="portal-field-label">Primary concern</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.Service" />
+                        </div>
+
+                        <div>
+                            <label class="portal-field-label">Mileage</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.Mileage" />
+                        </div>
+
+                        <div>
+                            <label class="portal-field-label">Technician</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.Technician" />
+                        </div>
+
                         <div>
                             <label class="portal-field-label">Status</label>
-                            <InputSelect TValue="string" class="portal-input" @bind-Value="_model.Form.Status">
+                            <InputSelect class="portal-input" @bind-Value="_model.Form.Status">
                                 @foreach (var status in _model.StatusOptions)
                                 {
                                     <option value="@status">@status</option>
                                 }
                             </InputSelect>
                         </div>
-                        <div><label class="portal-field-label">Approval status</label><InputText class="portal-input" @bind-Value="_model.Form.ApprovalStatus" /></div>
-                        <div><label class="portal-field-label">Estimate amount</label><InputText class="portal-input" @bind-Value="_model.Form.EstimateAmount" /></div>
-                        <div><label class="portal-field-label">Invoice number</label><InputText class="portal-input" @bind-Value="_model.Form.InvoiceNumber" /></div>
-                        <div><label class="portal-field-label">Invoice amount</label><InputText class="portal-input" @bind-Value="_model.Form.InvoiceAmount" /></div>
+
+                        <div>
+                            <label class="portal-field-label">Approval status</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.ApprovalStatus" />
+                        </div>
+
+                        <div>
+                            <label class="portal-field-label">Estimate amount</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.EstimateAmount" />
+                        </div>
+
+                        <div>
+                            <label class="portal-field-label">Invoice number</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.InvoiceNumber" />
+                        </div>
+
+                        <div>
+                            <label class="portal-field-label">Invoice amount</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.InvoiceAmount" />
+                        </div>
                     </div>
 
                     <div class="portal-dashboard-grid" style="grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem;">
-                        <div><label class="portal-field-label">Customer complaint</label><InputTextArea class="portal-input" style="min-height:120px;" @bind-Value="_model.Form.Complaint" /></div>
-                        <div><label class="portal-field-label">Diagnosis</label><InputTextArea class="portal-input" style="min-height:120px;" @bind-Value="_model.Form.Diagnosis" /></div>
+                        <div>
+                            <label class="portal-field-label">Customer complaint</label>
+                            <InputTextArea class="portal-input" style="min-height:120px;" @bind-Value="_model.Form.Complaint" />
+                        </div>
+
+                        <div>
+                            <label class="portal-field-label">Diagnosis</label>
+                            <InputTextArea class="portal-input" style="min-height:120px;" @bind-Value="_model.Form.Diagnosis" />
+                        </div>
                     </div>
 
                     <div class="portal-dashboard-grid" style="grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem;">
-                        <div><label class="portal-field-label">Customer notes</label><InputTextArea class="portal-input" style="min-height:120px;" @bind-Value="_model.Form.Notes" /></div>
-                        <div><label class="portal-field-label">Internal notes</label><InputTextArea class="portal-input" style="min-height:120px;" @bind-Value="_model.Form.InternalNotes" /></div>
+                        <div>
+                            <label class="portal-field-label">Customer notes</label>
+                            <InputTextArea class="portal-input" style="min-height:120px;" @bind-Value="_model.Form.Notes" />
+                        </div>
+
+                        <div>
+                            <label class="portal-field-label">Internal notes</label>
+                            <InputTextArea class="portal-input" style="min-height:120px;" @bind-Value="_model.Form.InternalNotes" />
+                        </div>
                     </div>
 
                     <div class="portal-actions" style="margin-top:1rem;">
@@ -175,17 +245,38 @@
 
     protected override async Task OnInitializedAsync()
     {
-        try { _model = await WorkOrderService.GetEmployeeAsync(); }
-        finally { _loading = false; }
+        try
+        {
+            _model = await WorkOrderService.GetEmployeeAsync();
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
-    private async Task BeginEditAsync(Guid workOrderId) => _model = await WorkOrderService.StartEditAsync(workOrderId);
-    private async Task SaveAsync() => _model = await WorkOrderService.SaveAsync(_model);
-    private async Task ResetEditorAsync() => _model = await WorkOrderService.ResetAsync();
+    private async Task BeginEditAsync(Guid workOrderId)
+    {
+        _model = await WorkOrderService.StartEditAsync(workOrderId);
+    }
+
+    private async Task SaveAsync()
+    {
+        _model = await WorkOrderService.SaveAsync(_model);
+    }
+
+    private async Task ResetEditorAsync()
+    {
+        _model = await WorkOrderService.ResetAsync();
+    }
 
     private static bool IsClosedStatus(string? status)
     {
-        if (string.IsNullOrWhiteSpace(status)) return false;
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return false;
+        }
+
         return status.Equals("Completed", StringComparison.OrdinalIgnoreCase)
             || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
             || status.Equals("Declined", StringComparison.OrdinalIgnoreCase)

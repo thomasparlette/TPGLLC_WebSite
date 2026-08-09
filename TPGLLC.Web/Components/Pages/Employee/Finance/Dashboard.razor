@@ -1,0 +1,162 @@
+﻿@page "/portal/employee/finance"
+@page "/portal/employee/finance/dashboard"
+@layout CustomerLayout
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Finance")]
+
+@using Microsoft.EntityFrameworkCore
+@using TPGLLC.Data
+@using TPGLLC.Data.Entities
+@using TPGLLC.Web.Services.Customers
+
+@inject IDbContextFactory<TPGLLCDbContext> DbFactory
+@inject ICurrentCustomerAccessor CurrentCustomerAccessor
+
+<PageTitle>Finance Dashboard</PageTitle>
+
+<section class="portal-dashboard">
+    <div class="portal-header">
+        <p class="section-kicker">Employee Portal</p>
+        <h1>Finance Dashboard</h1>
+        <p>Track completed work orders, pending payment, and receivables.</p>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="portal-loading-card">
+            <div class="portal-loading-icon">⏳</div>
+            <div>
+                <div class="portal-loading-title">Loading dashboard</div>
+                <div class="portal-loading-text">Please wait while we gather billing information.</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="portal-stats">
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_completedWorkOrders</div>
+                <div class="portal-stat-label">Work Orders Completed</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_needsPayment</div>
+                <div class="portal-stat-label">Need Payment</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_receivables</div>
+                <div class="portal-stat-label">Accounts Receivable</div>
+            </div>
+        </div>
+
+        <div class="portal-dashboard-grid">
+            <a class="portal-card-link" href="/portal/employee/finance/completed-work-orders">
+                <div class="portal-card-icon">✅</div>
+                <h3>Work Orders Completed</h3>
+                <p>Review completed repair orders ready for billing review.</p>
+            </a>
+
+            <a class="portal-card-link" href="/portal/employee/finance/pending-payment">
+                <div class="portal-card-icon">💳</div>
+                <h3>Work Orders Needing Payment</h3>
+                <p>See invoices that are still waiting on payment.</p>
+            </a>
+
+            <a class="portal-card-link" href="/portal/employee/finance/accounts-receivable">
+                <div class="portal-card-icon">📒</div>
+                <h3>Accounts Receivable</h3>
+                <p>Track unpaid balances and outstanding invoices.</p>
+            </a>
+
+            <a class="portal-card-link" href="/portal/account">
+                <div class="portal-card-icon">👤</div>
+                <h3>Account Detail</h3>
+                <p>Update your finance account details.</p>
+            </a>
+        </div>
+
+        <div class="portal-section" style="margin-top: 1.5rem;">
+            <div class="portal-section-heading">
+                <h2>Recent Billed Work Orders</h2>
+            </div>
+
+            @if (_recentInvoices.Count == 0)
+            {
+                <div class="portal-empty-state">
+                    <div class="portal-empty-icon">🧾</div>
+                    <div>
+                        <div class="portal-empty-title">No billed orders found</div>
+                        <div class="portal-empty-text">Billed work orders will appear here once invoices are generated.</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="portal-dashboard-grid">
+                    @foreach (var workOrder in _recentInvoices)
+                    {
+                        <article class="portal-card-link" @key="workOrder.Id">
+                            <div class="portal-card-icon">🧾</div>
+                            <h3>@workOrder.VehicleName</h3>
+                            <p>@workOrder.Service</p>
+                            <div class="portal-primary-meta" style="margin-top:0.75rem;">
+                                <span>@workOrder.ServiceDate.ToString("MMM d, yyyy")</span>
+                                <span>@workOrder.Status</span>
+                                @if (!string.IsNullOrWhiteSpace(workOrder.InvoiceNumber))
+                                {
+                                    <span>@workOrder.InvoiceNumber</span>
+                                }
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private bool _loading = true;
+    private int _completedWorkOrders;
+    private int _needsPayment;
+    private int _receivables;
+    private List<ServiceHistoryEntry> _recentInvoices = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var workOrders = await db.ServiceHistoryEntries.AsNoTracking().ToListAsync();
+
+            _recentInvoices = workOrders
+                .Where(x => x.InvoiceAmount.HasValue || !string.IsNullOrWhiteSpace(x.InvoiceNumber))
+                .OrderByDescending(x => x.ServiceDate)
+                .ThenByDescending(x => x.CreatedUtc)
+                .Take(5)
+                .ToList();
+
+            _completedWorkOrders = workOrders.Count(x => IsClosedStatus(x.Status));
+            _needsPayment = workOrders.Count(x => !IsClosedStatus(x.Status) && x.InvoiceAmount.HasValue);
+            _receivables = workOrders.Count(x => x.InvoiceAmount.HasValue || !string.IsNullOrWhiteSpace(x.InvoiceNumber));
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static bool IsClosedStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return false;
+        }
+
+        return status.Equals("Completed", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Declined", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Closed", StringComparison.OrdinalIgnoreCase);
+    }
+}

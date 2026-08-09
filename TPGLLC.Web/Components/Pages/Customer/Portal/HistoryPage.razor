@@ -1,7 +1,8 @@
 ﻿@page "/portal/history"
 @layout CustomerLayout
-@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.Customer)]
 
+@using TPGLLC.Web.Authorization
 @using System.Globalization
 @using TPGLLC.Data.Entities
 @using TPGLLC.Web.Components.Shared

@@ -1,7 +1,8 @@
 @page "/portal/dashboard"
 @layout CustomerLayout
-@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.Customer)]
 
+@using TPGLLC.Web.Authorization
 @using System.Globalization
 @using TPGLLC.Data.Entities
 @using TPGLLC.Web.Components.Shared
@@ -44,8 +45,8 @@
             </div>
 
             <div class="portal-stat">
-                <div class="portal-stat-value">@_model.OpenRequests.Count</div>
-                <div class="portal-stat-label">Open Requests</div>
+                <div class="portal-stat-value">@_model.Requests.Count</div>
+                <div class="portal-stat-label">Requests</div>
             </div>
 
             <div class="portal-stat">
@@ -87,12 +88,6 @@
                     <div class="portal-card-icon">👤</div>
                     <h3>Customer Account</h3>
                     <p>Update your personal information and contact details.</p>
-                </a>
-
-                <a class="portal-card-link" href="/portal/change-password">
-                    <div class="portal-card-icon">🔐</div>
-                    <h3>Change Password</h3>
-                    <p>Update the password for your signed-in account.</p>
                 </a>
             </div>
         </div>

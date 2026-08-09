@@ -1,0 +1,18 @@
+﻿@page "/portal/employee/service-advisor/customers"
+@layout CustomerLayout
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Employee,ServiceAdvisor,Administrator")]
+
+<PageTitle>Customers</PageTitle>
+
+<section class="portal-dashboard">
+    <div class="portal-header">
+        <p class="section-kicker">Employee Portal</p>
+        <h1>Customers</h1>
+        <p>Open customer records and review history.</p>
+    </div>
+
+    <PortalPlaceholderPage Title="Customers"
+                           Description="Open customer records and review history."
+                           BackHref="/portal/employee/service-advisor"
+                           BackText="Back to dashboard" />
+</section>

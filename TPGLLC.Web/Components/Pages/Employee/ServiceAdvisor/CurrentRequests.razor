@@ -1,0 +1,18 @@
+﻿@page "/portal/employee/service-advisor/current-requests"
+@layout CustomerLayout
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Employee,ServiceAdvisor,Administrator")]
+
+<PageTitle>Current Customer Requests</PageTitle>
+
+<section class="portal-dashboard">
+    <div class="portal-header">
+        <p class="section-kicker">Employee Portal</p>
+        <h1>Current Customer Requests</h1>
+        <p>Review and triage incoming customer service requests.</p>
+    </div>
+
+    <PortalPlaceholderPage Title="Current Customer Requests"
+                           Description="Review and triage incoming customer service requests."
+                           BackHref="/portal/employee/service-advisor"
+                           BackText="Back to dashboard" />
+</section>

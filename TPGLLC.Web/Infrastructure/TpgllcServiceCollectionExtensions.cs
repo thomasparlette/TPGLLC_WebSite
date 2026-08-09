@@ -31,8 +31,8 @@ public static class TpgllcServiceCollectionExtensions
             options.UseSqlServer(connectionString,
                 sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)));
 
-        services.AddDbContextFactory<TPGLLCDbContext>(
-            options => options.UseSqlServer(connectionString,
+        services.AddDbContextFactory<TPGLLCDbContext>(options =>
+            options.UseSqlServer(connectionString,
                 sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)),
             ServiceLifetime.Scoped);
 
@@ -118,17 +118,32 @@ public static class TpgllcServiceCollectionExtensions
             .AddPolicy(PortalPolicies.Customer, policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireRole("Customer");
+                policy.RequireRole(PortalPolicies.Customer);
             })
             .AddPolicy(PortalPolicies.Employee, policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireRole("Employee");
+                policy.RequireRole(PortalPolicies.Employee);
+            })
+            .AddPolicy(PortalPolicies.ServiceAdvisor, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireRole(PortalPolicies.ServiceAdvisor, PortalPolicies.Employee);
+            })
+            .AddPolicy(PortalPolicies.Technician, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireRole(PortalPolicies.Technician);
+            })
+            .AddPolicy(PortalPolicies.Finance, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireRole(PortalPolicies.Finance);
             })
             .AddPolicy(PortalPolicies.Administrator, policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireRole("Administrator");
+                policy.RequireRole(PortalPolicies.Administrator);
             });
 
         services.ConfigureApplicationCookie(options =>

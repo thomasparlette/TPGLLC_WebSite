@@ -1,7 +1,8 @@
 ﻿@page "/portal/appointments"
 @layout CustomerLayout
-@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.Customer)]
 
+@using TPGLLC.Web.Authorization
 @using System.Globalization
 @using Microsoft.AspNetCore.Components
 @using TPGLLC.Data.Entities
@@ -10,7 +11,6 @@
 @using TPGLLC.Web.Components.Shared
 @using TPGLLC.Web.Services.Appointments
 @using TPGLLC.Web.Services.Portal
-@using TPGLLC.Web.ViewModels.Portal
 
 @inject IPortalContextService PortalContextService
 @inject IVehicleCatalogService VehicleCatalog
@@ -54,13 +54,13 @@
 
         <div class="portal-stats">
             <div class="portal-stat">
-                <div class="portal-stat-value">@Vehicles.Count</div>
+                <div class="portal-stat-value">@(_portal?.Vehicles.Count ?? 0)</div>
                 <div class="portal-stat-label">Vehicles</div>
             </div>
 
             <div class="portal-stat">
                 <div class="portal-stat-value">@(_portal?.AppointmentRequests.Count(x => !IsClosedStatus(x.Status)) ?? 0)</div>
-                <div class="portal-stat-label">Open Requests</div>
+                <div class="portal-stat-label">Requests</div>
             </div>
 
             <div class="portal-stat">
@@ -72,6 +72,7 @@
         <div class="portal-section">
             <div class="portal-section-heading">
                 <h2>Your Vehicles</h2>
+
                 <a href="/portal/vehicles">Manage Vehicles</a>
             </div>
 
@@ -85,7 +86,7 @@
                     </div>
                 </div>
             }
-            else if (Vehicles.Count == 0)
+            else if (_portal.Vehicles.Count == 0)
             {
                 <div class="portal-empty-state">
                     <div class="portal-empty-icon">🚗</div>
@@ -96,13 +97,13 @@
                 </div>
 
                 <div class="portal-actions" style="margin-top: 1rem;">
-                    <a class="portal-action-button" href="/portal/vehicles">Add Vehicle</a>
+                    <a class="portal-action-button" href="/portal/vehicles">Go to Vehicle Management</a>
                 </div>
             }
             else
             {
                 <div class="portal-dashboard-grid">
-                    @foreach (var vehicle in Vehicles)
+                    @foreach (var vehicle in _portal.Vehicles)
                     {
                         <article class="portal-card-link" @key="vehicle.Id">
                             <div class="portal-card-icon">🚙</div>
@@ -132,7 +133,7 @@
 
         <AppointmentRequestsList Requests="@RecentRequests"
                                  Title="Recent Requests"
-                                 NewRequestHref="/portal/appointments#appointment-form"
+                                 NewRequestHref="#appointment-form"
                                  NewRequestText="New Request"
                                  ShowActions="true"
                                  OnReschedule="OnRescheduleRequestAsync"
@@ -155,8 +156,8 @@
                 </div>
 
                 <AppointmentRescheduleForm Form="@_rescheduleForm"
-                                           OnSave="SaveRescheduleAsync"
-                                           OnCancel="CloseRescheduleAsync" />
+                                           OnSave="@EventCallback.Factory.Create(this, SaveRescheduleAsync)"
+                                           OnCancel="@EventCallback.Factory.Create(this, CloseRescheduleAsync)" />
             </div>
         }
 
@@ -165,26 +166,31 @@
                 <h2>Request Details</h2>
             </div>
 
-            <AppointmentRequestForm Form="@_model.Form"
-                                    Years="@_model.Years"
-                                    Makes="@_model.Makes"
-                                    Models="@_model.Models"
-                                    OnSave="SaveRequestAsync"
-                                    OnCancel="ResetFormAsync"
-                                    OnYearChanged="OnVehicleYearChangedAsync"
-                                    OnMakeChanged="OnVehicleMakeChangedAsync" />
+            <AppointmentRequestForm Form="@_form"
+                                    Years="@_years"
+                                    Makes="@_makes"
+                                    Models="@_models"
+                                    OnSave="@EventCallback.Factory.Create(this, SaveRequestAsync)"
+                                    OnCancel="@EventCallback.Factory.Create(this, ResetFormAsync)"
+                                    OnYearChanged="@EventCallback.Factory.Create(this, OnVehicleYearChangedAsync)"
+                                    OnMakeChanged="@EventCallback.Factory.Create(this, OnVehicleMakeChangedAsync)" />
         </div>
     }
 </section>
 
 @code {
     private PortalContextViewModel? _portal;
-    private AppointmentPageViewModel _model = new();
+    private IReadOnlyList<int> _years = Array.Empty<int>();
+    private IReadOnlyList<string> _makes = Array.Empty<string>();
+    private IReadOnlyList<string> _models = Array.Empty<string>();
+
+    private AppointmentRequestFormModel _form = new();
     private AppointmentRescheduleFormModel _rescheduleForm = new();
     private AppointmentRequest? _reschedulingRequest;
-    private CustomerVehicle? _selectedVehicle;
+
     private string? _errorMessage;
     private string? _successMessage;
+    private CustomerVehicle? _selectedVehicle;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
@@ -192,7 +198,19 @@
         try
         {
             _portal = await PortalContextService.GetAsync();
-            _model = await AppointmentPortalService.GetAsync();
+
+            _years = (await VehicleCatalog.GetYearsAsync())
+                .Distinct()
+                .OrderByDescending(x => x)
+                .ToList();
+
+            if (_years.Count == 0)
+            {
+                _years = Enumerable.Range(1995, DateTime.UtcNow.Year - 1995 + 1)
+                    .Reverse()
+                    .ToList();
+            }
+
             ResetFormCore();
         }
         finally
@@ -201,78 +219,138 @@
         }
     }
 
-    private IReadOnlyList<CustomerVehicle> Vehicles =>
-        (_portal?.Vehicles ?? [])
-            .Where(IsValidVehicle)
-            .OrderByDescending(x => x.IsPrimary)
-            .ThenByDescending(x => x.CreatedUtc)
-            .ToList();
-
     private IReadOnlyList<AppointmentRequest> RecentRequests =>
         (_portal?.AppointmentRequests ?? [])
             .OrderByDescending(x => x.SubmittedAtUtc)
             .Take(5)
             .ToList();
 
-    private async Task SaveRequestAsync()
+    private async Task UseVehicleAsync(Guid vehicleId)
     {
-        _model = await AppointmentPortalService.SaveAsync(_model);
-        _successMessage = _model.SuccessMessage;
-        _errorMessage = _model.ErrorMessage;
-
-        _portal = await PortalContextService.GetAsync();
-
-        if (string.IsNullOrWhiteSpace(_model.ErrorMessage))
+        if (_portal is null)
         {
-            ResetFormCore();
+            return;
         }
 
-        await InvokeAsync(StateHasChanged);
-    }
+        _selectedVehicle = _portal.Vehicles.FirstOrDefault(x => x.Id == vehicleId);
+        if (_selectedVehicle is null)
+        {
+            return;
+        }
 
-    private async Task ResetFormAsync()
-    {
-        _model = await AppointmentPortalService.ResetAsync();
-        _selectedVehicle = null;
-        ResetFormCore();
-        _successMessage = _model.SuccessMessage;
-        _errorMessage = _model.ErrorMessage;
-    }
+        _form.VehicleYear = _selectedVehicle.ModelYear?.ToString(CultureInfo.InvariantCulture);
+        _form.VehicleMake = _selectedVehicle.Make;
+        _form.VehicleModel = _selectedVehicle.Model;
+        _form.Vin = _selectedVehicle.Vin;
+        _form.Mileage = _selectedVehicle.Mileage?.ToString(CultureInfo.InvariantCulture);
 
-    private void ResetFormCore()
-    {
-        _model.Form ??= new AppointmentRequestFormModel();
+        _makes = Array.Empty<string>();
+        _models = Array.Empty<string>();
 
-        _model.Form.Name ??= string.Empty;
-        _model.Form.Email ??= string.Empty;
-        _model.Form.Phone ??= string.Empty;
-        _model.Form.VehicleYear ??= string.Empty;
-        _model.Form.VehicleMake ??= string.Empty;
-        _model.Form.VehicleModel ??= string.Empty;
-        _model.Form.Vin ??= string.Empty;
-        _model.Form.Mileage ??= string.Empty;
-        _model.Form.PreferredDate ??= string.Empty;
-        _model.Form.PreferredTime ??= string.Empty;
-        _model.Form.ServiceNeeded ??= string.Empty;
-        _model.Form.Message ??= string.Empty;
+        if (_selectedVehicle.ModelYear.HasValue)
+        {
+            _makes = (await VehicleCatalog.GetMakesAsync(_selectedVehicle.ModelYear.Value))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            _makes = EnsureSelectedValue(_makes, _selectedVehicle.Make);
+        }
+
+        if (_selectedVehicle.ModelYear.HasValue && !string.IsNullOrWhiteSpace(_selectedVehicle.Make))
+        {
+            _models = (await VehicleCatalog.GetModelsAsync(_selectedVehicle.ModelYear.Value, _selectedVehicle.Make))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            _models = EnsureSelectedValue(_models, _selectedVehicle.Model);
+        }
+
+        _errorMessage = null;
+        _successMessage = null;
+        StateHasChanged();
     }
 
     private async Task OnVehicleYearChangedAsync()
     {
-        _model = await AppointmentPortalService.YearChangedAsync(_model);
-        _errorMessage = _model.ErrorMessage;
-        _successMessage = _model.SuccessMessage;
+        _form.VehicleMake = null;
+        _form.VehicleModel = null;
+
+        _makes = Array.Empty<string>();
+        _models = Array.Empty<string>();
+
+        if (int.TryParse(_form.VehicleYear, out var year))
+        {
+            _makes = await VehicleCatalog.GetMakesAsync(year);
+        }
+
+        _selectedVehicle = null;
+        StateHasChanged();
     }
 
     private async Task OnVehicleMakeChangedAsync()
     {
-        _model = await AppointmentPortalService.MakeChangedAsync(_model);
-        _errorMessage = _model.ErrorMessage;
-        _successMessage = _model.SuccessMessage;
+        _form.VehicleModel = null;
+        _models = Array.Empty<string>();
+
+        if (int.TryParse(_form.VehicleYear, out var year) &&
+            !string.IsNullOrWhiteSpace(_form.VehicleMake))
+        {
+            _models = await VehicleCatalog.GetModelsAsync(year, _form.VehicleMake);
+        }
+
+        _selectedVehicle = null;
+        StateHasChanged();
+    }
+
+    private async Task SaveRequestAsync()
+    {
+        _errorMessage = null;
+        _successMessage = null;
+
+        var request = new AppointmentRequest
+        {
+            Name = _form.Name.Trim(),
+            Phone = _form.Phone.Trim(),
+            Email = _form.Email.Trim(),
+            VehicleYear = _form.VehicleYear?.Trim(),
+            VehicleMake = _form.VehicleMake?.Trim(),
+            VehicleModel = _form.VehicleModel?.Trim(),
+            Vin = _form.Vin?.Trim(),
+            Mileage = _form.Mileage?.Trim(),
+            PreferredDate = _form.PreferredDate.Trim(),
+            PreferredTime = _form.PreferredTime.Trim(),
+            ServiceNeeded = _form.ServiceNeeded.Trim(),
+            Message = _form.Message.Trim()
+        };
+
+        if (_selectedVehicle is not null)
+        {
+            request.VehicleYear ??= _selectedVehicle.ModelYear?.ToString(CultureInfo.InvariantCulture);
+            request.VehicleMake ??= _selectedVehicle.Make;
+            request.VehicleModel ??= _selectedVehicle.Model;
+            request.Vin ??= _selectedVehicle.Vin;
+            request.Mileage ??= _selectedVehicle.Mileage?.ToString(CultureInfo.InvariantCulture);
+        }
+
+        var result = await AppointmentService.SubmitAsync(request);
+
+        if (!result.Success)
+        {
+            _errorMessage = result.ErrorMessage ?? "Unable to submit the appointment request.";
+            return;
+        }
+
+        _portal = await PortalContextService.GetAsync();
+        ResetFormCore();
+        _successMessage = $"Request submitted. Reference #{result.RequestId:D}";
+        StateHasChanged();
     }
 
     private async Task OnRescheduleRequestAsync(AppointmentRequest request)
     {
+        _errorMessage = null;
+        _successMessage = null;
+
         _reschedulingRequest = request;
         _rescheduleForm = new AppointmentRescheduleFormModel
         {
@@ -292,23 +370,43 @@
             return;
         }
 
-        _model = await AppointmentPortalService.RescheduleAsync(
-            _reschedulingRequest.RequestId,
-            _rescheduleForm);
+        try
+        {
+            await AppointmentPortalService.RescheduleAsync(_reschedulingRequest.RequestId, _rescheduleForm);
+            _portal = await PortalContextService.GetAsync();
+            _successMessage = "Appointment request rescheduled.";
+            _errorMessage = null;
+            CloseRescheduleCore();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            _successMessage = null;
+        }
 
-        _errorMessage = _model.ErrorMessage;
-        _successMessage = _model.SuccessMessage;
-
-        CloseRescheduleCore();
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnCancelRequestAsync(AppointmentRequest request)
     {
-        _model = await AppointmentPortalService.CancelAsync(request.RequestId);
-        _errorMessage = _model.ErrorMessage;
-        _successMessage = _model.SuccessMessage;
-        _portal = await PortalContextService.GetAsync();
+        try
+        {
+            await AppointmentPortalService.CancelAsync(request.RequestId);
+            _portal = await PortalContextService.GetAsync();
+            _successMessage = "Appointment request cancelled.";
+            _errorMessage = null;
+
+            if (_reschedulingRequest?.RequestId == request.RequestId)
+            {
+                CloseRescheduleCore();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            _successMessage = null;
+        }
+
         await InvokeAsync(StateHasChanged);
     }
 
@@ -325,62 +423,63 @@
         _rescheduleForm = new AppointmentRescheduleFormModel();
     }
 
-    private async Task UseVehicleAsync(Guid vehicleId)
+    private Task ResetFormAsync()
     {
-        if (_portal is null)
-        {
-            return;
-        }
-
-        _selectedVehicle = _portal.Vehicles.FirstOrDefault(x => x.Id == vehicleId);
-        if (_selectedVehicle is null)
-        {
-            return;
-        }
-
-        _model.Form.VehicleYear = _selectedVehicle.ModelYear?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
-        _model.Form.VehicleMake = _selectedVehicle.Make ?? string.Empty;
-        _model.Form.VehicleModel = _selectedVehicle.Model ?? string.Empty;
-        _model.Form.Vin = _selectedVehicle.Vin ?? string.Empty;
-
-        await PopulateCatalogListsFromSelectedVehicleAsync();
-
-        await InvokeAsync(StateHasChanged);
+        ResetFormCore();
+        return Task.CompletedTask;
     }
 
-    private async Task PopulateCatalogListsFromSelectedVehicleAsync()
+    private void ResetFormCore()
     {
-        _model.Years = (await VehicleCatalog.GetYearsAsync())
-            .Distinct()
-            .OrderByDescending(x => x)
-            .ToList();
+        _form = new AppointmentRequestFormModel();
+        _makes = Array.Empty<string>();
+        _models = Array.Empty<string>();
+        _selectedVehicle = null;
+        _errorMessage = null;
+        _successMessage = null;
+    }
 
-        if (_model.Years.Count == 0)
+    private static IReadOnlyList<string> EnsureSelectedValue(
+        IReadOnlyList<string> values,
+        string? selectedValue)
+    {
+        var list = values.ToList();
+
+        if (!string.IsNullOrWhiteSpace(selectedValue) &&
+            !list.Any(x => string.Equals(x, selectedValue, StringComparison.OrdinalIgnoreCase)))
         {
-            _model.Years = Enumerable.Range(1995, DateTime.UtcNow.Year - 1995 + 1)
-                .Reverse()
-                .ToList();
+            list.Insert(0, selectedValue);
         }
 
-        _model.Makes = [];
-        _model.Models = [];
+        return list;
+    }
 
-        if (!string.IsNullOrWhiteSpace(_model.Form.VehicleYear) &&
-            int.TryParse(_model.Form.VehicleYear, NumberStyles.Integer, CultureInfo.InvariantCulture, out var year))
+    private static string GetVehicleTitle(CustomerVehicle vehicle)
+    {
+        var year = vehicle.ModelYear?.ToString(CultureInfo.InvariantCulture);
+        return string.Join(" ", new[] { year, vehicle.Make, vehicle.Model }.Where(x => !string.IsNullOrWhiteSpace(x)));
+    }
+
+    private static string GetVehicleDetails(CustomerVehicle vehicle)
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(vehicle.Nickname))
         {
-            _model.Makes = (await VehicleCatalog.GetMakesAsync(year))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(x => x)
-                .ToList();
-
-            if (!string.IsNullOrWhiteSpace(_model.Form.VehicleMake))
-            {
-                _model.Models = (await VehicleCatalog.GetModelsAsync(year, _model.Form.VehicleMake.Trim()))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(x => x)
-                    .ToList();
-            }
+            parts.Add(vehicle.Nickname!);
         }
+
+        if (!string.IsNullOrWhiteSpace(vehicle.Vin))
+        {
+            parts.Add($"VIN {vehicle.Vin}");
+        }
+
+        if (vehicle.Mileage.HasValue)
+        {
+            parts.Add($"{vehicle.Mileage.Value:N0} mi");
+        }
+
+        return parts.Count == 0 ? "No additional details." : string.Join(" • ", parts);
     }
 
     private static string GetRequestVehicleSummary(AppointmentRequest request)
@@ -396,41 +495,6 @@
         return string.IsNullOrWhiteSpace(summary) ? "Vehicle not specified" : summary;
     }
 
-    private static string GetVehicleTitle(CustomerVehicle vehicle)
-    {
-        var parts = new[]
-        {
-            vehicle.ModelYear?.ToString(CultureInfo.InvariantCulture),
-            vehicle.Make,
-            vehicle.Model
-        }.Where(x => !string.IsNullOrWhiteSpace(x));
-
-        var title = string.Join(" ", parts);
-        return string.IsNullOrWhiteSpace(title) ? "Vehicle not specified" : title;
-    }
-
-    private static string GetVehicleDetails(CustomerVehicle vehicle)
-    {
-        var details = new[]
-        {
-            vehicle.Nickname,
-            vehicle.LicensePlate,
-            vehicle.Vin
-        }.Where(x => !string.IsNullOrWhiteSpace(x));
-
-        var text = string.Join(" • ", details);
-        return string.IsNullOrWhiteSpace(text) ? "No additional details." : text;
-    }
-
-    private static bool IsValidVehicle(CustomerVehicle vehicle)
-    {
-        return !string.IsNullOrWhiteSpace(vehicle.Make)
-            || !string.IsNullOrWhiteSpace(vehicle.Model)
-            || !string.IsNullOrWhiteSpace(vehicle.Nickname)
-            || !string.IsNullOrWhiteSpace(vehicle.LicensePlate)
-            || !string.IsNullOrWhiteSpace(vehicle.Vin);
-    }
-
     private static bool IsClosedStatus(string? status)
     {
         if (string.IsNullOrWhiteSpace(status))
@@ -440,9 +504,7 @@
 
         return status.Equals("Completed", StringComparison.OrdinalIgnoreCase)
             || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
-            || status.Equals("Canceled", StringComparison.OrdinalIgnoreCase)
             || status.Equals("Declined", StringComparison.OrdinalIgnoreCase)
-            || status.Equals("Closed", StringComparison.OrdinalIgnoreCase)
-            || status.Equals("Rejected", StringComparison.OrdinalIgnoreCase);
+            || status.Equals("Closed", StringComparison.OrdinalIgnoreCase);
     }
 }

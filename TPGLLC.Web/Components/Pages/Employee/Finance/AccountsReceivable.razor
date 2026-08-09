@@ -1,0 +1,18 @@
+﻿@page "/portal/employee/finance/accounts-receivable"
+@layout CustomerLayout
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Finance")]
+
+<PageTitle>Accounts Receivable</PageTitle>
+
+<section class="portal-dashboard">
+    <div class="portal-header">
+        <p class="section-kicker">Employee Portal</p>
+        <h1>Accounts Receivable</h1>
+        <p>Track outstanding balances and unpaid invoices.</p>
+    </div>
+
+    <PortalPlaceholderPage Title="Accounts Receivable"
+                           Description="Track outstanding balances and unpaid invoices."
+                           BackHref="/portal/employee/finance"
+                           BackText="Back to dashboard" />
+</section>

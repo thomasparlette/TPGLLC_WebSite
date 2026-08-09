@@ -1,16 +1,16 @@
 ﻿@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Security.Claims
+@using TPGLLC.Web.Authorization
 
 <div class="customer-layout">
     <header class="portal-topbar">
         <AuthorizeView Context="authState">
             <Authorized>
-                <a class="portal-brand" href="@GetPortalHomeHref(authState.User)">
+                <a class="portal-brand" href="@authState.User.GetPortalHomeHref()">
                     <img src="/images/logo.jpeg" alt="Tom Parlette Garage LLC" />
                     <div>
                         <div class="portal-brand-name">Tom Parlette Garage LLC</div>
-                        <div class="portal-brand-subtitle">Portal</div>
+                        <div class="portal-brand-subtitle">@authState.User.GetPortalSubtitle()</div>
                     </div>
                 </a>
             </Authorized>
@@ -29,11 +29,11 @@
             <AuthorizeView Context="authState">
                 <Authorized>
                     <div class="portal-topbar-welcome">
-                        Welcome, @(GetDisplayName(authState.User))
+                        Welcome, @authState.User.GetDisplayName()
                     </div>
 
-                    <a class="portal-admin-link" href="@GetPortalHomeHref(authState.User)">
-                        @GetPortalActionLabel(authState.User)
+                    <a class="portal-admin-link" href="@authState.User.GetPortalHomeHref()">
+                        Go to dashboard
                     </a>
                 </Authorized>
                 <NotAuthorized>
@@ -78,58 +78,4 @@
     private void ToggleMenu() => _mobileMenuOpen = !_mobileMenuOpen;
 
     private void CloseMenu() => _mobileMenuOpen = false;
-
-    private static string GetDisplayName(ClaimsPrincipal user)
-    {
-        if (user.Identity?.IsAuthenticated != true)
-        {
-            return "Portal";
-        }
-
-        var displayName =
-            user.FindFirst("display_name")?.Value ??
-            user.Identity?.Name ??
-            user.FindFirst(ClaimTypes.Email)?.Value ??
-            "Portal";
-
-        return string.IsNullOrWhiteSpace(displayName) ? "Portal" : displayName;
-    }
-
-    private static string GetPortalHomeHref(ClaimsPrincipal user)
-    {
-        if (user.IsInRole("Administrator"))
-        {
-            return "/portal/admin";
-        }
-
-        if (IsEmployeeUser(user))
-        {
-            return "/portal/employee/work-orders";
-        }
-
-        return "/portal/dashboard";
-    }
-
-    private static string GetPortalActionLabel(ClaimsPrincipal user)
-    {
-        if (user.IsInRole("Administrator"))
-        {
-            return "Administration";
-        }
-
-        if (IsEmployeeUser(user))
-        {
-            return "Work Orders";
-        }
-
-        return "Dashboard";
-    }
-
-    private static bool IsEmployeeUser(ClaimsPrincipal user)
-    {
-        return user.IsInRole("Employee")
-            || user.IsInRole("ServiceAdvisor")
-            || user.IsInRole("Technician")
-            || user.IsInRole("Finance");
-    }
 }

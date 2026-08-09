@@ -1,7 +1,8 @@
 ﻿@page "/portal/vehicles/{VehicleId:guid}"
 @layout CustomerLayout
-@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.Customer)]
 
+@using TPGLLC.Web.Authorization
 @using TPGLLC.Web.Components.PortalShared.Vehicles
 @using TPGLLC.Web.Services.Portal
 @using TPGLLC.Web.ViewModels.Portal

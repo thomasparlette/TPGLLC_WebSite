@@ -1,0 +1,18 @@
+﻿@page "/portal/employee/finance/completed-work-orders"
+@layout CustomerLayout
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Finance")]
+
+<PageTitle>Work Orders Completed</PageTitle>
+
+<section class="portal-dashboard">
+    <div class="portal-header">
+        <p class="section-kicker">Employee Portal</p>
+        <h1>Work Orders Completed</h1>
+        <p>Review completed repair orders ready for billing review.</p>
+    </div>
+
+    <PortalPlaceholderPage Title="Work Orders Completed"
+                           Description="Review completed repair orders ready for billing review."
+                           BackHref="/portal/employee/finance"
+                           BackText="Back to dashboard" />
+</section>

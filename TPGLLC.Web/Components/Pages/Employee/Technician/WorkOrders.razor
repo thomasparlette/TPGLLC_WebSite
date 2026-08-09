@@ -1,0 +1,18 @@
+﻿@page "/portal/employee/technician/work-orders"
+@layout CustomerLayout
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Technician")]
+
+<PageTitle>Current Work Orders Assigned</PageTitle>
+
+<section class="portal-dashboard">
+    <div class="portal-header">
+        <p class="section-kicker">Employee Portal</p>
+        <h1>Current Work Orders Assigned</h1>
+        <p>Review work orders assigned to you in the technician queue.</p>
+    </div>
+
+    <PortalPlaceholderPage Title="Current Work Orders Assigned"
+                           Description="Review work orders assigned to you in the technician queue."
+                           BackHref="/portal/employee/technician"
+                           BackText="Back to dashboard" />
+</section>

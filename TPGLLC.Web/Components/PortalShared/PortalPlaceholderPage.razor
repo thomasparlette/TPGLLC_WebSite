@@ -1,0 +1,28 @@
+﻿<div class="portal-section">
+    <div class="portal-section-heading">
+        <div>
+            <h2>@Title</h2>
+            <div class="portal-muted">@Description</div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(BackHref))
+        {
+            <a class="portal-action-button" href="@BackHref">@BackText</a>
+        }
+    </div>
+
+    <div class="portal-empty-state">
+        <div class="portal-empty-icon">⏳</div>
+        <div>
+            <div class="portal-empty-title">Coming soon</div>
+            <div class="portal-empty-text">This section is being prepared for the new portal layout.</div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Description { get; set; } = string.Empty;
+    [Parameter] public string BackHref { get; set; } = string.Empty;
+    [Parameter] public string BackText { get; set; } = "Back";
+}
