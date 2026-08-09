@@ -17,50 +17,58 @@
                 </div>
             </div>
 
-            <div class="nav-section">
-                <div class="nav-heading">Customer Portal</div>
+            @if (HasCustomerAccess(authState.User))
+            {
+                <div class="nav-section">
+                    <div class="nav-heading">Customer Portal</div>
 
-                <NavLink href="/portal/dashboard" Match="NavLinkMatch.All" class="nav-link" @onclick="HandleNavigate">
-                    Dashboard
-                </NavLink>
+                    <NavLink href="/portal/dashboard" Match="NavLinkMatch.All" class="nav-link" @onclick="HandleNavigate">
+                        Dashboard
+                    </NavLink>
 
-                <NavLink href="/portal/vehicles" class="nav-link" @onclick="HandleNavigate">
-                    Vehicles
-                </NavLink>
+                    <NavLink href="/portal/vehicles" class="nav-link" @onclick="HandleNavigate">
+                        Vehicles
+                    </NavLink>
 
-                <NavLink href="/portal/appointments" class="nav-link" @onclick="HandleNavigate">
-                    Appointments
-                </NavLink>
+                    <NavLink href="/portal/appointments" class="nav-link" @onclick="HandleNavigate">
+                        Appointments
+                    </NavLink>
 
-                <NavLink href="/portal/history" class="nav-link" @onclick="HandleNavigate">
-                    Service History
-                </NavLink>
+                    <NavLink href="/portal/history" class="nav-link" @onclick="HandleNavigate">
+                        Service History
+                    </NavLink>
 
-                <NavLink href="/portal/work-orders" class="nav-link" @onclick="HandleNavigate">
-                    Work Orders &amp; Invoices
-                </NavLink>
+                    <NavLink href="/portal/work-orders" class="nav-link" @onclick="HandleNavigate">
+                        Work Orders &amp; Invoices
+                    </NavLink>
 
-                <NavLink href="/portal/profile" class="nav-link" @onclick="HandleNavigate">
-                    Customer Account
-                </NavLink>
+                    <NavLink href="/portal/profile" class="nav-link" @onclick="HandleNavigate">
+                        Customer Account
+                    </NavLink>
+                </div>
+            }
 
-                <AuthorizeView Roles="Employee,ServiceAdvisor,Technician,Finance,Administrator" Context="staffState">
-                    <Authorized>
-                        <div class="nav-heading" style="margin-top:1.25rem;">Employee Portal</div>
-                        <NavLink href="/portal/employee/work-orders" class="nav-link" @onclick="HandleNavigate">
-                            Work Orders
-                        </NavLink>
-                    </Authorized>
-                </AuthorizeView>
+            @if (HasEmployeeAccess(authState.User))
+            {
+                <div class="nav-section">
+                    <div class="nav-heading">Employee Portal</div>
 
-                <AuthorizeView Roles="Administrator" Context="adminState">
-                    <Authorized>
-                        <NavLink href="/portal/admin" class="nav-link" @onclick="HandleNavigate">
-                            Administration
-                        </NavLink>
-                    </Authorized>
-                </AuthorizeView>
-            </div>
+                    <NavLink href="/portal/employee/work-orders" class="nav-link" @onclick="HandleNavigate">
+                        Work Orders
+                    </NavLink>
+                </div>
+            }
+
+            @if (authState.User.IsInRole("Administrator"))
+            {
+                <div class="nav-section">
+                    <div class="nav-heading">Administration</div>
+
+                    <NavLink href="/portal/admin" class="nav-link" @onclick="HandleNavigate">
+                        User Management
+                    </NavLink>
+                </div>
+            }
 
             <div class="nav-section">
                 <div class="nav-heading">Account</div>
@@ -123,9 +131,9 @@
             user.FindFirst("display_name")?.Value ??
             user.Identity?.Name ??
             user.FindFirst(ClaimTypes.Email)?.Value ??
-            "Customer";
+            "Portal";
 
-        return string.IsNullOrWhiteSpace(displayName) ? "Customer" : displayName;
+        return string.IsNullOrWhiteSpace(displayName) ? "Portal" : displayName;
     }
 
     private static string GetInitials(ClaimsPrincipal user)
@@ -134,7 +142,7 @@
         var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (parts.Length == 0)
         {
-            return "C";
+            return "P";
         }
 
         if (parts.Length == 1)
@@ -143,5 +151,19 @@
         }
 
         return string.Concat(parts[0][0], parts[^1][0]).ToUpperInvariant();
+    }
+
+    private static bool HasCustomerAccess(ClaimsPrincipal user)
+    {
+        return user.IsInRole("Customer");
+    }
+
+    private static bool HasEmployeeAccess(ClaimsPrincipal user)
+    {
+        return user.IsInRole("Employee")
+            || user.IsInRole("ServiceAdvisor")
+            || user.IsInRole("Technician")
+            || user.IsInRole("Finance")
+            || user.IsInRole("Administrator");
     }
 }

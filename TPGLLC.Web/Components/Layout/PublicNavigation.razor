@@ -1,8 +1,11 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 
-<AuthorizeView>
+<AuthorizeView Context="authState">
     <Authorized>
-        <NavLink href="/portal/dashboard" Match="NavLinkMatch.All">Customer Portal</NavLink>
+        <NavLink href="@GetPortalHomeHref(authState.User)" Match="NavLinkMatch.All">
+            @GetPortalLinkText(authState.User)
+        </NavLink>
         <a href="/logout">Sign Out</a>
     </Authorized>
     <NotAuthorized>
@@ -13,3 +16,43 @@
         <NavLink href="/Identity/Account/Login">Login</NavLink>
     </NotAuthorized>
 </AuthorizeView>
+
+@code {
+    private static string GetPortalHomeHref(ClaimsPrincipal user)
+    {
+        if (user.IsInRole("Administrator"))
+        {
+            return "/portal/admin";
+        }
+
+        if (IsEmployeeUser(user))
+        {
+            return "/portal/employee/work-orders";
+        }
+
+        return "/portal/dashboard";
+    }
+
+    private static string GetPortalLinkText(ClaimsPrincipal user)
+    {
+        if (user.IsInRole("Administrator"))
+        {
+            return "Administration";
+        }
+
+        if (IsEmployeeUser(user))
+        {
+            return "Employee Portal";
+        }
+
+        return "Customer Portal";
+    }
+
+    private static bool IsEmployeeUser(ClaimsPrincipal user)
+    {
+        return user.IsInRole("Employee")
+            || user.IsInRole("ServiceAdvisor")
+            || user.IsInRole("Technician")
+            || user.IsInRole("Finance");
+    }
+}

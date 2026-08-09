@@ -98,13 +98,14 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             .ToListAsync();
 
         var appointmentRequests = await db.AppointmentRequests
-            .AsNoTracking()
-            .Where(x =>
-                string.IsNullOrWhiteSpace(x.Status) ||
-                x.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase) ||
-                x.Status.Equals("Requested", StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(x => x.SubmittedAtUtc)
-            .ToListAsync();
+    .AsNoTracking()
+    .Where(x =>
+        x.Status == null ||
+        x.Status == "" ||
+        x.Status == "Pending" ||
+        x.Status == "Requested")
+    .OrderByDescending(x => x.SubmittedAtUtc)
+    .ToListAsync();
 
         return new WorkOrderPageViewModel
         {

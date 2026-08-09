@@ -4,13 +4,26 @@
 
 <div class="customer-layout">
     <header class="portal-topbar">
-        <a class="portal-brand" href="/portal/dashboard">
-            <img src="/images/logo.jpeg" alt="Tom Parlette Garage LLC" />
-            <div>
-                <div class="portal-brand-name">Tom Parlette Garage LLC</div>
-                <div class="portal-brand-subtitle">Customer Portal</div>
-            </div>
-        </a>
+        <AuthorizeView Context="authState">
+            <Authorized>
+                <a class="portal-brand" href="@GetPortalHomeHref(authState.User)">
+                    <img src="/images/logo.jpeg" alt="Tom Parlette Garage LLC" />
+                    <div>
+                        <div class="portal-brand-name">Tom Parlette Garage LLC</div>
+                        <div class="portal-brand-subtitle">Portal</div>
+                    </div>
+                </a>
+            </Authorized>
+            <NotAuthorized>
+                <a class="portal-brand" href="/">
+                    <img src="/images/logo.jpeg" alt="Tom Parlette Garage LLC" />
+                    <div>
+                        <div class="portal-brand-name">Tom Parlette Garage LLC</div>
+                        <div class="portal-brand-subtitle">Portal</div>
+                    </div>
+                </a>
+            </NotAuthorized>
+        </AuthorizeView>
 
         <div class="portal-topbar-actions">
             <AuthorizeView Context="authState">
@@ -19,12 +32,9 @@
                         Welcome, @(GetDisplayName(authState.User))
                     </div>
 
-                    @if (authState.User.IsInRole("Administrator"))
-                    {
-                        <a class="portal-admin-link" href="/portal/admin">
-                            Administration
-                        </a>
-                    }
+                    <a class="portal-admin-link" href="@GetPortalHomeHref(authState.User)">
+                        @GetPortalActionLabel(authState.User)
+                    </a>
                 </Authorized>
                 <NotAuthorized>
                     <div class="portal-topbar-welcome">
@@ -73,15 +83,53 @@
     {
         if (user.Identity?.IsAuthenticated != true)
         {
-            return "Customer";
+            return "Portal";
         }
 
         var displayName =
             user.FindFirst("display_name")?.Value ??
             user.Identity?.Name ??
             user.FindFirst(ClaimTypes.Email)?.Value ??
-            "Customer";
+            "Portal";
 
-        return string.IsNullOrWhiteSpace(displayName) ? "Customer" : displayName;
+        return string.IsNullOrWhiteSpace(displayName) ? "Portal" : displayName;
+    }
+
+    private static string GetPortalHomeHref(ClaimsPrincipal user)
+    {
+        if (user.IsInRole("Administrator"))
+        {
+            return "/portal/admin";
+        }
+
+        if (IsEmployeeUser(user))
+        {
+            return "/portal/employee/work-orders";
+        }
+
+        return "/portal/dashboard";
+    }
+
+    private static string GetPortalActionLabel(ClaimsPrincipal user)
+    {
+        if (user.IsInRole("Administrator"))
+        {
+            return "Administration";
+        }
+
+        if (IsEmployeeUser(user))
+        {
+            return "Work Orders";
+        }
+
+        return "Dashboard";
+    }
+
+    private static bool IsEmployeeUser(ClaimsPrincipal user)
+    {
+        return user.IsInRole("Employee")
+            || user.IsInRole("ServiceAdvisor")
+            || user.IsInRole("Technician")
+            || user.IsInRole("Finance");
     }
 }

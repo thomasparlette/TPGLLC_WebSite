@@ -83,16 +83,22 @@ public sealed class DashboardService : IDashboardService
             displayName = name;
         }
 
+        var openRequests = requests
+            .Where(x => !IsClosedStatus(x.Status))
+            .OrderByDescending(x => x.SubmittedAtUtc)
+            .ToList();
+
         var model = new DashboardViewModel
         {
             DisplayName = displayName,
             Vehicles = vehicles,
             Requests = requests,
+            OpenRequests = openRequests,
             History = history,
             WorkOrders = workOrders
         };
 
-        model.Activity = BuildActivity(model.Vehicles, model.Requests, model.History, model.WorkOrders);
+        model.Activity = BuildActivity(model.Vehicles, model.OpenRequests, model.History, model.WorkOrders);
         return model;
     }
 

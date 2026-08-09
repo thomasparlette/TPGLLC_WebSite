@@ -1,9 +1,7 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using TPGLLC.Data;
 using TPGLLC.Data.Entities;
 using TPGLLC.Services.Vehicles;
-using TPGLLC.Shared.Identity;
 using TPGLLC.Web.Components.PortalShared.Appointments;
 using TPGLLC.Web.Services.Customers;
 using TPGLLC.Web.ViewModels.Portal;
@@ -14,23 +12,24 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
 {
     private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
+    private readonly ICustomerProfileService _customerProfileService;
     private readonly IVehicleCatalogService _vehicleCatalogService;
-    private readonly UserManager<ApplicationUser> _userManager;
 
     public AppointmentPortalService(
         IDbContextFactory<TPGLLCDbContext> dbFactory,
         ICurrentCustomerAccessor currentCustomerAccessor,
-        IVehicleCatalogService vehicleCatalogService,
-        UserManager<ApplicationUser> userManager)
+        ICustomerProfileService customerProfileService,
+        IVehicleCatalogService vehicleCatalogService)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
+        _customerProfileService = customerProfileService;
         _vehicleCatalogService = vehicleCatalogService;
-        _userManager = userManager;
     }
 
     public async Task<AppointmentPageViewModel> GetAsync()
     {
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -47,25 +46,13 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
 
-        var customer = await db.Customers
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
+        List<AppointmentRequest> requests = [];
 
-        var user = await _userManager.FindByIdAsync(current.UserId);
-
-        var customerInfo = BuildCustomerInfo(
-            user,
-            profile,
-            customer,
-            current.Email);
-
-        var requests = new List<AppointmentRequest>();
-
-        if (!string.IsNullOrWhiteSpace(customerInfo.Email))
+        if (!string.IsNullOrWhiteSpace(current.Email))
         {
             requests = await db.AppointmentRequests
                 .AsNoTracking()
-                .Where(x => x.Email == customerInfo.Email)
+                .Where(x => x.Email == current.Email)
                 .OrderByDescending(x => x.SubmittedAtUtc)
                 .ToListAsync();
         }
@@ -75,12 +62,13 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             Requests = requests,
             OpenRequests = requests.Where(x => !IsClosedStatus(x.Status)).ToList(),
             Years = await GetYearsAsync(),
-            Form = BuildDefaultForm(customerInfo)
+            Form = BuildDefaultForm(profile, current.Email)
         };
     }
 
     public async Task<AppointmentPageViewModel> ResetAsync()
     {
+
         return await GetAsync();
     }
 
@@ -122,6 +110,7 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
 
     public async Task<AppointmentPageViewModel> SaveAsync(AppointmentPageViewModel model)
     {
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -147,28 +136,17 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
 
-        var customer = await db.Customers
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
-
-        var user = await _userManager.FindByIdAsync(current.UserId);
-
-        var customerInfo = BuildCustomerInfo(user, profile, customer, current.Email);
-
         var request = new AppointmentRequest
         {
             Name = string.IsNullOrWhiteSpace(model.Form.Name)
-                ? customerInfo.Name
+                ? BuildDisplayName(profile, current.Email)
                 : model.Form.Name.Trim(),
-
             Email = string.IsNullOrWhiteSpace(model.Form.Email)
-                ? customerInfo.Email
+                ? (current.Email ?? string.Empty).Trim()
                 : model.Form.Email.Trim(),
-
             Phone = string.IsNullOrWhiteSpace(model.Form.Phone)
-                ? customerInfo.Phone
+                ? (profile?.Phone ?? string.Empty).Trim()
                 : model.Form.Phone.Trim(),
-
             VehicleYear = string.IsNullOrWhiteSpace(model.Form.VehicleYear) ? null : model.Form.VehicleYear.Trim(),
             VehicleMake = string.IsNullOrWhiteSpace(model.Form.VehicleMake) ? null : model.Form.VehicleMake.Trim(),
             VehicleModel = string.IsNullOrWhiteSpace(model.Form.VehicleModel) ? null : model.Form.VehicleModel.Trim(),
@@ -196,7 +174,7 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         CancellationToken cancellationToken = default)
     {
         var current = _currentCustomerAccessor.GetCurrentCustomer();
-        if (!current.IsAuthenticated)
+        if (!current.IsAuthenticated || string.IsNullOrWhiteSpace(current.Email))
         {
             return new AppointmentPageViewModel
             {
@@ -205,21 +183,9 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         }
 
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-
-        var user = await _userManager.FindByIdAsync(current.UserId);
-        var currentEmail = FirstNotEmpty(user?.Email, current.Email);
-
-        if (string.IsNullOrWhiteSpace(currentEmail))
-        {
-            return new AppointmentPageViewModel
-            {
-                ErrorMessage = "Your account does not have an email address."
-            };
-        }
-
         var request = await db.AppointmentRequests
             .FirstOrDefaultAsync(
-                x => x.RequestId == requestId && x.Email == currentEmail,
+                x => x.RequestId == requestId && x.Email == current.Email,
                 cancellationToken);
 
         if (request is null)
@@ -254,7 +220,7 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         CancellationToken cancellationToken = default)
     {
         var current = _currentCustomerAccessor.GetCurrentCustomer();
-        if (!current.IsAuthenticated)
+        if (!current.IsAuthenticated || string.IsNullOrWhiteSpace(current.Email))
         {
             return new AppointmentPageViewModel
             {
@@ -263,21 +229,9 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         }
 
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-
-        var user = await _userManager.FindByIdAsync(current.UserId);
-        var currentEmail = FirstNotEmpty(user?.Email, current.Email);
-
-        if (string.IsNullOrWhiteSpace(currentEmail))
-        {
-            return new AppointmentPageViewModel
-            {
-                ErrorMessage = "Your account does not have an email address."
-            };
-        }
-
         var request = await db.AppointmentRequests
             .FirstOrDefaultAsync(
-                x => x.RequestId == requestId && x.Email == currentEmail,
+                x => x.RequestId == requestId && x.Email == current.Email,
                 cancellationToken);
 
         if (request is null)
@@ -313,66 +267,25 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         return list;
     }
 
-    private static AppointmentRequestFormModel BuildDefaultForm(CustomerAppointmentInfo customer)
+    private static AppointmentRequestFormModel BuildDefaultForm(CustomerProfile? profile, string? email)
     {
         return new AppointmentRequestFormModel
         {
-            Name = customer.Name,
-            Email = customer.Email,
-            Phone = customer.Phone
+            Name = BuildDisplayName(profile, email),
+            Email = string.IsNullOrWhiteSpace(email) ? string.Empty : email.Trim(),
+            Phone = string.IsNullOrWhiteSpace(profile?.Phone) ? string.Empty : profile.Phone.Trim()
         };
     }
 
-    private static CustomerAppointmentInfo BuildCustomerInfo(
-        ApplicationUser? user,
-        CustomerProfile? profile,
-        Customer? customer,
-        string? authenticatedEmail)
+    private static string BuildDisplayName(CustomerProfile? profile, string? email)
     {
-        var firstName = FirstNotEmpty(
-            user?.FirstName,
-            profile?.FirstName,
-            customer?.FirstName);
-
-        var lastName = FirstNotEmpty(
-            user?.LastName,
-            profile?.LastName,
-            customer?.LastName);
-
-        var name = string.Join(" ", new[] { firstName, lastName }.Where(x => !string.IsNullOrWhiteSpace(x)));
-
-        if (string.IsNullOrWhiteSpace(name))
+        var name = $"{profile?.FirstName} {profile?.LastName}".Trim();
+        if (!string.IsNullOrWhiteSpace(name))
         {
-            name = FirstNotEmpty(
-                user?.DisplayName,
-                authenticatedEmail,
-                "Customer");
+            return name;
         }
 
-        var email = FirstNotEmpty(
-            user?.Email,
-            customer?.Email,
-            authenticatedEmail);
-
-        var phone = FirstNotEmpty(
-            user?.PhoneNumber,
-            profile?.Phone,
-            customer?.Phone);
-
-        return new CustomerAppointmentInfo(name, email, phone);
-    }
-
-    private static string FirstNotEmpty(params string?[] values)
-    {
-        foreach (var value in values)
-        {
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                return value.Trim();
-            }
-        }
-
-        return string.Empty;
+        return string.IsNullOrWhiteSpace(email) ? "Customer" : email.Trim();
     }
 
     private static bool IsClosedStatus(string? status)
@@ -424,9 +337,4 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
 
         return false;
     }
-
-    private sealed record CustomerAppointmentInfo(
-        string Name,
-        string Email,
-        string Phone);
 }

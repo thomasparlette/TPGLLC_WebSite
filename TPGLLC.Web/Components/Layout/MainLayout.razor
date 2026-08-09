@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 
 <div class="app-shell">
     <header class="site-header">
@@ -42,9 +43,9 @@
             </div>
             <div>
                 <div class="footer-heading">Account</div>
-                <AuthorizeView>
+                <AuthorizeView Context="authState">
                     <Authorized>
-                        <a href="/portal/dashboard">Customer Portal</a><br />
+                        <a href="@GetPortalHomeHref(authState.User)">@GetPortalLinkText(authState.User)</a><br />
                         <a href="/logout">Sign Out</a>
                     </Authorized>
                     <NotAuthorized>
@@ -67,5 +68,43 @@
     private void ToggleNav()
     {
         _navOpen = !_navOpen;
+    }
+
+    private static string GetPortalHomeHref(ClaimsPrincipal user)
+    {
+        if (user.IsInRole("Administrator"))
+        {
+            return "/portal/admin";
+        }
+
+        if (IsEmployeeUser(user))
+        {
+            return "/portal/employee/work-orders";
+        }
+
+        return "/portal/dashboard";
+    }
+
+    private static string GetPortalLinkText(ClaimsPrincipal user)
+    {
+        if (user.IsInRole("Administrator"))
+        {
+            return "Administration";
+        }
+
+        if (IsEmployeeUser(user))
+        {
+            return "Employee Portal";
+        }
+
+        return "Customer Portal";
+    }
+
+    private static bool IsEmployeeUser(ClaimsPrincipal user)
+    {
+        return user.IsInRole("Employee")
+            || user.IsInRole("ServiceAdvisor")
+            || user.IsInRole("Technician")
+            || user.IsInRole("Finance");
     }
 }
