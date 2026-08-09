@@ -72,6 +72,11 @@
 
             <div class="nav-section">
                 <div class="nav-heading">Account</div>
+
+                <NavLink href="/portal/change-password" class="nav-link" @onclick="HandleNavigate">
+                    Change Password
+                </NavLink>
+
                 <a href="/logout" class="nav-link danger" @onclick="HandleNavigate">
                     Logout
                 </a>

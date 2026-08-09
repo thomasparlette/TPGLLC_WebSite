@@ -2,15 +2,20 @@
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.Administrator)]
 
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using TPGLLC.Data
 @using TPGLLC.Shared.Identity
 @using TPGLLC.Web.Authorization
+@using TPGLLC.Web.Components.Shared
 
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IDbContextFactory<TPGLLCDbContext> DbFactory
-@inject UserManager<ApplicationUser> UserManager
 @inject RoleManager<ApplicationRole> RoleManager
+@inject UserManager<ApplicationUser> UserManager
 
 <PageTitle>Admin - User Roles</PageTitle>
 
@@ -18,7 +23,7 @@
     <div class="portal-header">
         <p class="section-kicker">Administration</p>
         <h1>User Role Management</h1>
-        <p>Assign Customer and Employee access to existing site users. Administrator access remains protected.</p>
+        <p>Assign Customer access, Employee specialties, and administrator access to existing site users.</p>
     </div>
 
     @if (_loading)
@@ -35,37 +40,50 @@
     {
         @if (!string.IsNullOrWhiteSpace(_errorMessage))
         {
-            <div class="auth-alert">@_errorMessage</div>
+            <PortalNotice Type="danger" Title="Unable to save changes">
+                @_errorMessage
+            </PortalNotice>
         }
 
         @if (!string.IsNullOrWhiteSpace(_successMessage))
         {
-            <div class="auth-success">@_successMessage</div>
+            <PortalNotice Type="success" Title="Saved">
+                @_successMessage
+            </PortalNotice>
         }
+
+        <PortalNotice Type="info" Title="Role management scope">
+            This page manages Customer, Employee, Employee specialty, and Administrator roles. Other role memberships are left untouched.
+        </PortalNotice>
 
         <div class="portal-stats">
             <div class="portal-stat">
                 <div class="portal-stat-value">@_users.Count</div>
-                <div class="portal-stat-label">Total Users</div>
+                <div class="portal-stat-label">Users</div>
             </div>
 
             <div class="portal-stat">
-                <div class="portal-stat-value">@_users.Count(x => x.IsCustomer)</div>
+                <div class="portal-stat-value">@_users.Count(x => x.CustomerRole)</div>
                 <div class="portal-stat-label">Customers</div>
             </div>
 
             <div class="portal-stat">
-                <div class="portal-stat-value">@_users.Count(x => x.IsEmployee)</div>
+                <div class="portal-stat-value">@_users.Count(x => x.EmployeeRole)</div>
                 <div class="portal-stat-label">Employees</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_users.Count(x => x.AdministratorRole)</div>
+                <div class="portal-stat-label">Administrators</div>
             </div>
         </div>
 
         <div class="portal-section">
             <div class="portal-section-heading">
-                <h2>Users</h2>
+                <h2>Portal Users</h2>
 
                 <div class="portal-actions">
-                    <button type="button" class="portal-action-button" @onclick="ReloadAsync">
+                    <button type="button" class="portal-action-button" @onclick="async () => await ReloadAsync()">
                         Refresh
                     </button>
                 </div>
@@ -95,26 +113,31 @@
                 <div class="admin-user-grid">
                     @foreach (var user in FilteredUsers)
                     {
-                        <article class="portal-card-link admin-user-card" @key="user.UserId">
+                        <article class="portal-card-link admin-user-card" @key="user.Id">
                             <div class="portal-card-icon">👤</div>
 
                             <h3>@user.DisplayName</h3>
-                            <p>@user.Email</p>
+                            <p>@(string.IsNullOrWhiteSpace(user.Email) ? user.UserName : user.Email)</p>
 
                             <div class="admin-role-badges">
-                                @if (user.IsAdministrator)
+                                @if (user.AdministratorRole)
                                 {
                                     <span class="portal-chip admin-chip">Administrator</span>
                                 }
 
-                                @if (user.IsCustomer)
+                                @if (user.CustomerRole)
                                 {
                                     <span class="portal-chip">Customer</span>
                                 }
 
-                                @if (user.IsEmployee)
+                                @if (user.EmployeeRole)
                                 {
                                     <span class="portal-chip">Employee</span>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(GetEmployeeTypeLabel(user.EmployeeType)))
+                                {
+                                    <span class="portal-chip">@GetEmployeeTypeLabel(user.EmployeeType)</span>
                                 }
 
                                 @if (!user.IsAdministrator && !user.IsCustomer && !user.IsEmployee)
@@ -123,23 +146,17 @@
                                 }
                             </div>
 
-                            <div class="admin-role-options">
-                                <label class="admin-role-option">
-                                    <input type="checkbox" @bind="user.IsCustomer" />
-                                    Customer access
-                                </label>
-
-                                <label class="admin-role-option">
-                                    <input type="checkbox" @bind="user.IsEmployee" />
-                                    Employee access
-                                </label>
-                            </div>
-
                             <div class="portal-actions admin-actions">
                                 <button type="button"
                                         class="portal-action-button"
-                                        @onclick="() => SaveRolesAsync(user)">
-                                    Save Roles
+                                        @onclick="() => SelectUserAsync(user.Id)">
+                                    Edit Roles
+                                </button>
+
+                                <button type="button"
+                                        class="portal-action-button"
+                                        @onclick="() => OpenPasswordResetAsync(user.Id)">
+                                    Reset Password
                                 </button>
                             </div>
                         </article>
@@ -147,96 +164,325 @@
                 </div>
             }
         </div>
+
+        @if (_selectedUser is not null)
+        {
+            <div class="portal-section">
+                <div class="portal-section-heading">
+                    <h2>Selected User</h2>
+                    <span class="portal-muted">Editing role membership and security settings</span>
+                </div>
+
+                <div class="portal-form-grid">
+                    <div class="form-field">
+                        <label>Email</label>
+                        <input class="input" value="@(_selectedUser.Email ?? _selectedUser.UserName)" readonly />
+                    </div>
+
+                    <div class="form-field">
+                        <label>Display Name</label>
+                        <input class="input" value="@_selectedUser.DisplayName" readonly />
+                    </div>
+
+                    <div class="form-field">
+                        <label>First Name</label>
+                        <input class="input" value="@_selectedUser.FirstName" readonly />
+                    </div>
+
+                    <div class="form-field">
+                        <label>Last Name</label>
+                        <input class="input" value="@_selectedUser.LastName" readonly />
+                    </div>
+
+                    <div class="form-field">
+                        <label>Status</label>
+                        <input class="input" value="@GetStatusText(_selectedUser)" readonly />
+                    </div>
+
+                    <div class="form-field full">
+                        <label>Managed Roles</label>
+                        <div style="display:flex; flex-wrap:wrap; gap:0.75rem;">
+                            <label style="display:flex; align-items:center; gap:0.5rem; padding:0.75rem 1rem; border:1px solid #e5e7eb; border-radius:12px; background:#fff;">
+                                <input type="checkbox" class="checkbox" @bind="_selectedUser.CustomerRole" />
+                                <span>Customer</span>
+                            </label>
+
+                            <label style="display:flex; align-items:center; gap:0.5rem; padding:0.75rem 1rem; border:1px solid #e5e7eb; border-radius:12px; background:#fff;">
+                                <input type="checkbox" class="checkbox" @bind="_selectedUser.EmployeeRole" />
+                                <span>Employee</span>
+                            </label>
+
+                            <label style="display:flex; align-items:center; gap:0.5rem; padding:0.75rem 1rem; border:1px solid #e5e7eb; border-radius:12px; background:#fff;">
+                                <input type="checkbox" class="checkbox" @bind="_selectedUser.AdministratorRole" />
+                                <span>Administrator</span>
+                            </label>
+                        </div>
+
+                        <div class="portal-muted" style="margin-top:0.5rem;">
+                            Other role memberships are preserved.
+                        </div>
+                    </div>
+
+                    <div class="form-field full">
+                        <label>Employee Type</label>
+                        <select class="input" @bind="_selectedUser.EmployeeType" disabled="@(!_selectedUser.EmployeeRole)">
+                            <option value="">General Employee</option>
+                            <option value="ServiceAdvisor">Service Advisor</option>
+                            <option value="Technician">Technician</option>
+                            <option value="Finance">Finance</option>
+                        </select>
+
+                        <div class="portal-muted" style="margin-top:0.5rem;">
+                            Use one specialty role for employees who need a specific shop function.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="portal-actions" style="margin-top: 1.25rem;">
+                    <button type="button" class="portal-action-button" @onclick="SaveAsync">
+                        Save Role Changes
+                    </button>
+
+                    <button type="button" class="portal-action-button" @onclick="async () => await ReloadAsync()">
+                        Reset
+                    </button>
+                </div>
+            </div>
+
+            <div class="portal-section">
+                <div class="portal-section-heading">
+                    <h2>Reset Password</h2>
+                    <span class="portal-muted">Sets a new password without needing the current one.</span>
+                </div>
+
+                <EditForm Model="@_passwordReset" OnValidSubmit="ResetPasswordAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="portal-form-grid">
+                        <div class="form-field">
+                            <label>New Password</label>
+                            <InputText class="input" type="password" @bind-Value="_passwordReset.NewPassword" />
+                            <ValidationMessage For="@(() => _passwordReset.NewPassword)" />
+                        </div>
+
+                        <div class="form-field">
+                            <label>Confirm Password</label>
+                            <InputText class="input" type="password" @bind-Value="_passwordReset.ConfirmPassword" />
+                            <ValidationMessage For="@(() => _passwordReset.ConfirmPassword)" />
+                        </div>
+                    </div>
+
+                    <div class="portal-actions" style="margin-top: 1.25rem;">
+                        <button type="submit" class="portal-action-button">Reset Password</button>
+                        <button type="button" class="portal-action-button" @onclick="ClearPasswordFormAsync">Clear</button>
+                    </div>
+                </EditForm>
+            </div>
+        }
     }
 </section>
 
 @code {
-    private IReadOnlyList<AdminUserRow> _users = [];
-    private string _searchText = string.Empty;
+    private static readonly string[] ManagedRoles = ["Customer", "Employee", "ServiceAdvisor", "Technician", "Finance", "Administrator"];
+
+    private readonly List<AdminUserRow> _users = [];
+    private AdminUserRow? _selectedUser;
+    private string? _selectedUserId;
+    private string? _currentUserId;
+    private bool _loading = true;
     private string? _errorMessage;
     private string? _successMessage;
-    private bool _loading = true;
+    private string? _searchText;
+    private PasswordResetForm _passwordReset = new();
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadUsersAsync();
-        _loading = false;
+        await ReloadAsync();
     }
 
-    private async Task ReloadAsync()
-    {
-        _errorMessage = null;
-        _successMessage = null;
-        await LoadUsersAsync();
-        _successMessage = "User list refreshed.";
-        StateHasChanged();
-    }
+    private Task ReloadAsync() => ReloadAsync(preserveMessages: false);
 
-    private async Task LoadUsersAsync()
+    private async Task ReloadAsync(bool preserveMessages = false)
     {
+        _loading = true;
+
+        if (!preserveMessages)
+        {
+            _errorMessage = null;
+            _successMessage = null;
+        }
+
         try
         {
-            await using var db = await DbFactory.CreateDbContextAsync();
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            _currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            var users = await db.Users
+            var selectedId = _selectedUserId;
+            _users.Clear();
+
+            var users = await UserManager.Users
                 .AsNoTracking()
-                .OrderBy(x => x.Email ?? x.UserName ?? x.Id)
+                .OrderBy(x => x.Email ?? x.UserName)
+                .ThenBy(x => x.UserName)
                 .ToListAsync();
-
-            var rows = new List<AdminUserRow>(users.Count);
 
             foreach (var user in users)
             {
                 var roles = await UserManager.GetRolesAsync(user);
-
-                rows.Add(new AdminUserRow
-                {
-                    UserId = user.Id,
-                    Email = user.Email ?? user.UserName ?? string.Empty,
-                    DisplayName = BuildDisplayName(user),
-                    IsCustomer = roles.Contains("Customer"),
-                    IsEmployee = roles.Contains("Employee"),
-                    IsAdministrator = roles.Contains("Administrator")
-                });
+                _users.Add(AdminUserRow.FromUser(user, roles));
             }
 
-            _users = rows;
+            _selectedUser = _users.FirstOrDefault(x => x.Id == selectedId)
+                ?? _users.FirstOrDefault();
+            _selectedUserId = _selectedUser?.Id;
+            _passwordReset = new PasswordResetForm();
         }
         catch (Exception ex)
         {
             _errorMessage = ex.Message;
-            _users = [];
+            _users.Clear();
+        }
+        finally
+        {
+            _loading = false;
         }
     }
 
-    private async Task SaveRolesAsync(AdminUserRow row)
+    private async Task SelectUserAsync(string userId)
     {
+        _selectedUserId = userId;
+        _selectedUser = CloneUser(_users.FirstOrDefault(x => x.Id == userId));
+        _passwordReset = new PasswordResetForm();
+        _errorMessage = null;
+        _successMessage = null;
+        await Task.CompletedTask;
+    }
+
+    private async Task OpenPasswordResetAsync(string userId)
+    {
+        await SelectUserAsync(userId);
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_selectedUser is null)
+        {
+            return;
+        }
+
+        if (string.Equals(_currentUserId, _selectedUser.Id, StringComparison.OrdinalIgnoreCase) && !_selectedUser.AdministratorRole)
+        {
+            _errorMessage = "You cannot remove your own Administrator role while signed in.";
+            _successMessage = null;
+            await ReloadAsync(preserveMessages: true);
+            _selectedUserId = _selectedUser.Id;
+            _selectedUser = CloneUser(_users.FirstOrDefault(x => x.Id == _selectedUserId));
+            return;
+        }
+
+        try
+        {
+            var user = await UserManager.FindByIdAsync(_selectedUser.Id);
+            if (user is null)
+            {
+                _errorMessage = "User not found.";
+                _successMessage = null;
+                return;
+            }
+
+            await EnsureRoleAsync("Customer");
+            await EnsureRoleAsync("Employee");
+            await EnsureRoleAsync("ServiceAdvisor");
+            await EnsureRoleAsync("Technician");
+            await EnsureRoleAsync("Finance");
+            await EnsureRoleAsync("Administrator");
+
+            var currentRoles = await UserManager.GetRolesAsync(user);
+            var desiredRoles = GetDesiredRoles(_selectedUser).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var roleName in ManagedRoles)
+            {
+                var hasRole = currentRoles.Contains(roleName, StringComparer.OrdinalIgnoreCase);
+                var shouldHaveRole = desiredRoles.Contains(roleName);
+
+                if (shouldHaveRole && !hasRole)
+                {
+                    var addResult = await UserManager.AddToRoleAsync(user, roleName);
+                    if (!addResult.Succeeded)
+                    {
+                        throw new InvalidOperationException(string.Join(" ", addResult.Errors.Select(x => x.Description)));
+                    }
+                }
+                else if (!shouldHaveRole && hasRole)
+                {
+                    var removeResult = await UserManager.RemoveFromRoleAsync(user, roleName);
+                    if (!removeResult.Succeeded)
+                    {
+                        throw new InvalidOperationException(string.Join(" ", removeResult.Errors.Select(x => x.Description)));
+                    }
+                }
+            }
+
+            await ReloadAsync(preserveMessages: true);
+            _selectedUserId = user.Id;
+            _selectedUser = CloneUser(_users.FirstOrDefault(x => x.Id == _selectedUserId));
+            _successMessage = $"Updated roles for {GetDisplayName(_selectedUser)}.";
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            await ReloadAsync(preserveMessages: true);
+            _errorMessage = ex.Message;
+            _successMessage = null;
+            _selectedUserId = _selectedUser?.Id ?? _selectedUserId;
+            _selectedUser = CloneUser(_users.FirstOrDefault(x => x.Id == _selectedUserId));
+        }
+    }
+
+    private async Task ResetPasswordAsync()
+    {
+        if (_selectedUser is null)
+        {
+            return;
+        }
+
         _errorMessage = null;
         _successMessage = null;
 
         try
         {
-            await EnsureRoleAsync("Customer");
-            await EnsureRoleAsync("Employee");
-
-            var user = await UserManager.FindByIdAsync(row.UserId);
+            var user = await UserManager.FindByIdAsync(_selectedUser.Id);
             if (user is null)
             {
                 _errorMessage = "User not found.";
                 return;
             }
 
-            await SyncRoleAsync(user, "Customer", row.IsCustomer);
-            await SyncRoleAsync(user, "Employee", row.IsEmployee);
+            var token = await UserManager.GeneratePasswordResetTokenAsync(user);
+            var result = await UserManager.ResetPasswordAsync(user, token, _passwordReset.NewPassword);
 
-            await LoadUsersAsync();
+            if (!result.Succeeded)
+            {
+                _errorMessage = string.Join(" ", result.Errors.Select(x => x.Description));
+                return;
+            }
 
-            _successMessage = $"Updated roles for {row.DisplayName}.";
+            _passwordReset = new PasswordResetForm();
+            _successMessage = $"Password updated for {GetDisplayName(_selectedUser)}.";
         }
         catch (Exception ex)
         {
             _errorMessage = ex.Message;
         }
+    }
+
+    private Task ClearPasswordFormAsync()
+    {
+        _passwordReset = new PasswordResetForm();
+        _errorMessage = null;
+        _successMessage = null;
+        return Task.CompletedTask;
     }
 
     private async Task EnsureRoleAsync(string roleName)
@@ -252,67 +498,181 @@
         }
     }
 
-    private async Task SyncRoleAsync(ApplicationUser user, string roleName, bool shouldHaveRole)
+    private static string NormalizeEmployeeType(string? employeeType)
     {
-        var roles = await UserManager.GetRolesAsync(user);
-        var hasRole = roles.Contains(roleName, StringComparer.OrdinalIgnoreCase);
+        return string.IsNullOrWhiteSpace(employeeType) ? string.Empty : employeeType.Trim();
+    }
 
-        if (shouldHaveRole && !hasRole)
+    private static IEnumerable<string> GetDesiredRoles(AdminUserRow user)
+    {
+        if (user.CustomerRole)
         {
-            var add = await UserManager.AddToRoleAsync(user, roleName);
-            if (!add.Succeeded)
+            yield return "Customer";
+        }
+
+        var employeeType = NormalizeEmployeeType(user.EmployeeType);
+
+        if (user.EmployeeRole)
+        {
+            yield return "Employee";
+
+            if (string.Equals(employeeType, "ServiceAdvisor", StringComparison.OrdinalIgnoreCase))
             {
-                var errors = string.Join(" ", add.Errors.Select(x => x.Description));
-                throw new InvalidOperationException(errors);
+                yield return "ServiceAdvisor";
+            }
+            else if (string.Equals(employeeType, "Technician", StringComparison.OrdinalIgnoreCase))
+            {
+                yield return "Technician";
+            }
+            else if (string.Equals(employeeType, "Finance", StringComparison.OrdinalIgnoreCase))
+            {
+                yield return "Finance";
             }
         }
-        else if (!shouldHaveRole && hasRole)
+
+        if (user.AdministratorRole)
         {
-            var remove = await UserManager.RemoveFromRoleAsync(user, roleName);
-            if (!remove.Succeeded)
-            {
-                var errors = string.Join(" ", remove.Errors.Select(x => x.Description));
-                throw new InvalidOperationException(errors);
-            }
+            yield return "Administrator";
         }
     }
 
-    private static string BuildDisplayName(ApplicationUser user)
+    private static AdminUserRow? CloneUser(AdminUserRow? user)
     {
-        var displayName = user.DisplayName?.Trim();
+        return user is null ? null : user.Clone();
+    }
 
-        if (!string.IsNullOrWhiteSpace(displayName))
+    private static string GetEmployeeTypeLabel(string? employeeType)
+    {
+        return employeeType switch
         {
-            return displayName;
+            "ServiceAdvisor" => "Service Advisor",
+            "Technician" => "Technician",
+            "Finance" => "Finance",
+            _ => string.Empty
+        };
+    }
+
+    private static string GetStatusText(AdminUserRow user)
+    {
+        return user.IsActive ? "Active" : "Inactive";
+    }
+
+    private static string GetDisplayName(AdminUserRow user)
+    {
+        if (!string.IsNullOrWhiteSpace(user.DisplayName))
+        {
+            return user.DisplayName;
         }
 
         var name = string.Join(" ", new[] { user.FirstName, user.LastName }
-            .Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+            .Where(x => !string.IsNullOrWhiteSpace(x)));
 
-        if (!string.IsNullOrWhiteSpace(name))
-        {
-            return name;
-        }
-
-        return user.Email ?? user.UserName ?? user.Id;
+        return string.IsNullOrWhiteSpace(name)
+            ? (string.IsNullOrWhiteSpace(user.Email) ? user.UserName : user.Email)
+            : name;
     }
 
     private IReadOnlyList<AdminUserRow> FilteredUsers =>
         _users
             .Where(user =>
                 string.IsNullOrWhiteSpace(_searchText) ||
-                user.Email.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
-                user.DisplayName.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
+                (user.Email ?? string.Empty).Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
+                (user.UserName ?? string.Empty).Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
+                (user.DisplayName ?? string.Empty).Contains(_searchText, StringComparison.OrdinalIgnoreCase))
             .OrderBy(user => user.DisplayName)
             .ToList();
 
     private sealed class AdminUserRow
     {
-        public string UserId { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string? Email { get; set; }
         public string DisplayName { get; set; } = string.Empty;
-        public bool IsCustomer { get; set; }
-        public bool IsEmployee { get; set; }
-        public bool IsAdministrator { get; set; }
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public bool CustomerRole { get; set; }
+        public bool EmployeeRole { get; set; }
+        public string EmployeeType { get; set; } = string.Empty;
+        public bool AdministratorRole { get; set; }
+        public IReadOnlyList<string> Roles { get; set; } = [];
+
+        public bool IsCustomer => CustomerRole;
+        public bool IsEmployee => EmployeeRole;
+        public bool IsAdministrator => AdministratorRole;
+
+        public static AdminUserRow FromUser(ApplicationUser user, IEnumerable<string> roles)
+        {
+            var roleList = roles.ToList();
+            var employeeType = GetEmployeeType(roleList);
+
+            return new AdminUserRow
+            {
+                Id = user.Id,
+                UserName = user.UserName ?? string.Empty,
+                Email = user.Email,
+                DisplayName = user.DisplayName,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                IsActive = user.IsActive,
+                CustomerRole = roleList.Contains("Customer", StringComparer.OrdinalIgnoreCase),
+                EmployeeRole = roleList.Contains("Employee", StringComparer.OrdinalIgnoreCase) || !string.IsNullOrWhiteSpace(employeeType),
+                EmployeeType = employeeType,
+                AdministratorRole = roleList.Contains("Administrator", StringComparer.OrdinalIgnoreCase),
+                Roles = roleList
+            };
+        }
+
+        public AdminUserRow Clone()
+        {
+            return new AdminUserRow
+            {
+                Id = Id,
+                UserName = UserName,
+                Email = Email,
+                DisplayName = DisplayName,
+                FirstName = FirstName,
+                LastName = LastName,
+                IsActive = IsActive,
+                CustomerRole = CustomerRole,
+                EmployeeRole = EmployeeRole,
+                EmployeeType = EmployeeType,
+                AdministratorRole = AdministratorRole,
+                Roles = Roles.ToList()
+            };
+        }
+
+        private static string GetEmployeeType(IReadOnlyList<string> roles)
+        {
+            if (roles.Contains("ServiceAdvisor", StringComparer.OrdinalIgnoreCase))
+            {
+                return "ServiceAdvisor";
+            }
+
+            if (roles.Contains("Technician", StringComparer.OrdinalIgnoreCase))
+            {
+                return "Technician";
+            }
+
+            if (roles.Contains("Finance", StringComparer.OrdinalIgnoreCase))
+            {
+                return "Finance";
+            }
+
+            return string.Empty;
+        }
+    }
+
+    private sealed class PasswordResetForm
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(100, MinimumLength = 10)]
+        [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.Password)]
+        public string NewPassword { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.DataType(System.ComponentModel.DataAnnotations.DataType.Password)]
+        [System.ComponentModel.DataAnnotations.Compare(nameof(NewPassword), ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; } = string.Empty;
     }
 }
