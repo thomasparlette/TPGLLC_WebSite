@@ -11,11 +11,21 @@ public sealed class ServiceHistoryEntry
     public DateOnly ServiceDate { get; set; }
     public string Service { get; set; } = string.Empty;
 
+    public string? WorkOrderNumber { get; set; }
+    public string? Complaint { get; set; }
+    public string? Diagnosis { get; set; }
+
     public int? Mileage { get; set; }
     public string? Technician { get; set; }
 
     public string Status { get; set; } = "Completed";
+    public string? ApprovalStatus { get; set; }
+    public decimal? EstimateAmount { get; set; }
+    public string? InvoiceNumber { get; set; }
+    public decimal? InvoiceAmount { get; set; }
+
     public string? Notes { get; set; }
+    public string? InternalNotes { get; set; }
 
     public DateTimeOffset CreatedUtc { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? UpdatedUtc { get; set; }

@@ -21,6 +21,7 @@ public sealed class DashboardService : IDashboardService
 
     public async Task<DashboardViewModel> GetAsync()
     {
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -40,6 +41,7 @@ public sealed class DashboardService : IDashboardService
 
         var vehicles = new List<CustomerVehicle>();
         var history = new List<ServiceHistoryEntry>();
+        var workOrders = new List<ServiceHistoryEntry>();
 
         if (customer is not null)
         {
@@ -56,6 +58,11 @@ public sealed class DashboardService : IDashboardService
                 .OrderByDescending(x => x.ServiceDate)
                 .Take(10)
                 .ToListAsync();
+
+            workOrders = history
+                .Where(x => !IsClosedStatus(x.Status) || x.EstimateAmount.HasValue || x.InvoiceAmount.HasValue || !string.IsNullOrWhiteSpace(x.ApprovalStatus))
+                .OrderByDescending(x => x.ServiceDate)
+                .ToList();
         }
 
         var requests = new List<AppointmentRequest>();
@@ -81,17 +88,32 @@ public sealed class DashboardService : IDashboardService
             DisplayName = displayName,
             Vehicles = vehicles,
             Requests = requests,
-            History = history
+            History = history,
+            WorkOrders = workOrders
         };
 
-        model.Activity = BuildActivity(model.Vehicles, model.Requests, model.History);
+        model.Activity = BuildActivity(model.Vehicles, model.Requests, model.History, model.WorkOrders);
         return model;
+    }
+
+    private static bool IsClosedStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return false;
+        }
+
+        return status.Equals("Completed", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Declined", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Closed", StringComparison.OrdinalIgnoreCase);
     }
 
     private static List<ActivityItem> BuildActivity(
         List<CustomerVehicle> vehicles,
         List<AppointmentRequest> requests,
-        List<ServiceHistoryEntry> history)
+        List<ServiceHistoryEntry> history,
+        List<ServiceHistoryEntry> workOrders)
     {
         var items = new List<ActivityItem>();
 
@@ -123,6 +145,16 @@ public sealed class DashboardService : IDashboardService
                 "Service completed",
                 $"{latestService.VehicleName} · {latestService.Service}",
                 latestService.ServiceDate.ToString("MMM d, yyyy")));
+        }
+
+        if (workOrders.Count > 0)
+        {
+            var latestWorkOrder = workOrders.First();
+            items.Add(new ActivityItem(
+                "📝",
+                "Work order updated",
+                $"{latestWorkOrder.VehicleName} · {latestWorkOrder.Service}",
+                latestWorkOrder.ServiceDate.ToString("MMM d, yyyy")));
         }
 
         return items;

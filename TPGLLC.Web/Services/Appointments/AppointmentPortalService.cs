@@ -1,7 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using TPGLLC.Data;
 using TPGLLC.Data.Entities;
 using TPGLLC.Services.Vehicles;
+using TPGLLC.Shared.Identity;
 using TPGLLC.Web.Components.PortalShared.Appointments;
 using TPGLLC.Web.Services.Customers;
 using TPGLLC.Web.ViewModels.Portal;
@@ -12,19 +14,19 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
 {
     private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
-    private readonly ICustomerProfileService _customerProfileService;
     private readonly IVehicleCatalogService _vehicleCatalogService;
+    private readonly UserManager<ApplicationUser> _userManager;
 
     public AppointmentPortalService(
         IDbContextFactory<TPGLLCDbContext> dbFactory,
         ICurrentCustomerAccessor currentCustomerAccessor,
-        ICustomerProfileService customerProfileService,
-        IVehicleCatalogService vehicleCatalogService)
+        IVehicleCatalogService vehicleCatalogService,
+        UserManager<ApplicationUser> userManager)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
-        _customerProfileService = customerProfileService;
         _vehicleCatalogService = vehicleCatalogService;
+        _userManager = userManager;
     }
 
     public async Task<AppointmentPageViewModel> GetAsync()
@@ -45,13 +47,25 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
 
-        List<AppointmentRequest> requests = [];
+        var customer = await db.Customers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
 
-        if (!string.IsNullOrWhiteSpace(current.Email))
+        var user = await _userManager.FindByIdAsync(current.UserId);
+
+        var customerInfo = BuildCustomerInfo(
+            user,
+            profile,
+            customer,
+            current.Email);
+
+        var requests = new List<AppointmentRequest>();
+
+        if (!string.IsNullOrWhiteSpace(customerInfo.Email))
         {
             requests = await db.AppointmentRequests
                 .AsNoTracking()
-                .Where(x => x.Email == current.Email)
+                .Where(x => x.Email == customerInfo.Email)
                 .OrderByDescending(x => x.SubmittedAtUtc)
                 .ToListAsync();
         }
@@ -61,7 +75,7 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             Requests = requests,
             OpenRequests = requests.Where(x => !IsClosedStatus(x.Status)).ToList(),
             Years = await GetYearsAsync(),
-            Form = BuildDefaultForm(profile, current.Email)
+            Form = BuildDefaultForm(customerInfo)
         };
     }
 
@@ -133,17 +147,28 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
 
+        var customer = await db.Customers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ApplicationUserId == current.UserId);
+
+        var user = await _userManager.FindByIdAsync(current.UserId);
+
+        var customerInfo = BuildCustomerInfo(user, profile, customer, current.Email);
+
         var request = new AppointmentRequest
         {
             Name = string.IsNullOrWhiteSpace(model.Form.Name)
-                ? BuildDisplayName(profile, current.Email)
+                ? customerInfo.Name
                 : model.Form.Name.Trim(),
+
             Email = string.IsNullOrWhiteSpace(model.Form.Email)
-                ? (current.Email ?? string.Empty).Trim()
+                ? customerInfo.Email
                 : model.Form.Email.Trim(),
+
             Phone = string.IsNullOrWhiteSpace(model.Form.Phone)
-                ? (profile?.Phone ?? string.Empty).Trim()
+                ? customerInfo.Phone
                 : model.Form.Phone.Trim(),
+
             VehicleYear = string.IsNullOrWhiteSpace(model.Form.VehicleYear) ? null : model.Form.VehicleYear.Trim(),
             VehicleMake = string.IsNullOrWhiteSpace(model.Form.VehicleMake) ? null : model.Form.VehicleMake.Trim(),
             VehicleModel = string.IsNullOrWhiteSpace(model.Form.VehicleModel) ? null : model.Form.VehicleModel.Trim(),
@@ -160,123 +185,117 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         db.AppointmentRequests.Add(request);
         await db.SaveChangesAsync();
 
-        var refreshed = await GetAsync();
-        refreshed.SuccessMessage = "Appointment request submitted.";
-        return refreshed;
+        var updatedModel = await GetAsync();
+        updatedModel.SuccessMessage = "Appointment request submitted.";
+        return updatedModel;
     }
 
-
-    public async Task<AppointmentPageViewModel> RescheduleAsync(Guid requestId,AppointmentRescheduleFormModel form,CancellationToken cancellationToken = default)
+    public async Task<AppointmentPageViewModel> RescheduleAsync(
+        Guid requestId,
+        AppointmentRescheduleFormModel form,
+        CancellationToken cancellationToken = default)
     {
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
             return new AppointmentPageViewModel
             {
-                ErrorMessage = "You must be signed in to manage appointments."
-            };
-        }
-
-        if (string.IsNullOrWhiteSpace(current.Email))
-        {
-            return new AppointmentPageViewModel
-            {
-                ErrorMessage = "Your account does not have an email address on file."
-            };
-        }
-
-        if (string.IsNullOrWhiteSpace(form.PreferredDate))
-        {
-            return new AppointmentPageViewModel
-            {
-                ErrorMessage = "Preferred date is required."
-            };
-        }
-
-        if (string.IsNullOrWhiteSpace(form.PreferredTime))
-        {
-            return new AppointmentPageViewModel
-            {
-                ErrorMessage = "Preferred time is required."
-            };
-        }
-
-        if (string.IsNullOrWhiteSpace(form.ServiceNeeded))
-        {
-            return new AppointmentPageViewModel
-            {
-                ErrorMessage = "Service needed is required."
+                ErrorMessage = "You must be signed in to reschedule appointments."
             };
         }
 
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
 
-        var request = await db.AppointmentRequests
-            .FirstOrDefaultAsync(x => x.RequestId == requestId
-                && x.Email != null
-                && x.Email.ToLower() == current.Email.ToLower(), cancellationToken);
+        var user = await _userManager.FindByIdAsync(current.UserId);
+        var currentEmail = FirstNotEmpty(user?.Email, current.Email);
 
-        if (request is null)
+        if (string.IsNullOrWhiteSpace(currentEmail))
         {
             return new AppointmentPageViewModel
             {
-                ErrorMessage = "Appointment request not found."
+                ErrorMessage = "Your account does not have an email address."
             };
+        }
+
+        var request = await db.AppointmentRequests
+            .FirstOrDefaultAsync(
+                x => x.RequestId == requestId && x.Email == currentEmail,
+                cancellationToken);
+
+        if (request is null)
+        {
+            var notFoundModel = await GetAsync();
+            notFoundModel.ErrorMessage = "Appointment request was not found.";
+            return notFoundModel;
+        }
+
+        if (IsClosedStatus(request.Status))
+        {
+            var closedModel = await GetAsync();
+            closedModel.ErrorMessage = "Closed appointments cannot be rescheduled.";
+            return closedModel;
         }
 
         request.PreferredDate = form.PreferredDate.Trim();
         request.PreferredTime = form.PreferredTime.Trim();
         request.ServiceNeeded = form.ServiceNeeded.Trim();
         request.Message = string.IsNullOrWhiteSpace(form.Message) ? null : form.Message.Trim();
-        request.Status = "Rescheduled";
+        request.Status = "Requested";
 
         await db.SaveChangesAsync(cancellationToken);
 
-        var refreshed = await GetAsync();
-        refreshed.SuccessMessage = "Appointment request rescheduled.";
-        return refreshed;
+        var result = await GetAsync();
+        result.SuccessMessage = "Appointment request rescheduled.";
+        return result;
     }
 
-    public async Task<AppointmentPageViewModel> CancelAsync(Guid requestId, CancellationToken cancellationToken = default)
+    public async Task<AppointmentPageViewModel> CancelAsync(
+        Guid requestId,
+        CancellationToken cancellationToken = default)
     {
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
             return new AppointmentPageViewModel
             {
-                ErrorMessage = "You must be signed in to manage appointments."
-            };
-        }
-
-        if (string.IsNullOrWhiteSpace(current.Email))
-        {
-            return new AppointmentPageViewModel
-            {
-                ErrorMessage = "Your account does not have an email address on file."
+                ErrorMessage = "You must be signed in to cancel appointments."
             };
         }
 
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
 
-        var request = await db.AppointmentRequests
-            .FirstOrDefaultAsync(x => x.RequestId == requestId
-                && x.Email != null
-                && x.Email.ToLower() == current.Email.ToLower(), cancellationToken);
+        var user = await _userManager.FindByIdAsync(current.UserId);
+        var currentEmail = FirstNotEmpty(user?.Email, current.Email);
 
-        if (request is null)
+        if (string.IsNullOrWhiteSpace(currentEmail))
         {
             return new AppointmentPageViewModel
             {
-                ErrorMessage = "Appointment request not found."
+                ErrorMessage = "Your account does not have an email address."
             };
         }
 
-        request.Status = "Cancelled";
-        await db.SaveChangesAsync(cancellationToken);
+        var request = await db.AppointmentRequests
+            .FirstOrDefaultAsync(
+                x => x.RequestId == requestId && x.Email == currentEmail,
+                cancellationToken);
 
-        var refreshed = await GetAsync();
-        refreshed.SuccessMessage = "Appointment request cancelled.";
-        return refreshed;
+        if (request is null)
+        {
+            var notFoundModel = await GetAsync();
+            notFoundModel.ErrorMessage = "Appointment request was not found.";
+            return notFoundModel;
+        }
+
+        if (!IsClosedStatus(request.Status))
+        {
+            request.Status = "Cancelled";
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        var result = await GetAsync();
+        result.SuccessMessage = "Appointment request cancelled.";
+        return result;
     }
 
     private async Task<List<int>> GetYearsAsync()
@@ -294,25 +313,66 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         return list;
     }
 
-    private static AppointmentRequestFormModel BuildDefaultForm(CustomerProfile? profile, string? email)
+    private static AppointmentRequestFormModel BuildDefaultForm(CustomerAppointmentInfo customer)
     {
         return new AppointmentRequestFormModel
         {
-            Name = BuildDisplayName(profile, email),
-            Email = string.IsNullOrWhiteSpace(email) ? string.Empty : email.Trim(),
-            Phone = string.IsNullOrWhiteSpace(profile?.Phone) ? string.Empty : profile.Phone.Trim()
+            Name = customer.Name,
+            Email = customer.Email,
+            Phone = customer.Phone
         };
     }
 
-    private static string BuildDisplayName(CustomerProfile? profile, string? email)
+    private static CustomerAppointmentInfo BuildCustomerInfo(
+        ApplicationUser? user,
+        CustomerProfile? profile,
+        Customer? customer,
+        string? authenticatedEmail)
     {
-        var name = $"{profile?.FirstName} {profile?.LastName}".Trim();
-        if (!string.IsNullOrWhiteSpace(name))
+        var firstName = FirstNotEmpty(
+            user?.FirstName,
+            profile?.FirstName,
+            customer?.FirstName);
+
+        var lastName = FirstNotEmpty(
+            user?.LastName,
+            profile?.LastName,
+            customer?.LastName);
+
+        var name = string.Join(" ", new[] { firstName, lastName }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+        if (string.IsNullOrWhiteSpace(name))
         {
-            return name;
+            name = FirstNotEmpty(
+                user?.DisplayName,
+                authenticatedEmail,
+                "Customer");
         }
 
-        return string.IsNullOrWhiteSpace(email) ? "Customer" : email.Trim();
+        var email = FirstNotEmpty(
+            user?.Email,
+            customer?.Email,
+            authenticatedEmail);
+
+        var phone = FirstNotEmpty(
+            user?.PhoneNumber,
+            profile?.Phone,
+            customer?.Phone);
+
+        return new CustomerAppointmentInfo(name, email, phone);
+    }
+
+    private static string FirstNotEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value.Trim();
+            }
+        }
+
+        return string.Empty;
     }
 
     private static bool IsClosedStatus(string? status)
@@ -364,4 +424,9 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
 
         return false;
     }
+
+    private sealed record CustomerAppointmentInfo(
+        string Name,
+        string Email,
+        string Phone);
 }

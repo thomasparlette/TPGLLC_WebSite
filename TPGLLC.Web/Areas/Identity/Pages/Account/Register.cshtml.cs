@@ -1,7 +1,10 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.WebUtilities;
 using TPGLLC.Shared.Identity;
 
 namespace TPGLLC.Web.Areas.Identity.Pages.Account;
@@ -9,11 +12,13 @@ namespace TPGLLC.Web.Areas.Identity.Pages.Account;
 public sealed class RegisterModel(
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,
-    RoleManager<ApplicationRole> roleManager) : PageModel
+    RoleManager<ApplicationRole> roleManager,
+    IEmailSender emailSender) : PageModel
 {
     private readonly UserManager<ApplicationUser> _userManager = userManager;
     private readonly SignInManager<ApplicationUser> _signInManager = signInManager;
     private readonly RoleManager<ApplicationRole> _roleManager = roleManager;
+    private readonly IEmailSender _emailSender = emailSender;
 
     [BindProperty]
     public InputModel Input { get; set; } = new();
@@ -63,8 +68,31 @@ public sealed class RegisterModel(
             await _userManager.AddToRoleAsync(user, "Customer");
         }
 
+        await SendConfirmationEmailAsync(user);
+
         await _signInManager.SignInAsync(user, isPersistent: true);
         return LocalRedirect(GetReturnUrl());
+    }
+
+    private async Task SendConfirmationEmailAsync(ApplicationUser user)
+    {
+        var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+        var encodedCode = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = Url.Page(
+            "/Account/ConfirmEmail",
+            pageHandler: null,
+            values: new { area = "Identity", userId = user.Id, code = encodedCode },
+            protocol: Request.Scheme);
+
+        if (callbackUrl is null)
+        {
+            return;
+        }
+
+        await _emailSender.SendEmailAsync(
+            user.Email!,
+            "Confirm your email address",
+            $"Please confirm your email address by <a href='{callbackUrl}'>clicking here</a>.");
     }
 
     private string GetReturnUrl()

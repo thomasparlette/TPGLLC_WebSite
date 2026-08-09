@@ -184,9 +184,16 @@ public sealed class BuildEnvironmentSeeder
                     VehicleName = "2019 Dodge Challenger",
                     ServiceDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-21)),
                     Service = "Oil change",
+                    WorkOrderNumber = "WO-10482",
+                    Complaint = "Routine maintenance request",
+                    Diagnosis = "Oil change and inspection completed without issues.",
                     Mileage = 52000,
                     Technician = "J. Miller",
                     Status = "Completed",
+                    ApprovalStatus = "Approved",
+                    EstimateAmount = 89.95m,
+                    InvoiceNumber = "INV-10482",
+                    InvoiceAmount = 89.95m,
                     Notes = "Demo history row",
                     CreatedUtc = DateTimeOffset.UtcNow
                 },
@@ -198,15 +205,46 @@ public sealed class BuildEnvironmentSeeder
                     VehicleName = "2015 Honda Grom",
                     ServiceDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-45)),
                     Service = "Chain service",
+                    WorkOrderNumber = "WO-10491",
+                    Complaint = "Chain adjustment and lubrication needed",
+                    Diagnosis = "Chain cleaned, adjusted, and lubricated.",
                     Mileage = 6050,
                     Technician = "A. Smith",
                     Status = "Completed",
+                    ApprovalStatus = "Approved",
+                    EstimateAmount = 164.20m,
+                    InvoiceNumber = "INV-10491",
+                    InvoiceAmount = 164.20m,
                     Notes = "Demo history row",
                     CreatedUtc = DateTimeOffset.UtcNow
                 }
             ]);
         }
 
+
+        if (!await _db.ServiceHistoryEntries.AnyAsync(x => x.CustomerId == customer.Id && x.WorkOrderNumber == "WO-10500"))
+        {
+            _db.ServiceHistoryEntries.Add(
+                new ServiceHistoryEntry
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerId = customer.Id,
+                    CustomerVehicleId = primaryVehicle.Id,
+                    VehicleName = "2019 Dodge Challenger",
+                    ServiceDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-3)),
+                    Service = "Front brakes and rotors",
+                    WorkOrderNumber = "WO-10500",
+                    Complaint = "Brake pulsation and noise under light braking.",
+                    Diagnosis = "Front rotors are warped and pads are near minimum thickness.",
+                    Mileage = 52950,
+                    Technician = "Demo Tech",
+                    Status = "Quoted",
+                    ApprovalStatus = "Pending",
+                    EstimateAmount = 684.27m,
+                    Notes = "Customer advised of brake condition and quoted replacement.",
+                    CreatedUtc = DateTimeOffset.UtcNow
+                });
+        }
         await _db.SaveChangesAsync();
     }
 

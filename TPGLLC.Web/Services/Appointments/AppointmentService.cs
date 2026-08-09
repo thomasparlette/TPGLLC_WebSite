@@ -45,6 +45,15 @@ public sealed class AppointmentService : IAppointmentService
 
             await SaveRequestAsync(request, requestId, current, submittedAtUtc, cancellationToken);
 
+            if (!CanSendEmails())
+            {
+                _logger.LogInformation(
+                    "Appointment request {RequestId} saved without email because SMTP settings are incomplete.",
+                    requestId);
+
+                return AppointmentSubmissionResult.Ok(requestId);
+            }
+
             ValidateOptions();
 
             var year = DateTime.UtcNow.Year;
@@ -193,6 +202,17 @@ public sealed class AppointmentService : IAppointmentService
         };
 
         await client.SendMailAsync(message, cancellationToken);
+    }
+
+    private bool CanSendEmails()
+    {
+        return
+            !string.IsNullOrWhiteSpace(_options.Host) &&
+            _options.Port > 0 &&
+            !string.IsNullOrWhiteSpace(_options.Username) &&
+            !string.IsNullOrWhiteSpace(_options.Password) &&
+            !string.IsNullOrWhiteSpace(_options.FromAddress) &&
+            !string.IsNullOrWhiteSpace(_options.ToAddress);
     }
 
     private void ValidateOptions()

@@ -21,6 +21,7 @@ public sealed class VehicleDetailsService : IVehicleDetailsService
 
     public async Task<VehicleDetailsViewModel> GetAsync(Guid vehicleId)
     {
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {

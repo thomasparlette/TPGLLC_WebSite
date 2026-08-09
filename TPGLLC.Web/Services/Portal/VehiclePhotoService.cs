@@ -19,18 +19,15 @@ public sealed class VehiclePhotoService : IVehiclePhotoService
     private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
     private readonly IWebHostEnvironment _environment;
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
-    private readonly IBuildEnvironmentService _buildEnvironmentService;
 
     public VehiclePhotoService(
         IDbContextFactory<TPGLLCDbContext> dbFactory,
         IWebHostEnvironment environment,
-        ICurrentCustomerAccessor currentCustomerAccessor,
-        IBuildEnvironmentService buildEnvironmentService)
+        ICurrentCustomerAccessor currentCustomerAccessor)
     {
         _dbFactory = dbFactory;
         _environment = environment;
         _currentCustomerAccessor = currentCustomerAccessor;
-        _buildEnvironmentService = buildEnvironmentService;
     }
 
     public async Task UploadAsync(Guid vehicleId, IBrowserFile file)

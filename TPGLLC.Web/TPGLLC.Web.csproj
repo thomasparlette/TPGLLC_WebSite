@@ -17,7 +17,6 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.10">
       <PrivateAssets>all</PrivateAssets>
@@ -35,9 +34,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Update="appsettings.Build.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Content>
+    <Compile Remove="Infrastructure\BuildEnvironmentSeeder.cs" />
+    <Compile Remove="Services\Portal\BuildEnvironmentService.cs" />
+    <Compile Remove="Services\Portal\IBuildEnvironmentService.cs" />
+    <Content Remove="appsettings.Build.json" />
     <Content Update="appsettings.json">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Content>

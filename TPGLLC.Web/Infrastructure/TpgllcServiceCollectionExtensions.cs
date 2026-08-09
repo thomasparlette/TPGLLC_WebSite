@@ -9,6 +9,7 @@ using TPGLLC.Web.Services;
 using TPGLLC.Web.Services.Appointments;
 using TPGLLC.Web.Services.Customers;
 using TPGLLC.Web.Services.Portal;
+using TPGLLC.Web.Services.WorkOrders;
 
 namespace TPGLLC.Web.Infrastructure;
 
@@ -16,8 +17,7 @@ public static class TpgllcServiceCollectionExtensions
 {
     public static IServiceCollection AddTpgllcPlatform(
         this IServiceCollection services,
-        IConfiguration configuration,
-        IWebHostEnvironment environment)
+        IConfiguration configuration)
     {
         var configConnection = configuration.GetConnectionString("WebsiteDb");
         var envConnection = Environment.GetEnvironmentVariable("ConnectionStrings__WebsiteDb");
@@ -27,24 +27,14 @@ public static class TpgllcServiceCollectionExtensions
             ?? envConnection
             ?? throw new InvalidOperationException("Missing WebsiteDb connection string.");
 
-        if (environment.IsEnvironment("Build"))
-        {
-            services.AddDbContext<TPGLLCDbContext>(options =>
-                options.UseInMemoryDatabase("TPGLLC_Build"));
+        services.AddDbContext<TPGLLCDbContext>(options =>
+            options.UseSqlServer(connectionString,
+                sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)));
 
-            services.AddDbContextFactory<TPGLLCDbContext>(options =>
-                options.UseInMemoryDatabase("TPGLLC_Build"));
-        }
-        else
-        {
-            services.AddDbContext<TPGLLCDbContext>(options =>
-                options.UseSqlServer(connectionString,
-                    sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)));
-
-            services.AddDbContextFactory<TPGLLCDbContext>(options =>
-                options.UseSqlServer(connectionString,
-                    sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)));
-        }
+        services.AddDbContextFactory<TPGLLCDbContext>(
+            options => options.UseSqlServer(connectionString,
+                sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)),
+            ServiceLifetime.Scoped);
 
         services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
         {
@@ -109,21 +99,20 @@ public static class TpgllcServiceCollectionExtensions
             configuration.GetSection("Gmail"));
 
         services.AddScoped<IVehicleCatalogService, VehicleCatalogService>();
-        services.AddScoped<IPortalSessionState, PortalSessionState>();
         services.AddScoped<ICurrentCustomerAccessor, CurrentCustomerAccessor>();
         services.AddScoped<ICustomerProfileService, CustomerProfileService>();
         services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IVehiclePortalService, VehiclePortalService>();
+        services.AddScoped<IPortalSessionState, PortalSessionState>();
         services.AddScoped<IAppointmentPortalService, AppointmentPortalService>();
         services.AddScoped<IAppointmentService, AppointmentService>();
+        services.AddScoped<IWorkOrderPortalService, WorkOrderPortalService>();
         services.AddScoped<IEmailTemplateRenderer, FileEmailTemplateRenderer>();
-        services.AddSingleton<IBuildEnvironmentService, BuildEnvironmentService>();
         services.AddScoped<ICustomerAccountService, CustomerAccountService>();
         services.AddScoped<IVehiclePhotoService, VehiclePhotoService>();
         services.AddScoped<IVehicleDetailsService, VehicleDetailsService>();
         services.AddScoped<IPortalContextService, PortalContextService>();
-        services.AddScoped<BuildEnvironmentSeeder>();
 
         services.AddAuthorizationBuilder()
             .AddPolicy(PortalPolicies.Customer, policy =>

@@ -25,6 +25,15 @@ public sealed class ServiceHistoryEntryConfiguration
             .HasMaxLength(200)
             .IsRequired();
 
+        builder.Property(x => x.WorkOrderNumber)
+            .HasMaxLength(50);
+
+        builder.Property(x => x.Complaint)
+            .HasMaxLength(4000);
+
+        builder.Property(x => x.Diagnosis)
+            .HasMaxLength(4000);
+
         builder.Property(x => x.Technician)
             .HasMaxLength(120);
 
@@ -32,7 +41,22 @@ public sealed class ServiceHistoryEntryConfiguration
             .HasMaxLength(30)
             .IsRequired();
 
+        builder.Property(x => x.ApprovalStatus)
+            .HasMaxLength(30);
+
+        builder.Property(x => x.EstimateAmount)
+            .HasColumnType("decimal(18,2)");
+
+        builder.Property(x => x.InvoiceNumber)
+            .HasMaxLength(50);
+
+        builder.Property(x => x.InvoiceAmount)
+            .HasColumnType("decimal(18,2)");
+
         builder.Property(x => x.Notes)
+            .HasMaxLength(4000);
+
+        builder.Property(x => x.InternalNotes)
             .HasMaxLength(4000);
 
         builder.Property(x => x.CreatedUtc)

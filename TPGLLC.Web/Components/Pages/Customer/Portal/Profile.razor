@@ -46,6 +46,13 @@
             </PortalNotice>
         }
 
+        @if (!_model.EmailConfirmed)
+        {
+            <PortalNotice Type="warning" Title="Verify your email">
+                Your email address is not confirmed yet. Saving a new email address will send a verification link to @_model.Email.
+            </PortalNotice>
+        }
+
         <div class="portal-stats">
             <div class="portal-stat">
                 <div class="portal-stat-value">@GetDisplayName()</div>
@@ -166,7 +173,7 @@
     private async Task SaveAsync()
     {
         _model = await AccountService.SaveAsync(_model) ?? new CustomerAccountViewModel();
-        Navigation.NavigateTo("/portal/dashboard", forceLoad: true);
+        Navigation.NavigateTo("/portal/dashboard");
     }
 
     private async Task ReloadAsync()

@@ -78,7 +78,6 @@ public sealed class VehicleCatalogImportService
         }
 
         var strategy = _db.Database.CreateExecutionStrategy();
-        var inserted = 0;
 
         await strategy.ExecuteAsync(async () =>
         {
@@ -97,16 +96,16 @@ public sealed class VehicleCatalogImportService
                     _settings.EndYear);
             }
 
-            inserted = await FlushAsync(rows, cancellationToken);
+            var inserted = await FlushAsync(rows, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
-        });
 
-        _logger.LogInformation(
-            "vPIC import complete. Imported {Imported} rows for {MakeCount} makes across {StartYear}-{EndYear}.",
-            inserted,
-            allowedMakes.Count,
-            _settings.StartYear,
-            _settings.EndYear);
+            _logger.LogInformation(
+                "vPIC import complete. Imported {Imported} rows for {MakeCount} makes across {StartYear}-{EndYear}.",
+                inserted,
+                allowedMakes.Count,
+                _settings.StartYear,
+                _settings.EndYear);
+        });
     }
 
     private async Task<ConcurrentDictionary<VehicleCatalogKey, VehicleCatalogEntry>> FetchRowsAsync(

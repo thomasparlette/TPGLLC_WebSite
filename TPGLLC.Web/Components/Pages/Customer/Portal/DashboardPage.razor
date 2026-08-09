@@ -15,7 +15,7 @@
     <div class="portal-header">
         <p class="section-kicker">Customer Portal</p>
         <h1>Welcome back, @_model.DisplayName</h1>
-        <p>Manage your vehicles, appointments, service history, and account details in one place.</p>
+        <p>Manage your vehicles, appointments, work orders, invoices, service history, and account details in one place.</p>
     </div>
 
     @if (_loading)
@@ -52,6 +52,11 @@
                 <div class="portal-stat-value">@_model.History.Count</div>
                 <div class="portal-stat-label">History Entries</div>
             </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_model.WorkOrders.Count</div>
+                <div class="portal-stat-label">Work Orders</div>
+            </div>
         </div>
 
         <div class="portal-section">
@@ -70,6 +75,12 @@
                     <div class="portal-card-icon">📅</div>
                     <h3>Request Service</h3>
                     <p>Submit a new appointment request or review recent requests.</p>
+                </a>
+
+                <a class="portal-card-link" href="/portal/work-orders">
+                    <div class="portal-card-icon">📝</div>
+                    <h3>Work Orders &amp; Invoices</h3>
+                    <p>Review estimates, approvals, and invoices tied to your vehicles.</p>
                 </a>
 
                 <a class="portal-card-link" href="/portal/profile">

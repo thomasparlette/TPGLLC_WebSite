@@ -9,11 +9,46 @@
     <div class="portal-primary-meta" style="margin-top:0.75rem;">
         <span>@Entry.ServiceDate.ToString("MMM d, yyyy")</span>
         <span>@Entry.Status</span>
+        @if (!string.IsNullOrWhiteSpace(Entry.ApprovalStatus))
+        {
+            <span>@Entry.ApprovalStatus</span>
+        }
         @if (Entry.Mileage.HasValue)
         {
             <span>@Entry.Mileage.Value.ToString("N0") mi</span>
         }
     </div>
+
+    <div style="margin-top:0.75rem; display:flex; flex-wrap:wrap; gap:0.5rem;">
+        @if (!string.IsNullOrWhiteSpace(Entry.WorkOrderNumber))
+        {
+            <span class="portal-chip">@Entry.WorkOrderNumber</span>
+        }
+
+        @if (Entry.EstimateAmount.HasValue)
+        {
+            <span class="portal-chip">Estimate @Entry.EstimateAmount.Value.ToString("C")</span>
+        }
+
+        @if (Entry.InvoiceAmount.HasValue)
+        {
+            <span class="portal-chip">Invoice @Entry.InvoiceAmount.Value.ToString("C")</span>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Entry.Complaint))
+    {
+        <div style="margin-top:0.75rem; color:#6b7280;">
+            Concern: @Entry.Complaint
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Entry.Diagnosis))
+    {
+        <div style="margin-top:0.6rem; color:#6b7280;">
+            Diagnosis: @Entry.Diagnosis
+        </div>
+    }
 
     @if (!string.IsNullOrWhiteSpace(Entry.Technician))
     {

@@ -15,4 +15,6 @@ public interface IBuildEnvironmentService
     VehicleDetailsViewModel CreateVehicleDetails(Guid vehicleId);
 
     AppointmentPageViewModel CreateAppointments();
+
+    WorkOrderPageViewModel CreateWorkOrders();
 }

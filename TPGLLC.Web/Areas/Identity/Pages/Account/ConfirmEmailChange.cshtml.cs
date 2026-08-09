@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -7,13 +8,16 @@ using TPGLLC.Shared.Identity;
 
 namespace TPGLLC.Web.Areas.Identity.Pages.Account;
 
-public sealed class ConfirmEmailModel : PageModel
+public sealed class ConfirmEmailChangeModel : PageModel
 {
+    private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
 
-    public ConfirmEmailModel(
+    public ConfirmEmailChangeModel(
+        SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager)
     {
+        _signInManager = signInManager;
         _userManager = userManager;
     }
 
@@ -21,10 +25,12 @@ public sealed class ConfirmEmailModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(
         string? userId,
-        string? code)
+        string? email,
+        string? token)
     {
         if (string.IsNullOrWhiteSpace(userId) ||
-            string.IsNullOrWhiteSpace(code))
+            string.IsNullOrWhiteSpace(email) ||
+            string.IsNullOrWhiteSpace(token))
         {
             StatusMessage =
                 "The email confirmation link is invalid or incomplete.";
@@ -42,12 +48,12 @@ public sealed class ConfirmEmailModel : PageModel
             return Page();
         }
 
-        string decodedCode;
+        string decodedToken;
 
         try
         {
-            decodedCode = Encoding.UTF8.GetString(
-                WebEncoders.Base64UrlDecode(code));
+            decodedToken = Encoding.UTF8.GetString(
+                WebEncoders.Base64UrlDecode(token));
         }
         catch
         {
@@ -57,9 +63,10 @@ public sealed class ConfirmEmailModel : PageModel
             return Page();
         }
 
-        var result = await _userManager.ConfirmEmailAsync(
+        var result = await _userManager.ChangeEmailAsync(
             user,
-            decodedCode);
+            email,
+            decodedToken);
 
         if (!result.Succeeded)
         {
@@ -70,8 +77,26 @@ public sealed class ConfirmEmailModel : PageModel
             return Page();
         }
 
+        var userNameResult = await _userManager.SetUserNameAsync(
+            user,
+            email);
+
+        if (!userNameResult.Succeeded)
+        {
+            StatusMessage =
+                "Your email address was confirmed, but your sign-in username could not be updated automatically.";
+
+            return Page();
+        }
+
+        if (User.Identity?.IsAuthenticated == true &&
+            User.FindFirstValue(ClaimTypes.NameIdentifier) == user.Id)
+        {
+            await _signInManager.RefreshSignInAsync(user);
+        }
+
         StatusMessage =
-            "Thank you. Your email address has been confirmed successfully.";
+            "Thank you. Your new email address has been confirmed successfully.";
 
         return Page();
     }

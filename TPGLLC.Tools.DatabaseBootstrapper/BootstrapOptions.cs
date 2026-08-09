@@ -2,7 +2,7 @@
 
 public sealed class BootstrapOptions
 {
-    public string AdminEmail { get; set; } = "admin@tomparlettegarage.org";
+    public string AdminEmail { get; set; } = "tomparlette@tomparlettegarage.org";
 
     public string AdminPassword { get; set; } = "Admin12345!";
 
@@ -14,6 +14,7 @@ public sealed class BootstrapOptions
         "Owner",
         "ServiceAdvisor",
         "Technician",
+        "Employee",
         "Finance",
         "Customer"
     ];

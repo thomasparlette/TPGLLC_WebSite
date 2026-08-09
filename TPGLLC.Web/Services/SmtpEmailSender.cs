@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity.UI.Services;
+﻿using MailKit.Security;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using MimeKit;
 
 namespace TPGLLC.Web.Services;
@@ -7,32 +8,62 @@ public sealed class SmtpEmailSender(IConfiguration configuration) : IEmailSender
 {
     private readonly IConfiguration _configuration = configuration;
 
-    public Task SendEmailAsync(string email, string subject, string htmlMessage)
+    public Task SendEmailAsync(
+        string email,
+        string subject,
+        string htmlMessage)
     {
-        var host = Get("Smtp:Host", "Gmail:Host");
-        var port = GetInt(587, "Smtp:Port", "Gmail:Port");
-        var userName = Get("Smtp:UserName", "Gmail:UserName", "Gmail:Username", "Gmail:UsernameOrEmail");
-        var password = Get("Smtp:Password", "Gmail:Password");
-        var fromEmail = Get("Smtp:FromEmail", "Gmail:FromEmail", userName);
-        var fromName = Get("Smtp:FromName", "Gmail:FromName", "TPG LLC");
-        var useSsl = GetBool(true, "Smtp:UseSsl", "Gmail:UseSsl");
+        var host = Get(
+            "Smtp:Host",
+            "Gmail:Host");
+
+        var port = GetInt(
+            587,
+            "Smtp:Port",
+            "Gmail:Port");
+
+        var userName = Get(
+            "Smtp:UserName",
+            "Gmail:UserName",
+            "Gmail:Username",
+            "Gmail:UsernameOrEmail");
+
+        var password = Get(
+            "Smtp:Password",
+            "Gmail:Password");
+
+        var fromEmail = Get(
+            "Smtp:FromEmail",
+            "Smtp:FromAddress",
+            "Gmail:FromEmail",
+            "Gmail:FromAddress",
+            userName);
+
+        var fromName = Get(
+            "Smtp:FromName",
+            "Gmail:FromName",
+            "TPG LLC");
 
         if (string.IsNullOrWhiteSpace(host) ||
             string.IsNullOrWhiteSpace(userName) ||
             string.IsNullOrWhiteSpace(password) ||
             string.IsNullOrWhiteSpace(fromEmail))
         {
-            throw new InvalidOperationException("SMTP settings are missing or incomplete.");
+            throw new InvalidOperationException(
+                "SMTP settings are missing or incomplete. " +
+                "Check Host, Port, Username, Password, and FromAddress settings.");
         }
+
+        var socketOptions = GetSocketOptions(port);
 
         return SendAsync(
             host,
             port,
-            useSsl,
+            socketOptions,
             userName,
             password,
             fromEmail,
-            fromName ?? string.Empty,
+            fromName ?? "TPG LLC",
             email,
             subject,
             htmlMessage);
@@ -41,7 +72,7 @@ public sealed class SmtpEmailSender(IConfiguration configuration) : IEmailSender
     private static async Task SendAsync(
         string host,
         int port,
-        bool useSsl,
+        SecureSocketOptions socketOptions,
         string userName,
         string password,
         string fromEmail,
@@ -51,16 +82,78 @@ public sealed class SmtpEmailSender(IConfiguration configuration) : IEmailSender
         string htmlMessage)
     {
         var message = new MimeMessage();
-        message.From.Add(new MailboxAddress(fromName, fromEmail));
-        message.To.Add(MailboxAddress.Parse(email));
-        message.Subject = subject;
-        message.Body = new BodyBuilder { HtmlBody = htmlMessage }.ToMessageBody();
 
-        using var client = new MailKit.Net.Smtp.SmtpClient();
-        await client.ConnectAsync(host, port, useSsl).ConfigureAwait(false);
-        await client.AuthenticateAsync(userName, password).ConfigureAwait(false);
-        await client.SendAsync(message).ConfigureAwait(false);
-        await client.DisconnectAsync(true).ConfigureAwait(false);
+        message.From.Add(
+            new MailboxAddress(
+                fromName,
+                fromEmail));
+
+        message.To.Add(
+            MailboxAddress.Parse(email));
+
+        message.Subject = subject;
+
+        message.Body = new BodyBuilder
+        {
+            HtmlBody = htmlMessage
+        }.ToMessageBody();
+
+        using var client =
+            new MailKit.Net.Smtp.SmtpClient();
+
+        await client.ConnectAsync(
+            host,
+            port,
+            socketOptions);
+
+        await client.AuthenticateAsync(
+            userName,
+            password);
+
+        await client.SendAsync(message);
+
+        await client.DisconnectAsync(true);
+    }
+
+    private SecureSocketOptions GetSocketOptions(int port)
+    {
+        var configured = Get(
+            "Smtp:Security",
+            "Gmail:Security");
+
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            switch (configured.Trim().ToLowerInvariant())
+            {
+                case "starttls":
+                    return SecureSocketOptions.StartTls;
+
+                case "starttlswhenavailable":
+                    return SecureSocketOptions.StartTlsWhenAvailable;
+
+                case "ssl":
+                case "sslonconnect":
+                    return SecureSocketOptions.SslOnConnect;
+
+                case "none":
+                    return SecureSocketOptions.None;
+
+                case "auto":
+                    return SecureSocketOptions.Auto;
+            }
+        }
+
+        // Standard SMTP defaults:
+        //
+        // 465 = implicit SSL/TLS
+        // 587 = STARTTLS
+        //
+        // Default to STARTTLS for everything except
+        // the standard implicit-TLS port.
+
+        return port == 465
+            ? SecureSocketOptions.SslOnConnect
+            : SecureSocketOptions.StartTls;
     }
 
     private string? Get(params string?[] keys)
@@ -73,6 +166,7 @@ public sealed class SmtpEmailSender(IConfiguration configuration) : IEmailSender
             }
 
             var value = _configuration[key];
+
             if (!string.IsNullOrWhiteSpace(value))
             {
                 return value;
@@ -82,7 +176,9 @@ public sealed class SmtpEmailSender(IConfiguration configuration) : IEmailSender
         return null;
     }
 
-    private int GetInt(int fallback, params string?[] keys)
+    private int GetInt(
+        int fallback,
+        params string?[] keys)
     {
         foreach (var key in keys)
         {
@@ -92,26 +188,8 @@ public sealed class SmtpEmailSender(IConfiguration configuration) : IEmailSender
             }
 
             var raw = _configuration[key];
+
             if (int.TryParse(raw, out var value))
-            {
-                return value;
-            }
-        }
-
-        return fallback;
-    }
-
-    private bool GetBool(bool fallback, params string?[] keys)
-    {
-        foreach (var key in keys)
-        {
-            if (string.IsNullOrWhiteSpace(key))
-            {
-                continue;
-            }
-
-            var raw = _configuration[key];
-            if (bool.TryParse(raw, out var value))
             {
                 return value;
             }

@@ -29,6 +29,7 @@ public sealed class VehiclePortalService : IVehiclePortalService
 
     public async Task<VehiclePageViewModel> GetAsync()
     {
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -148,6 +149,7 @@ public sealed class VehiclePortalService : IVehiclePortalService
 
     public async Task<VehiclePageViewModel> SaveAsync(VehiclePageViewModel model)
     {
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -214,13 +216,14 @@ public sealed class VehiclePortalService : IVehiclePortalService
 
         await db.SaveChangesAsync();
 
-        var refreshed = await GetAsync();
-        refreshed.SuccessMessage = isNew ? "Vehicle added." : "Vehicle updated.";
-        return refreshed;
+        var updatedModel = await GetAsync();
+        updatedModel.SuccessMessage = isNew ? "Vehicle added." : "Vehicle updated.";
+        return updatedModel;
     }
 
     public async Task<VehiclePageViewModel> DeleteAsync(Guid vehicleId)
     {
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -256,13 +259,14 @@ public sealed class VehiclePortalService : IVehiclePortalService
             }
         }
 
-        var refreshed = await GetAsync();
-        refreshed.SuccessMessage = "Vehicle deleted.";
-        return refreshed;
+        var updatedModel = await GetAsync();
+        updatedModel.SuccessMessage = "Vehicle deleted.";
+        return updatedModel;
     }
 
     public async Task<VehiclePageViewModel> MakePrimaryAsync(Guid vehicleId)
     {
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
         {
@@ -294,9 +298,9 @@ public sealed class VehiclePortalService : IVehiclePortalService
 
         await db.SaveChangesAsync();
 
-        var refreshed = await GetAsync();
-        refreshed.SuccessMessage = "Primary vehicle updated.";
-        return refreshed;
+        var updatedModel = await GetAsync();
+        updatedModel.SuccessMessage = "Primary vehicle updated.";
+        return updatedModel;
     }
 
     private async Task<List<int>> GetYearsAsync()
@@ -339,7 +343,7 @@ public sealed class VehiclePortalService : IVehiclePortalService
             return true;
         }
 
-        var normalized = value.Replace(",", string.Empty, StringComparison.Ordinal).Trim();
+        var normalized = value.Replace(",", "", StringComparison.Ordinal).Trim();
         if (int.TryParse(normalized, out var parsed) && parsed >= 0)
         {
             mileage = parsed;
@@ -366,19 +370,18 @@ public sealed class VehiclePortalService : IVehiclePortalService
             ApplicationUserId = current.UserId,
             FirstName = string.IsNullOrWhiteSpace(profile?.FirstName) ? "Customer" : profile!.FirstName.Trim(),
             LastName = string.IsNullOrWhiteSpace(profile?.LastName) ? "Account" : profile!.LastName.Trim(),
-            Email = string.IsNullOrWhiteSpace(current.Email) ? null : current.Email.Trim(),
-            Phone = string.IsNullOrWhiteSpace(profile?.Phone) ? null : profile.Phone.Trim(),
-            AddressLine1 = string.IsNullOrWhiteSpace(profile?.Address1) ? null : profile.Address1.Trim(),
-            AddressLine2 = string.IsNullOrWhiteSpace(profile?.Address2) ? null : profile.Address2.Trim(),
-            City = string.IsNullOrWhiteSpace(profile?.City) ? null : profile.City.Trim(),
-            State = string.IsNullOrWhiteSpace(profile?.State) ? null : profile.State.Trim(),
-            PostalCode = string.IsNullOrWhiteSpace(profile?.ZipCode) ? null : profile.ZipCode.Trim(),
-            Notes = null,
-            CreatedUtc = DateTimeOffset.UtcNow
+            Email = string.IsNullOrWhiteSpace(current.Email) ? profile?.Phone : current.Email,
+            Phone = profile?.Phone,
+            AddressLine1 = profile?.Address1,
+            AddressLine2 = profile?.Address2,
+            City = profile?.City,
+            State = profile?.State,
+            PostalCode = profile?.ZipCode
         };
 
         db.Customers.Add(customer);
         await db.SaveChangesAsync();
+
         return customer;
     }
 }

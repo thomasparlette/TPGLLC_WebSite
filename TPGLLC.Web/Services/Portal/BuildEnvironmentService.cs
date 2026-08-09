@@ -1,6 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using TPGLLC.Data;
-using TPGLLC.Data.Entities;
+﻿using TPGLLC.Data.Entities;
 using TPGLLC.Web.Components.PortalShared.Appointments;
 using TPGLLC.Web.Components.PortalShared.Vehicles;
 using TPGLLC.Web.ViewModels.Portal;
@@ -15,16 +13,10 @@ public sealed class BuildEnvironmentService : IBuildEnvironmentService
     private static readonly Guid DemoAppointmentRequestId = Guid.Parse("44444444-4444-4444-4444-444444444444");
 
     private readonly bool _isBuildEnvironment;
-    private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
-    private readonly object _catalogLock = new();
-    private CatalogLookup? _catalogLookup;
 
-    public BuildEnvironmentService(
-        IWebHostEnvironment environment,
-        IDbContextFactory<TPGLLCDbContext> dbFactory)
+    public BuildEnvironmentService(IWebHostEnvironment environment)
     {
         _isBuildEnvironment = environment.IsEnvironment("Build");
-        _dbFactory = dbFactory;
     }
 
     public bool IsBuildEnvironment => _isBuildEnvironment;
@@ -34,19 +26,22 @@ public sealed class BuildEnvironmentService : IBuildEnvironmentService
         var vehicles = CreateVehicleList();
         var requests = CreateAppointmentList();
         var history = CreateHistoryList();
+        var workOrders = CreateWorkOrders();
 
         var model = new DashboardViewModel
         {
             DisplayName = "Thomas Parlette",
             Vehicles = vehicles,
             Requests = requests,
-            History = history
+            History = history,
+            WorkOrders = workOrders
         };
 
         model.Activity = new List<ActivityItem>
         {
             new("🚗", "Vehicle added", "2019 Dodge Challenger", DateTime.Today.AddDays(-12).ToString("MMM d, yyyy")),
             new("📅", "Appointment request", "Oil change and inspection", DateTime.Today.AddDays(-1).ToString("MMM d, yyyy")),
+            new("📝", "Work order quoted", "Front brakes and rotors", DateTime.Today.AddDays(-3).ToString("MMM d, yyyy")),
             new("🛠️", "Service completed", "2019 Dodge Challenger · Oil change", DateTime.Today.AddDays(-21).ToString("MMM d, yyyy"))
         };
 
@@ -186,9 +181,16 @@ public sealed class BuildEnvironmentService : IBuildEnvironmentService
                 VehicleName = "2019 Dodge Challenger",
                 ServiceDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-21)),
                 Service = "Oil change",
+                WorkOrderNumber = "WO-10482",
+                Complaint = "Routine maintenance request",
+                Diagnosis = "Oil change and inspection completed without issues.",
                 Mileage = 52_000,
                 Technician = "Demo Tech",
                 Status = "Completed",
+                ApprovalStatus = "Approved",
+                EstimateAmount = 89.95m,
+                InvoiceNumber = "INV-10482",
+                InvoiceAmount = 89.95m,
                 Notes = "Oil and filter replaced. Tires rotated.",
                 CreatedUtc = DateTimeOffset.UtcNow.AddDays(-21)
             },
@@ -200,9 +202,16 @@ public sealed class BuildEnvironmentService : IBuildEnvironmentService
                 VehicleName = "2015 Honda Grom",
                 ServiceDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-45)),
                 Service = "Chain service",
+                WorkOrderNumber = "WO-10491",
+                Complaint = "Chain adjustment and lubrication needed",
+                Diagnosis = "Chain cleaned, adjusted, and lubricated.",
                 Mileage = 6_050,
                 Technician = "Demo Tech",
                 Status = "Completed",
+                ApprovalStatus = "Approved",
+                EstimateAmount = 164.20m,
+                InvoiceNumber = "INV-10491",
+                InvoiceAmount = 164.20m,
                 Notes = "Chain cleaned, adjusted, and lubricated.",
                 CreatedUtc = DateTimeOffset.UtcNow.AddDays(-45)
             }
@@ -234,49 +243,40 @@ public sealed class BuildEnvironmentService : IBuildEnvironmentService
         ];
     }
 
-    private List<int> GetYears()
+    public WorkOrderPageViewModel CreateWorkOrders()
     {
-        var catalog = GetCatalogLookup();
-        if (catalog.Years.Count > 0)
+        return new WorkOrderPageViewModel
         {
-            return catalog.Years.ToList();
-        }
+            WorkOrders = CreateHistoryList(),
+            CanEdit = true
+        };
+    }
 
+    private static List<int> GetYears()
+    {
         return Enumerable.Range(1995, DateTime.UtcNow.Year - 1995 + 1)
             .Reverse()
             .ToList();
     }
 
-    private List<string> GetMakesForYear(int year)
+    private static List<string> GetMakesForYear(int year)
     {
-        var catalog = GetCatalogLookup();
-        if (catalog.MakesByYear.TryGetValue(year, out var makes) && makes.Count > 0)
-        {
-            return makes.ToList();
-        }
-
-        var fallback = year switch
+        var makes = year switch
         {
             2019 => new[] { "Dodge", "Ford", "Honda", "Toyota" },
             2015 => new[] { "Honda", "Kawasaki", "Yamaha" },
             _ => new[] { "Dodge", "Ford", "Honda", "Toyota" }
         };
 
-        return fallback
+        return makes
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(x => x)
             .ToList();
     }
 
-    private List<string> GetModelsForYearAndMake(int year, string make)
+    private static List<string> GetModelsForYearAndMake(int year, string make)
     {
-        var catalog = GetCatalogLookup();
-        var key = (year, NormalizeKey(make));
-
-        if (catalog.ModelsByYearMake.TryGetValue(key, out var models) && models.Count > 0)
-        {
-            return models.ToList();
-        }
+        var key = (year, make.Trim().ToUpperInvariant());
 
         return key switch
         {
@@ -288,84 +288,6 @@ public sealed class BuildEnvironmentService : IBuildEnvironmentService
             (2015, "YAMAHA") => new List<string> { "R3", "Bolt", "YZF-R3" },
             _ => []
         };
-    }
-
-    private CatalogLookup GetCatalogLookup()
-    {
-        if (_catalogLookup is not null)
-        {
-            return _catalogLookup;
-        }
-
-        lock (_catalogLock)
-        {
-            if (_catalogLookup is not null)
-            {
-                return _catalogLookup;
-            }
-
-            _catalogLookup = LoadCatalogLookup();
-            return _catalogLookup;
-        }
-    }
-
-    private CatalogLookup LoadCatalogLookup()
-    {
-        try
-        {
-            using var db = _dbFactory.CreateDbContext();
-
-            var rows = db.VehicleCatalogEntries
-                .AsNoTracking()
-                .Select(x => new CatalogRow(x.ModelYear, x.Make, x.Model))
-                .ToList();
-
-            if (rows.Count == 0)
-            {
-                return CatalogLookup.Empty;
-            }
-
-            var years = rows
-                .Select(x => x.ModelYear)
-                .Distinct()
-                .OrderByDescending(x => x)
-                .ToList();
-
-            var makesByYear = rows
-                .GroupBy(x => x.ModelYear)
-                .ToDictionary(
-                    group => group.Key,
-                    group => group
-                        .Select(x => x.Make)
-                        .Where(x => !string.IsNullOrWhiteSpace(x))
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .OrderBy(x => x)
-                        .ToList());
-
-            var modelsByYearMake = rows
-                .GroupBy(x => (x.ModelYear, NormalizeKey(x.Make)))
-                .ToDictionary(
-                    group => group.Key,
-                    group => group
-                        .Select(x => x.Model)
-                        .Where(x => !string.IsNullOrWhiteSpace(x))
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .OrderBy(x => x)
-                        .ToList());
-
-            return new CatalogLookup(years, makesByYear, modelsByYearMake);
-        }
-        catch
-        {
-            return CatalogLookup.Empty;
-        }
-    }
-
-    private static string NormalizeKey(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value)
-            ? string.Empty
-            : value.Trim().ToUpperInvariant();
     }
 
     private static bool IsClosedStatus(string? status)
@@ -380,17 +302,5 @@ public sealed class BuildEnvironmentService : IBuildEnvironmentService
             || status.Equals("Declined", StringComparison.OrdinalIgnoreCase)
             || status.Equals("Closed", StringComparison.OrdinalIgnoreCase);
     }
-
-    private sealed record CatalogRow(int ModelYear, string Make, string Model);
-
-    private sealed record CatalogLookup(
-        IReadOnlyList<int> Years,
-        Dictionary<int, List<string>> MakesByYear,
-        Dictionary<(int ModelYear, string Make), List<string>> ModelsByYearMake)
-    {
-        public static CatalogLookup Empty { get; } = new(
-            [],
-            new Dictionary<int, List<string>>(),
-            new Dictionary<(int ModelYear, string Make), List<string>>());
-    }
 }
+

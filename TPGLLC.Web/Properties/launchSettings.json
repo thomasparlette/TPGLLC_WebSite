@@ -1,12 +1,12 @@
 {
   "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
-    "TPGLLC.Web (Build)": {
+    "TPGLLC.Web (Development)": {
       "commandName": "Project",
       "launchBrowser": true,
       "applicationUrl": "http://localhost:5001",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Build"
+        "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }
   }
