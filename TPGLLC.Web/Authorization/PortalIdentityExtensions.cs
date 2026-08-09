@@ -8,10 +8,14 @@ public static class PortalIdentityExtensions
         user.IsInRole(PortalPolicies.Administrator);
 
     public static bool IsCustomerOnly(this ClaimsPrincipal user) =>
-        user.IsInRole(PortalPolicies.Customer) && !user.IsEmployeePortalUser() && !user.IsAdministrator();
+        user.IsInRole(PortalPolicies.Customer)
+        && !user.IsAdministrator()
+        && !user.IsServiceAdvisor()
+        && !user.IsTechnician()
+        && !user.IsFinance();
 
     public static bool IsServiceAdvisor(this ClaimsPrincipal user) =>
-        user.IsInRole(PortalPolicies.ServiceAdvisor) || user.IsInRole(PortalPolicies.Employee);
+        user.IsInRole(PortalPolicies.ServiceAdvisor);
 
     public static bool IsTechnician(this ClaimsPrincipal user) =>
         user.IsInRole(PortalPolicies.Technician);

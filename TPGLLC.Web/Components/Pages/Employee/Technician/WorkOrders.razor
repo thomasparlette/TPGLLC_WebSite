@@ -1,18 +1,23 @@
 ﻿@page "/portal/employee/technician/work-orders"
 @layout CustomerLayout
-@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Technician")]
+@attribute [Authorize(Policy = PortalPolicies.Technician)]
 
-<PageTitle>Current Work Orders Assigned</PageTitle>
+<PageTitle>Technician Work Orders</PageTitle>
 
 <section class="portal-dashboard">
     <div class="portal-header">
-        <p class="section-kicker">Employee Portal</p>
+        <p class="section-kicker">Technician Portal</p>
         <h1>Current Work Orders Assigned</h1>
-        <p>Review work orders assigned to you in the technician queue.</p>
+        <p>Track work assigned to the logged-in technician.</p>
     </div>
 
-    <PortalPlaceholderPage Title="Current Work Orders Assigned"
-                           Description="Review work orders assigned to you in the technician queue."
-                           BackHref="/portal/employee/technician"
-                           BackText="Back to dashboard" />
+    <div class="portal-section">
+        <div class="portal-empty-state">
+            <div class="portal-empty-icon">🛠️</div>
+            <div>
+                <div class="portal-empty-title">Work order assignment coming next</div>
+                <div class="portal-empty-text">This page is ready for filtering assigned jobs by technician.</div>
+            </div>
+        </div>
+    </div>
 </section>

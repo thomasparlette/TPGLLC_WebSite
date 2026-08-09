@@ -77,35 +77,30 @@ public sealed class VehicleCatalogImportService
             return;
         }
 
-        var strategy = _db.Database.CreateExecutionStrategy();
+        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
 
-        await strategy.ExecuteAsync(async () =>
+        if (_settings.ReplaceExisting)
         {
-            await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
-
-            if (_settings.ReplaceExisting)
-            {
-                var deleted = await _db.VehicleCatalogEntries
-                    .Where(x => x.ModelYear >= _settings.StartYear && x.ModelYear <= _settings.EndYear)
-                    .ExecuteDeleteAsync(cancellationToken);
-
-                _logger.LogInformation(
-                    "Removed {DeletedCount} existing catalog rows for years {StartYear} through {EndYear}.",
-                    deleted,
-                    _settings.StartYear,
-                    _settings.EndYear);
-            }
-
-            var inserted = await FlushAsync(rows, cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            var deleted = await _db.VehicleCatalogEntries
+                .Where(x => x.ModelYear >= _settings.StartYear && x.ModelYear <= _settings.EndYear)
+                .ExecuteDeleteAsync(cancellationToken);
 
             _logger.LogInformation(
-                "vPIC import complete. Imported {Imported} rows for {MakeCount} makes across {StartYear}-{EndYear}.",
-                inserted,
-                allowedMakes.Count,
+                "Removed {DeletedCount} existing catalog rows for years {StartYear} through {EndYear}.",
+                deleted,
                 _settings.StartYear,
                 _settings.EndYear);
-        });
+        }
+
+        var inserted = await FlushAsync(rows, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "vPIC import complete. Imported {Imported} rows for {MakeCount} makes across {StartYear}-{EndYear}.",
+            inserted,
+            allowedMakes.Count,
+            _settings.StartYear,
+            _settings.EndYear);
     }
 
     private async Task<ConcurrentDictionary<VehicleCatalogKey, VehicleCatalogEntry>> FetchRowsAsync(

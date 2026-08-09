@@ -1,7 +1,7 @@
 ﻿@page "/portal/employee/service-advisor"
 @page "/portal/employee/service-advisor/dashboard"
 @layout CustomerLayout
-@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Employee,ServiceAdvisor,Administrator")]
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "ServiceAdvisor,Administrator")]
 
 @using Microsoft.EntityFrameworkCore
 @using TPGLLC.Data
@@ -16,7 +16,7 @@
 
 <section class="portal-dashboard">
     <div class="portal-header">
-        <p class="section-kicker">Employee Portal</p>
+        <p class="section-kicker">Service Advisor Portal</p>
         <h1>Service Advisor Dashboard</h1>
         <p>Track customer requests, schedule appointments, and move work orders through the shop.</p>
     </div>

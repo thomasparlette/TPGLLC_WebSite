@@ -33,8 +33,7 @@ public static class TpgllcServiceCollectionExtensions
 
         services.AddDbContextFactory<TPGLLCDbContext>(options =>
             options.UseSqlServer(connectionString,
-                sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)),
-            ServiceLifetime.Scoped);
+                sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)));
 
         services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
         {
@@ -107,43 +106,38 @@ public static class TpgllcServiceCollectionExtensions
         services.AddScoped<IPortalSessionState, PortalSessionState>();
         services.AddScoped<IAppointmentPortalService, AppointmentPortalService>();
         services.AddScoped<IAppointmentService, AppointmentService>();
-        services.AddScoped<IWorkOrderPortalService, WorkOrderPortalService>();
         services.AddScoped<IEmailTemplateRenderer, FileEmailTemplateRenderer>();
         services.AddScoped<ICustomerAccountService, CustomerAccountService>();
         services.AddScoped<IVehiclePhotoService, VehiclePhotoService>();
         services.AddScoped<IVehicleDetailsService, VehicleDetailsService>();
         services.AddScoped<IPortalContextService, PortalContextService>();
+        services.AddScoped<IWorkOrderPortalService, WorkOrderPortalService>();
 
         services.AddAuthorizationBuilder()
             .AddPolicy(PortalPolicies.Customer, policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireRole(PortalPolicies.Customer);
-            })
-            .AddPolicy(PortalPolicies.Employee, policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireRole(PortalPolicies.Employee);
+                policy.RequireRole("Customer");
             })
             .AddPolicy(PortalPolicies.ServiceAdvisor, policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireRole(PortalPolicies.ServiceAdvisor, PortalPolicies.Employee);
+                policy.RequireRole("ServiceAdvisor");
             })
             .AddPolicy(PortalPolicies.Technician, policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireRole(PortalPolicies.Technician);
+                policy.RequireRole("Technician");
             })
             .AddPolicy(PortalPolicies.Finance, policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireRole(PortalPolicies.Finance);
+                policy.RequireRole("Finance");
             })
             .AddPolicy(PortalPolicies.Administrator, policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireRole(PortalPolicies.Administrator);
+                policy.RequireRole("Administrator");
             });
 
         services.ConfigureApplicationCookie(options =>

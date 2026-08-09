@@ -1,11 +1,11 @@
-@page "/portal/dashboard"
+@page "/portal"
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.Customer)]
 
-@using TPGLLC.Web.Authorization
 @using System.Globalization
 @using TPGLLC.Data.Entities
 @using TPGLLC.Web.Components.Shared
+@using TPGLLC.Web.Authorization
 @using TPGLLC.Web.Services.Portal
 
 @inject IDashboardService DashboardService
@@ -84,7 +84,7 @@
                     <p>Review estimates, approvals, and invoices tied to your vehicles.</p>
                 </a>
 
-                <a class="portal-card-link" href="/portal/profile">
+                <a class="portal-card-link" href="/portal/account">
                     <div class="portal-card-icon">👤</div>
                     <h3>Customer Account</h3>
                     <p>Update your personal information and contact details.</p>

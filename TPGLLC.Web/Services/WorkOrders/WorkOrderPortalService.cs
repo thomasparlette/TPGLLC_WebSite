@@ -2,8 +2,6 @@
 using Microsoft.EntityFrameworkCore;
 using TPGLLC.Data;
 using TPGLLC.Data.Entities;
-using TPGLLC.Services.Vehicles;
-using TPGLLC.Web.Components.PortalShared.Appointments;
 using TPGLLC.Web.Services.Customers;
 using TPGLLC.Web.ViewModels.Portal;
 
@@ -65,7 +63,6 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         return new WorkOrderPageViewModel
         {
             WorkOrders = workOrders,
-            AppointmentRequests = [],
             CanEdit = false
         };
     }
@@ -81,7 +78,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             };
         }
 
-        if (!current.IsEmployee && !current.IsAdministrator)
+        if (!current.IsServiceAdvisor && !current.IsAdministrator)
         {
             return new WorkOrderPageViewModel
             {
@@ -97,20 +94,9 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             .ThenByDescending(x => x.CreatedUtc)
             .ToListAsync();
 
-        var appointmentRequests = await db.AppointmentRequests
-    .AsNoTracking()
-    .Where(x =>
-        x.Status == null ||
-        x.Status == "" ||
-        x.Status == "Pending" ||
-        x.Status == "Requested")
-    .OrderByDescending(x => x.SubmittedAtUtc)
-    .ToListAsync();
-
         return new WorkOrderPageViewModel
         {
             WorkOrders = workOrders,
-            AppointmentRequests = appointmentRequests,
             CanEdit = true
         };
     }
@@ -153,7 +139,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             return model;
         }
 
-        if (!current.IsEmployee && !current.IsAdministrator)
+        if (!current.IsServiceAdvisor && !current.IsAdministrator)
         {
             model.ErrorMessage = "You are not authorized to manage work orders.";
             return model;
@@ -222,61 +208,13 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         return refreshed;
     }
 
-    public async Task<WorkOrderPageViewModel> ApproveAppointmentAsync(Guid requestId)
+    private static WorkOrderPageViewModel BuildModel(List<ServiceHistoryEntry> entries, bool canEdit)
     {
-        return await UpdateAppointmentStatusAsync(
-            requestId,
-            "Approved",
-            "Appointment request approved.");
-    }
-
-    public async Task<WorkOrderPageViewModel> DeclineAppointmentAsync(Guid requestId)
-    {
-        return await UpdateAppointmentStatusAsync(
-            requestId,
-            "Declined",
-            "Appointment request declined.");
-    }
-
-    private async Task<WorkOrderPageViewModel> UpdateAppointmentStatusAsync(
-        Guid requestId,
-        string newStatus,
-        string successMessage)
-    {
-        var current = _currentCustomerAccessor.GetCurrentCustomer();
-        if (!current.IsAuthenticated)
+        return new WorkOrderPageViewModel
         {
-            return new WorkOrderPageViewModel
-            {
-                ErrorMessage = "You must be signed in to manage appointment requests."
-            };
-        }
-
-        if (!current.IsEmployee && !current.IsAdministrator)
-        {
-            return new WorkOrderPageViewModel
-            {
-                ErrorMessage = "You are not authorized to manage appointment requests."
-            };
-        }
-
-        await using var db = await _dbFactory.CreateDbContextAsync();
-        var request = await db.AppointmentRequests
-            .FirstOrDefaultAsync(x => x.RequestId == requestId);
-
-        if (request is null)
-        {
-            var model = await GetEmployeeAsync();
-            model.ErrorMessage = "Appointment request not found.";
-            return model;
-        }
-
-        request.Status = newStatus;
-        await db.SaveChangesAsync();
-
-        var refreshed = await GetEmployeeAsync();
-        refreshed.SuccessMessage = successMessage;
-        return refreshed;
+            WorkOrders = entries,
+            CanEdit = canEdit
+        };
     }
 
     private static WorkOrderEditViewModel MapToForm(ServiceHistoryEntry entry)

@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using TPGLLC.Web.Authorization;
 
 namespace TPGLLC.Web.Services.Customers;
 
@@ -21,15 +20,24 @@ public sealed class CurrentCustomerAccessor : ICurrentCustomerAccessor
             return new CurrentCustomer();
         }
 
+        var displayName =
+            user.FindFirst("display_name")?.Value ??
+            user.Identity?.Name ??
+            user.FindFirst(ClaimTypes.Email)?.Value ??
+            string.Empty;
+
         return new CurrentCustomer
         {
             IsAuthenticated = user.Identity?.IsAuthenticated ?? false,
             UserId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty,
             Email = user.FindFirstValue(ClaimTypes.Email) ?? string.Empty,
-            DisplayName = user.GetDisplayName(),
-            IsCustomer = user.IsInRole(PortalPolicies.Customer),
-            IsEmployee = user.IsEmployeePortalUser(),
-            IsAdministrator = user.IsAdministrator()
+            DisplayName = displayName,
+            IsCustomer = user.IsInRole("Customer"),
+            IsServiceAdvisor = user.IsInRole("ServiceAdvisor"),
+            IsTechnician = user.IsInRole("Technician"),
+            IsFinance = user.IsInRole("Finance"),
+            IsAdministrator = user.IsInRole("Administrator")
         };
     }
 }
+

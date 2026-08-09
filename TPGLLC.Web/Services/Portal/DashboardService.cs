@@ -83,22 +83,16 @@ public sealed class DashboardService : IDashboardService
             displayName = name;
         }
 
-        var openRequests = requests
-            .Where(x => !IsClosedStatus(x.Status))
-            .OrderByDescending(x => x.SubmittedAtUtc)
-            .ToList();
-
         var model = new DashboardViewModel
         {
             DisplayName = displayName,
             Vehicles = vehicles,
             Requests = requests,
-            OpenRequests = openRequests,
             History = history,
             WorkOrders = workOrders
         };
 
-        model.Activity = BuildActivity(model.Vehicles, model.OpenRequests, model.History, model.WorkOrders);
+        model.Activity = BuildActivity(model.Vehicles, model.Requests, model.History, model.WorkOrders);
         return model;
     }
 
@@ -114,6 +108,7 @@ public sealed class DashboardService : IDashboardService
             || status.Equals("Declined", StringComparison.OrdinalIgnoreCase)
             || status.Equals("Closed", StringComparison.OrdinalIgnoreCase);
     }
+
 
     private static List<ActivityItem> BuildActivity(
         List<CustomerVehicle> vehicles,

@@ -8,7 +8,6 @@ public sealed class DashboardViewModel
 
     public List<CustomerVehicle> Vehicles { get; set; } = [];
     public List<AppointmentRequest> Requests { get; set; } = [];
-    public List<AppointmentRequest> OpenRequests { get; set; } = [];
     public List<ServiceHistoryEntry> History { get; set; } = [];
     public List<ServiceHistoryEntry> WorkOrders { get; set; } = [];
     public List<ActivityItem> Activity { get; set; } = [];
@@ -17,5 +16,5 @@ public sealed class DashboardViewModel
         => Vehicles.FirstOrDefault(x => x.IsPrimary) ?? Vehicles.FirstOrDefault();
 
     public AppointmentRequest? NextRequest
-        => OpenRequests.FirstOrDefault() ?? Requests.FirstOrDefault();
+        => Requests.FirstOrDefault();
 }

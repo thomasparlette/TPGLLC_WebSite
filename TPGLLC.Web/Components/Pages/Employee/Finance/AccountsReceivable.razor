@@ -1,18 +1,23 @@
-﻿@page "/portal/employee/finance/accounts-receivable"
+﻿@page "/portal/employee/finance/accounts-received"
 @layout CustomerLayout
-@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Finance")]
+@attribute [Authorize(Policy = PortalPolicies.Finance)]
 
-<PageTitle>Accounts Receivable</PageTitle>
+<PageTitle>Account Received</PageTitle>
 
 <section class="portal-dashboard">
     <div class="portal-header">
-        <p class="section-kicker">Employee Portal</p>
-        <h1>Accounts Receivable</h1>
-        <p>Track outstanding balances and unpaid invoices.</p>
+        <p class="section-kicker">Finance Portal</p>
+        <h1>Account Received</h1>
+        <p>Posted payments and reconciliation items.</p>
     </div>
 
-    <PortalPlaceholderPage Title="Accounts Receivable"
-                           Description="Track outstanding balances and unpaid invoices."
-                           BackHref="/portal/employee/finance"
-                           BackText="Back to dashboard" />
+    <div class="portal-section">
+        <div class="portal-empty-state">
+            <div class="portal-empty-icon">📒</div>
+            <div>
+                <div class="portal-empty-title">Account Received coming next</div>
+                <div class="portal-empty-text">This page is ready for the billing workflow.</div>
+            </div>
+        </div>
+    </div>
 </section>

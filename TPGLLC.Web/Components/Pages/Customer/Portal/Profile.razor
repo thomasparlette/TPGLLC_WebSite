@@ -1,30 +1,24 @@
-﻿@page "/portal/profile"
-@page "/portal/account"
-@page "/portal/admin/account"
-@page "/portal/employee/service-advisor/account"
-@page "/portal/employee/technician/account"
-@page "/portal/employee/finance/account"
+﻿@page "/portal/account"
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Forms
-@using TPGLLC.Web.Authorization
 @using TPGLLC.Web.Components.Shared
+@using TPGLLC.Web.Authorization
 @using TPGLLC.Web.Services.Portal
 @using TPGLLC.Web.ViewModels.Portal
 
 @inject ICustomerAccountService AccountService
 @inject NavigationManager Navigation
-@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Account Detail</PageTitle>
 
 <section class="portal-dashboard">
     <div class="portal-header">
-        <p class="section-kicker">Account</p>
+        <p class="section-kicker">Portal</p>
         <h1>Account Detail</h1>
-        <p>Update your personal information and contact details.</p>
+        <p>Update your personal information, contact details, and sign-in profile.</p>
     </div>
 
     @if (_loading)
@@ -77,6 +71,10 @@
                 <button type="button" class="portal-action-button" @onclick="ReloadAsync">
                     Reset
                 </button>
+
+                <a class="portal-action-button" href="/Identity/Account/Manage/ChangePassword">
+                    Change Password
+                </a>
             </div>
 
             <EditForm Model="@_model" OnValidSubmit="@SaveAsync">
@@ -143,32 +141,17 @@
                 </div>
             </EditForm>
         </div>
-
-        <div class="portal-section" style="margin-top: 1.5rem;">
-            <div class="portal-section-heading">
-                <h2>Password &amp; Security</h2>
-            </div>
-
-            <div class="portal-actions">
-                <a class="portal-action-button" href="/portal/change-password">Change Password</a>
-                <a class="portal-action-button" href="/Identity/Account/ForgotPassword">Reset Password</a>
-            </div>
-        </div>
     }
 </section>
 
 @code {
     private CustomerAccountViewModel _model = new();
     private bool _loading = true;
-    private string _homeHref = "/portal/dashboard";
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            _homeHref = authState.User.GetPortalHomeHref();
-
             _model = await AccountService.GetAsync() ?? new CustomerAccountViewModel();
 
             if (string.IsNullOrWhiteSpace(_model.ErrorMessage) &&
@@ -188,7 +171,7 @@
     private async Task SaveAsync()
     {
         _model = await AccountService.SaveAsync(_model) ?? new CustomerAccountViewModel();
-        Navigation.NavigateTo(_homeHref, forceLoad: true);
+        Navigation.NavigateTo("/portal", forceLoad: true);
     }
 
     private async Task ReloadAsync()

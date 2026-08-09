@@ -168,38 +168,34 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         return updatedModel;
     }
 
+
     public async Task<AppointmentPageViewModel> RescheduleAsync(
         Guid requestId,
         AppointmentRescheduleFormModel form,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(form);
+
         var current = _currentCustomerAccessor.GetCurrentCustomer();
-        if (!current.IsAuthenticated || string.IsNullOrWhiteSpace(current.Email))
+        if (!current.IsAuthenticated)
         {
             return new AppointmentPageViewModel
             {
-                ErrorMessage = "You must be signed in to reschedule appointments."
+                ErrorMessage = "You must be signed in to update appointments."
             };
         }
 
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        db.ChangeTracker.Clear();
+
         var request = await db.AppointmentRequests
-            .FirstOrDefaultAsync(
-                x => x.RequestId == requestId && x.Email == current.Email,
-                cancellationToken);
+            .FirstOrDefaultAsync(x => x.RequestId == requestId && x.Email == current.Email, cancellationToken);
 
         if (request is null)
         {
-            var notFoundModel = await GetAsync();
-            notFoundModel.ErrorMessage = "Appointment request was not found.";
-            return notFoundModel;
-        }
-
-        if (IsClosedStatus(request.Status))
-        {
-            var closedModel = await GetAsync();
-            closedModel.ErrorMessage = "Closed appointments cannot be rescheduled.";
-            return closedModel;
+            var model = await GetAsync();
+            model.ErrorMessage = "Appointment request was not found.";
+            return model;
         }
 
         request.PreferredDate = form.PreferredDate.Trim();
@@ -207,49 +203,45 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         request.ServiceNeeded = form.ServiceNeeded.Trim();
         request.Message = string.IsNullOrWhiteSpace(form.Message) ? null : form.Message.Trim();
         request.Status = "Requested";
+        request.SubmittedAtUtc = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken);
 
-        var result = await GetAsync();
-        result.SuccessMessage = "Appointment request rescheduled.";
-        return result;
+        var updatedModel = await GetAsync();
+        updatedModel.SuccessMessage = "Appointment request updated.";
+        return updatedModel;
     }
 
-    public async Task<AppointmentPageViewModel> CancelAsync(
-        Guid requestId,
-        CancellationToken cancellationToken = default)
+    public async Task<AppointmentPageViewModel> CancelAsync(Guid requestId, CancellationToken cancellationToken = default)
     {
         var current = _currentCustomerAccessor.GetCurrentCustomer();
-        if (!current.IsAuthenticated || string.IsNullOrWhiteSpace(current.Email))
+        if (!current.IsAuthenticated)
         {
             return new AppointmentPageViewModel
             {
-                ErrorMessage = "You must be signed in to cancel appointments."
+                ErrorMessage = "You must be signed in to update appointments."
             };
         }
 
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        db.ChangeTracker.Clear();
+
         var request = await db.AppointmentRequests
-            .FirstOrDefaultAsync(
-                x => x.RequestId == requestId && x.Email == current.Email,
-                cancellationToken);
+            .FirstOrDefaultAsync(x => x.RequestId == requestId && x.Email == current.Email, cancellationToken);
 
         if (request is null)
         {
-            var notFoundModel = await GetAsync();
-            notFoundModel.ErrorMessage = "Appointment request was not found.";
-            return notFoundModel;
+            var model = await GetAsync();
+            model.ErrorMessage = "Appointment request was not found.";
+            return model;
         }
 
-        if (!IsClosedStatus(request.Status))
-        {
-            request.Status = "Cancelled";
-            await db.SaveChangesAsync(cancellationToken);
-        }
+        request.Status = "Cancelled";
+        await db.SaveChangesAsync(cancellationToken);
 
-        var result = await GetAsync();
-        result.SuccessMessage = "Appointment request cancelled.";
-        return result;
+        var updatedModel = await GetAsync();
+        updatedModel.SuccessMessage = "Appointment request cancelled.";
+        return updatedModel;
     }
 
     private async Task<List<int>> GetYearsAsync()

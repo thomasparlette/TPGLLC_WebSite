@@ -1,12 +1,8 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
-@using TPGLLC.Web.Authorization
 
-<AuthorizeView Context="authState">
+<AuthorizeView>
     <Authorized>
-        <NavLink href="@authState.User.GetPortalHomeHref()" Match="NavLinkMatch.All">
-            @authState.User.GetPortalSubtitle()
-        </NavLink>
-
+        <NavLink href="/portal" Match="NavLinkMatch.All">Customer Portal</NavLink>
         <a href="/logout">Sign Out</a>
     </Authorized>
     <NotAuthorized>

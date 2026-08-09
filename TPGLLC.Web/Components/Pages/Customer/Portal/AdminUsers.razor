@@ -1,5 +1,4 @@
 ﻿@page "/portal/admin/users"
-@page "/portal/admin/user-roles"
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.Administrator)]
 
@@ -13,13 +12,13 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject RoleManager<ApplicationRole> RoleManager
 
-<PageTitle>User Role Management</PageTitle>
+<PageTitle>Admin - User Roles</PageTitle>
 
 <section class="portal-dashboard">
     <div class="portal-header">
         <p class="section-kicker">Administration</p>
         <h1>User Role Management</h1>
-        <p>Assign Customer access, Service Advisor, Technician, Finance, and Administrator roles to existing users. Other memberships are left untouched.</p>
+        <p>Assign customer access and employee specialty roles to existing site users.</p>
     </div>
 
     @if (_loading)
@@ -47,7 +46,7 @@
         <div class="portal-stats">
             <div class="portal-stat">
                 <div class="portal-stat-value">@_users.Count</div>
-                <div class="portal-stat-label">Users</div>
+                <div class="portal-stat-label">Total Users</div>
             </div>
 
             <div class="portal-stat">
@@ -78,11 +77,13 @@
 
         <div class="portal-section">
             <div class="portal-section-heading">
-                <h2>Portal Users</h2>
+                <h2>Users</h2>
 
-                <button type="button" class="portal-action-button" @onclick="ReloadAsync">
-                    Refresh
-                </button>
+                <div class="portal-actions">
+                    <button type="button" class="portal-action-button" @onclick="ReloadAsync">
+                        Refresh
+                    </button>
+                </div>
             </div>
 
             <div class="admin-toolbar">
@@ -141,12 +142,7 @@
                                     <span class="portal-chip">Finance</span>
                                 }
 
-                                @if (user.IsLegacyEmployee)
-                                {
-                                    <span class="portal-chip">Employee (legacy)</span>
-                                }
-
-                                @if (!user.IsAdministrator && !user.IsCustomer && !user.IsServiceAdvisor && !user.IsTechnician && !user.IsFinance && !user.IsLegacyEmployee)
+                                @if (!user.IsAdministrator && !user.IsCustomer && !user.IsServiceAdvisor && !user.IsTechnician && !user.IsFinance)
                                 {
                                     <span class="portal-chip">No portal roles</span>
                                 }
@@ -195,8 +191,6 @@
 </section>
 
 @code {
-    private static readonly string[] ManagedRoles = ["Customer", "ServiceAdvisor", "Technician", "Finance", "Administrator"];
-
     private IReadOnlyList<AdminUserRow> _users = [];
     private string _searchText = string.Empty;
     private string? _errorMessage;
@@ -240,12 +234,11 @@
                     UserId = user.Id,
                     Email = user.Email ?? user.UserName ?? string.Empty,
                     DisplayName = BuildDisplayName(user),
-                    IsCustomer = roles.Contains("Customer", StringComparer.OrdinalIgnoreCase),
-                    IsServiceAdvisor = roles.Contains("ServiceAdvisor", StringComparer.OrdinalIgnoreCase),
-                    IsTechnician = roles.Contains("Technician", StringComparer.OrdinalIgnoreCase),
-                    IsFinance = roles.Contains("Finance", StringComparer.OrdinalIgnoreCase),
-                    IsAdministrator = roles.Contains("Administrator", StringComparer.OrdinalIgnoreCase),
-                    IsLegacyEmployee = roles.Contains("Employee", StringComparer.OrdinalIgnoreCase)
+                    IsCustomer = roles.Any(role => string.Equals(role, "Customer", StringComparison.OrdinalIgnoreCase)),
+                    IsServiceAdvisor = roles.Any(role => string.Equals(role, "ServiceAdvisor", StringComparison.OrdinalIgnoreCase)),
+                    IsTechnician = roles.Any(role => string.Equals(role, "Technician", StringComparison.OrdinalIgnoreCase)),
+                    IsFinance = roles.Any(role => string.Equals(role, "Finance", StringComparison.OrdinalIgnoreCase)),
+                    IsAdministrator = roles.Any(role => string.Equals(role, "Administrator", StringComparison.OrdinalIgnoreCase))
                 });
             }
 
@@ -265,10 +258,11 @@
 
         try
         {
-            foreach (var role in ManagedRoles)
-            {
-                await EnsureRoleAsync(role);
-            }
+            await EnsureRoleAsync("Customer");
+            await EnsureRoleAsync("ServiceAdvisor");
+            await EnsureRoleAsync("Technician");
+            await EnsureRoleAsync("Finance");
+            await EnsureRoleAsync("Administrator");
 
             var user = await UserManager.FindByIdAsync(row.UserId);
             if (user is null)
@@ -309,7 +303,7 @@
     private async Task SyncRoleAsync(ApplicationUser user, string roleName, bool shouldHaveRole)
     {
         var roles = await UserManager.GetRolesAsync(user);
-        var hasRole = roles.Contains(roleName, StringComparer.OrdinalIgnoreCase);
+        var hasRole = roles.Any(role => string.Equals(role, roleName, StringComparison.OrdinalIgnoreCase));
 
         if (shouldHaveRole && !hasRole)
         {
@@ -370,6 +364,5 @@
         public bool IsTechnician { get; set; }
         public bool IsFinance { get; set; }
         public bool IsAdministrator { get; set; }
-        public bool IsLegacyEmployee { get; set; }
     }
 }

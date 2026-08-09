@@ -1,39 +1,34 @@
 ﻿@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
-@using TPGLLC.Web.Authorization
+@using System.Security.Claims
+@using TPGLLC.Web.Infrastructure
 
 <div class="customer-layout">
     <header class="portal-topbar">
-        <AuthorizeView Context="authState">
-            <Authorized>
-                <a class="portal-brand" href="@authState.User.GetPortalHomeHref()">
-                    <img src="/images/logo.jpeg" alt="Tom Parlette Garage LLC" />
-                    <div>
-                        <div class="portal-brand-name">Tom Parlette Garage LLC</div>
-                        <div class="portal-brand-subtitle">@authState.User.GetPortalSubtitle()</div>
-                    </div>
-                </a>
-            </Authorized>
-            <NotAuthorized>
-                <a class="portal-brand" href="/">
-                    <img src="/images/logo.jpeg" alt="Tom Parlette Garage LLC" />
-                    <div>
-                        <div class="portal-brand-name">Tom Parlette Garage LLC</div>
+        <a class="portal-brand" href="/portal">
+            <img src="/images/logo.jpeg" alt="Tom Parlette Garage LLC" />
+            <div>
+                <div class="portal-brand-name">Tom Parlette Garage LLC</div>
+                <AuthorizeView Context="authState">
+                    <Authorized>
+                        <div class="portal-brand-subtitle">@GetPortalLabel(authState.User)</div>
+                    </Authorized>
+                    <NotAuthorized>
                         <div class="portal-brand-subtitle">Portal</div>
-                    </div>
-                </a>
-            </NotAuthorized>
-        </AuthorizeView>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </a>
 
         <div class="portal-topbar-actions">
             <AuthorizeView Context="authState">
                 <Authorized>
                     <div class="portal-topbar-welcome">
-                        Welcome, @authState.User.GetDisplayName()
+                        Welcome, @(GetDisplayName(authState.User))
                     </div>
 
-                    <a class="portal-admin-link" href="@authState.User.GetPortalHomeHref()">
-                        Go to dashboard
+                    <a class="portal-admin-link" href="@GetPortalHomeHref(authState.User)">
+                        @GetPortalLabel(authState.User)
                     </a>
                 </Authorized>
                 <NotAuthorized>
@@ -78,4 +73,24 @@
     private void ToggleMenu() => _mobileMenuOpen = !_mobileMenuOpen;
 
     private void CloseMenu() => _mobileMenuOpen = false;
+
+    private static string GetDisplayName(ClaimsPrincipal user)
+    {
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            return "Customer";
+        }
+
+        var displayName =
+            user.FindFirst("display_name")?.Value ??
+            user.Identity?.Name ??
+            user.FindFirst(ClaimTypes.Email)?.Value ??
+            "Customer";
+
+        return string.IsNullOrWhiteSpace(displayName) ? "Customer" : displayName;
+    }
+
+    private static string GetPortalLabel(ClaimsPrincipal user) => PortalRouteHelper.GetPortalLabel(user);
+
+    private static string GetPortalHomeHref(ClaimsPrincipal user) => PortalRouteHelper.GetPortalHomeRoute(user);
 }

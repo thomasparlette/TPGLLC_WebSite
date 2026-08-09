@@ -7,6 +7,8 @@ public sealed class CurrentCustomer
     public string Email { get; init; } = string.Empty;
     public string DisplayName { get; init; } = string.Empty;
     public bool IsCustomer { get; init; }
-    public bool IsEmployee { get; init; }
+    public bool IsServiceAdvisor { get; init; }
+    public bool IsTechnician { get; init; }
+    public bool IsFinance { get; init; }
     public bool IsAdministrator { get; init; }
 }

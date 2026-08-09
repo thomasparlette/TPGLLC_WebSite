@@ -5,7 +5,6 @@ namespace TPGLLC.Web.ViewModels.Portal;
 public sealed class WorkOrderPageViewModel
 {
     public List<ServiceHistoryEntry> WorkOrders { get; set; } = [];
-    public List<AppointmentRequest> AppointmentRequests { get; set; } = [];
     public WorkOrderEditViewModel Form { get; set; } = new();
     public Guid? EditingWorkOrderId { get; set; }
     public List<string> StatusOptions { get; set; } = [

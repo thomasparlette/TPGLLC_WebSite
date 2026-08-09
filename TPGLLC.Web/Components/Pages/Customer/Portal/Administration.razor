@@ -1,48 +1,124 @@
 ﻿@page "/portal/admin"
-@page "/portal/admin/dashboard"
 @layout CustomerLayout
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.Administrator)]
 
-@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TPGLLC.Shared.Identity
 @using TPGLLC.Web.Authorization
+@using TPGLLC.Web.Components.Shared
 
-<PageTitle>Administration Dashboard</PageTitle>
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<ApplicationRole> RoleManager
+@inject IDbContextFactory<TPGLLC.Data.TPGLLCDbContext> DbFactory
+
+<PageTitle>Administration</PageTitle>
 
 <section class="portal-dashboard">
     <div class="portal-header">
         <p class="section-kicker">Administration</p>
         <h1>Administration Dashboard</h1>
-        <p>Manage user access and account details from one place.</p>
+        <p>Quick access to user management and account maintenance tools.</p>
     </div>
 
-    <div class="portal-stats">
-        <div class="portal-stat">
-            <div class="portal-stat-value">User</div>
-            <div class="portal-stat-label">Management</div>
+    @if (_loading)
+    {
+        <div class="portal-loading-card">
+            <div class="portal-loading-icon">⏳</div>
+            <div>
+                <div class="portal-loading-title">Loading administration</div>
+                <div class="portal-loading-text">Please wait while we load the dashboard.</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <PortalNotice Type="danger" Title="Unable to load dashboard">
+                @_errorMessage
+            </PortalNotice>
+        }
+
+        <div class="portal-stats">
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_userCount</div>
+                <div class="portal-stat-label">Users</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_customerCount</div>
+                <div class="portal-stat-label">Customers</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_advisorCount</div>
+                <div class="portal-stat-label">Service Advisors</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_technicianCount</div>
+                <div class="portal-stat-label">Technicians</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_financeCount</div>
+                <div class="portal-stat-label">Finance</div>
+            </div>
         </div>
 
-        <div class="portal-stat">
-            <div class="portal-stat-value">Role</div>
-            <div class="portal-stat-label">Assignments</div>
+        <div class="portal-dashboard-grid">
+            <a class="portal-card-link" href="/portal/admin/users">
+                <div class="portal-card-icon">👥</div>
+                <h3>User Roles</h3>
+                <p>Assign customer access and employee specialty roles.</p>
+            </a>
+
+            <a class="portal-card-link" href="/portal/account">
+                <div class="portal-card-icon">👤</div>
+                <h3>Account Detail</h3>
+                <p>Review your administrator profile and change your password.</p>
+            </a>
         </div>
-
-        <div class="portal-stat">
-            <div class="portal-stat-value">Profile</div>
-            <div class="portal-stat-label">Detail</div>
-        </div>
-    </div>
-
-    <div class="portal-dashboard-grid">
-        <a class="portal-card-link" href="/portal/admin/user-roles">
-            <div class="portal-card-icon">👥</div>
-            <h3>User Roles</h3>
-            <p>Assign customer access, employee specialties, and administrator access.</p>
-        </a>
-
-        <a class="portal-card-link" href="/portal/account">
-            <div class="portal-card-icon">👤</div>
-            <h3>Account Detail</h3>
-            <p>Update your own administrator account details and password.</p>
-        </a>
-    </div>
+    }
 </section>
+
+@code {
+    private bool _loading = true;
+    private string? _errorMessage;
+    private int _userCount;
+    private int _customerCount;
+    private int _advisorCount;
+    private int _technicianCount;
+    private int _financeCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var users = await UserManager.Users.AsNoTracking().ToListAsync();
+
+            _userCount = users.Count;
+            _customerCount = await CountByRoleAsync("Customer");
+            _advisorCount = await CountByRoleAsync("ServiceAdvisor");
+            _technicianCount = await CountByRoleAsync("Technician");
+            _financeCount = await CountByRoleAsync("Finance");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task<int> CountByRoleAsync(string roleName)
+    {
+        var users = await UserManager.GetUsersInRoleAsync(roleName);
+        return users.Count;
+    }
+}

@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using TPGLLC.Shared.Identity;
-using TPGLLC.Web.Authorization;
 
 namespace TPGLLC.Web.Areas.Identity.Pages.Account;
 
@@ -37,12 +36,12 @@ public sealed class LoginModel : PageModel
 
     public void OnGet(string? returnUrl = null)
     {
-        Input.ReturnUrl = ResolveInitialReturnUrl(returnUrl);
+        Input.ReturnUrl = GetReturnUrl(returnUrl);
     }
 
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
-        Input.ReturnUrl = ResolveInitialReturnUrl(returnUrl ?? Input.ReturnUrl);
+        Input.ReturnUrl = GetReturnUrl(returnUrl ?? Input.ReturnUrl);
 
         if (!ModelState.IsValid)
         {
@@ -57,14 +56,7 @@ public sealed class LoginModel : PageModel
 
         if (result.Succeeded)
         {
-            var user = await _userManager.FindByEmailAsync(Input.Email.Trim());
-            if (user is null)
-            {
-                return LocalRedirect(ResolvePostLoginRedirectUrl(Input.ReturnUrl, Array.Empty<string>()));
-            }
-
-            var roles = await _userManager.GetRolesAsync(user);
-            return LocalRedirect(ResolvePostLoginRedirectUrl(Input.ReturnUrl, roles));
+            return LocalRedirect(await GetPostLoginReturnUrl(Input.ReturnUrl, Input.Email.Trim()));
         }
 
         if (result.RequiresTwoFactor)
@@ -90,7 +82,7 @@ public sealed class LoginModel : PageModel
     {
         var callbackUrl = Url.Page("./Login", pageHandler: "Callback", values: new
         {
-            returnUrl = ResolveInitialReturnUrl(returnUrl)
+            returnUrl = GetReturnUrl(returnUrl)
         });
 
         var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, callbackUrl!);
@@ -99,7 +91,7 @@ public sealed class LoginModel : PageModel
 
     public async Task<IActionResult> OnGetCallbackAsync(string? returnUrl = null, string? remoteError = null)
     {
-        var safeReturnUrl = ResolveInitialReturnUrl(returnUrl);
+        var safeReturnUrl = GetReturnUrl(returnUrl);
 
         if (!string.IsNullOrWhiteSpace(remoteError))
         {
@@ -116,6 +108,10 @@ public sealed class LoginModel : PageModel
             return Page();
         }
 
+        var email = info.Principal.FindFirstValue(ClaimTypes.Email)
+            ?? info.Principal.FindFirstValue("email")
+            ?? info.Principal.FindFirstValue(ClaimTypes.Upn);
+
         var externalSignIn = await _signInManager.ExternalLoginSignInAsync(
             info.LoginProvider,
             info.ProviderKey,
@@ -124,14 +120,7 @@ public sealed class LoginModel : PageModel
 
         if (externalSignIn.Succeeded)
         {
-            var linkedUser = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
-            if (linkedUser is not null)
-            {
-                var roles = await _userManager.GetRolesAsync(linkedUser);
-                return LocalRedirect(ResolvePostLoginRedirectUrl(safeReturnUrl, roles));
-            }
-
-            return LocalRedirect(safeReturnUrl);
+            return LocalRedirect(await GetPostLoginReturnUrl(safeReturnUrl, email ?? string.Empty));
         }
 
         if (externalSignIn.IsLockedOut)
@@ -141,10 +130,6 @@ public sealed class LoginModel : PageModel
             return Page();
         }
 
-        var email = info.Principal.FindFirstValue(ClaimTypes.Email)
-            ?? info.Principal.FindFirstValue("email")
-            ?? info.Principal.FindFirstValue(ClaimTypes.Upn);
-
         if (string.IsNullOrWhiteSpace(email))
         {
             ErrorMessage = "The external provider did not supply an email address.";
@@ -152,10 +137,10 @@ public sealed class LoginModel : PageModel
             return Page();
         }
 
-        var user = await _userManager.FindByEmailAsync(email);
-        if (user is null)
+        var lookupUser = await _userManager.FindByEmailAsync(email);
+        if (lookupUser is null)
         {
-            user = new ApplicationUser
+            lookupUser = new ApplicationUser
             {
                 UserName = email,
                 Email = email,
@@ -167,7 +152,7 @@ public sealed class LoginModel : PageModel
                 CreatedUtc = DateTimeOffset.UtcNow
             };
 
-            var createResult = await _userManager.CreateAsync(user);
+            var createResult = await _userManager.CreateAsync(lookupUser);
             if (!createResult.Succeeded)
             {
                 ErrorMessage = string.Join(" ", createResult.Errors.Select(x => x.Description));
@@ -177,11 +162,11 @@ public sealed class LoginModel : PageModel
 
             if (await _roleManager.RoleExistsAsync("Customer"))
             {
-                await _userManager.AddToRoleAsync(user, "Customer");
+                await _userManager.AddToRoleAsync(lookupUser, "Customer");
             }
         }
 
-        var addLoginResult = await _userManager.AddLoginAsync(user, info);
+        var addLoginResult = await _userManager.AddLoginAsync(lookupUser, info);
         if (!addLoginResult.Succeeded && !addLoginResult.Errors.Any(x => x.Code == "LoginAlreadyAssociated"))
         {
             ErrorMessage = string.Join(" ", addLoginResult.Errors.Select(x => x.Description));
@@ -189,32 +174,66 @@ public sealed class LoginModel : PageModel
             return Page();
         }
 
-        await _signInManager.SignInAsync(user, isPersistent: true);
-
-        var rolesAfterSignIn = await _userManager.GetRolesAsync(user);
-        return LocalRedirect(ResolvePostLoginRedirectUrl(safeReturnUrl, rolesAfterSignIn));
+        await _signInManager.SignInAsync(lookupUser, isPersistent: true);
+        return LocalRedirect(await GetPostLoginReturnUrl(safeReturnUrl, email));
     }
 
-    private string ResolveInitialReturnUrl(string? returnUrl)
+    private string GetReturnUrl(string? returnUrl)
     {
-        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+        var safeReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/portal" : returnUrl;
+        if (!Url.IsLocalUrl(safeReturnUrl))
         {
-            return returnUrl;
+            return "/portal";
         }
 
-        return PortalNavigationHelper.CustomerDashboardPath;
+        return safeReturnUrl;
     }
 
-    private string ResolvePostLoginRedirectUrl(string? returnUrl, IEnumerable<string> roles)
+    private async Task<string> GetPostLoginReturnUrl(string? requestedReturnUrl, string userNameOrEmail)
     {
-        if (!string.IsNullOrWhiteSpace(returnUrl) &&
-            Url.IsLocalUrl(returnUrl) &&
-            !returnUrl.Equals(PortalNavigationHelper.CustomerDashboardPath, StringComparison.OrdinalIgnoreCase))
+        var safeReturnUrl = string.IsNullOrWhiteSpace(requestedReturnUrl) ? "/portal" : requestedReturnUrl;
+        if (!Url.IsLocalUrl(safeReturnUrl))
         {
-            return returnUrl;
+            safeReturnUrl = "/portal";
         }
 
-        return PortalNavigationHelper.GetDefaultPortalPath(roles);
+        if (!string.Equals(safeReturnUrl, "/portal", StringComparison.OrdinalIgnoreCase))
+        {
+            return safeReturnUrl;
+        }
+
+        var lookupUser = await _userManager.FindByNameAsync(userNameOrEmail)
+            ?? await _userManager.FindByEmailAsync(userNameOrEmail);
+
+        if (lookupUser is null)
+        {
+            return "/portal";
+        }
+
+        var roles = await _userManager.GetRolesAsync(lookupUser);
+        bool HasRole(string roleName) => roles.Any(role => string.Equals(role, roleName, StringComparison.OrdinalIgnoreCase));
+
+        if (HasRole("Administrator"))
+        {
+            return "/portal/admin";
+        }
+
+        if (HasRole("ServiceAdvisor"))
+        {
+            return "/portal/employee/service-advisor";
+        }
+
+        if (HasRole("Technician"))
+        {
+            return "/portal/employee/technician";
+        }
+
+        if (HasRole("Finance"))
+        {
+            return "/portal/employee/finance";
+        }
+
+        return "/portal";
     }
 
     private bool IsConfigured(params string[] keys)
