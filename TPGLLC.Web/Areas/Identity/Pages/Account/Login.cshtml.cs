@@ -208,7 +208,7 @@ public sealed class LoginModel : PageModel
 
         if (lookupUser is null)
         {
-            return "/portal";
+            return "/";
         }
 
         var roles = await _userManager.GetRolesAsync(lookupUser);
@@ -232,9 +232,12 @@ public sealed class LoginModel : PageModel
         {
             return "/portal/employee/finance";
         }
+        if (roles.Contains("Customer", StringComparer.OrdinalIgnoreCase))
+        {
+            return "/portal/customer";
+        }
 
-
-        return "/portal";
+        return "/";
     }
 
     private bool IsConfigured(params string[] keys)

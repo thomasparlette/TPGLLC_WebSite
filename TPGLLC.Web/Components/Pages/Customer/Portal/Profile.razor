@@ -35,49 +35,6 @@
             </div>
         </div>
     }
-    else if (!_isCustomerAccount)
-    {
-        <div class="portal-stats">
-            <div class="portal-stat">
-                <div class="portal-stat-value">@GetDisplayName()</div>
-                <div class="portal-stat-label">Name</div>
-            </div>
-
-            <div class="portal-stat">
-                <div class="portal-stat-value">@(_identityUser?.Email ?? _currentCustomer.Email)</div>
-                <div class="portal-stat-label">Email</div>
-            </div>
-
-            <div class="portal-stat">
-                <div class="portal-stat-value">@(_identityUser?.PhoneNumber ?? "Not set")</div>
-                <div class="portal-stat-label">Phone</div>
-            </div>
-        </div>
-
-        <div class="portal-section">
-            <div class="portal-section-heading">
-                <h2>Account Security</h2>
-                <a class="portal-action-button" href="/Identity/Account/Manage/ChangePassword">Change Password</a>
-            </div>
-
-            <div class="portal-card-link" style="padding:1rem;">
-                <div class="portal-card-icon">🪪</div>
-                <h3>@GetDisplayName()</h3>
-                <p>@(_identityUser?.Email ?? _currentCustomer.Email)</p>
-
-                <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.75rem;">
-                    @foreach (var role in _roles)
-                    {
-                        <span class="portal-chip">@role</span>
-                    }
-                </div>
-
-                <div class="portal-muted" style="margin-top:0.75rem;">
-                    Non-customer accounts use the standard sign-in security page for password changes.
-                </div>
-            </div>
-        </div>
-    }
     else
     {
         @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
@@ -196,7 +153,7 @@
     private CurrentCustomer _currentCustomer = new();
     private ApplicationUser? _identityUser;
     private IReadOnlyList<string> _roles = Array.Empty<string>();
-    private bool _isCustomerAccount;
+    private bool _isAdminAccount;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
@@ -204,26 +161,20 @@
         try
         {
             _currentCustomer = CurrentCustomerAccessor.GetCurrentCustomer();
-            _isCustomerAccount = _currentCustomer.IsCustomer;
 
             _identityUser = await UserManager.FindByIdAsync(_currentCustomer.UserId);
             if (_identityUser is not null)
             {
                 _roles = (IReadOnlyList<string>)await UserManager.GetRolesAsync(_identityUser);
             }
-
-            if (_isCustomerAccount)
-            {
-                _model = await AccountService.GetAsync() ?? new CustomerAccountViewModel();
-
-                if (string.IsNullOrWhiteSpace(_model.ErrorMessage) &&
-                    string.IsNullOrWhiteSpace(_model.FirstName) &&
-                    string.IsNullOrWhiteSpace(_model.LastName))
+            _model = await AccountService.GetAsync() ?? new CustomerAccountViewModel();
+            if (string.IsNullOrWhiteSpace(_model.ErrorMessage) &&
+                string.IsNullOrWhiteSpace(_model.FirstName) &&
+                string.IsNullOrWhiteSpace(_model.LastName))
                 {
                     _model.FirstName = string.Empty;
                     _model.LastName = string.Empty;
                 }
-            }
         }
         finally
         {

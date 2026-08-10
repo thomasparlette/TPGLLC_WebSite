@@ -27,7 +27,7 @@ public static class PortalRouteHelper
         }
 
 
-        return "/portal/dashboard";
+        return "/portal/customer";
     }
 
     public static string GetPortalLabel(ClaimsPrincipal user)
