@@ -1,0 +1,23 @@
+﻿@page "/portal/service-advisor/appointment-calendar"
+@layout CustomerLayout
+@attribute [Authorize(Policy = PortalPolicies.ServiceAdvisor)]
+
+<PageTitle>Appointment Calendar</PageTitle>
+
+<section class="portal-dashboard">
+    <div class="portal-header">
+        <p class="section-kicker">Service Advisor</p>
+        <h1>Appointment Calendar</h1>
+        <p>Planned next step: calendar scheduling and appointment slot management.</p>
+    </div>
+
+    <div class="portal-section">
+        <div class="portal-empty-state">
+            <div class="portal-empty-icon">🗓️</div>
+            <div>
+                <div class="portal-empty-title">Calendar setup coming next</div>
+                <div class="portal-empty-text">This page is ready for calendar integration and scheduling controls.</div>
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,71 @@
+﻿@page "/portal/service-advisor/current-requests"
+@layout CustomerLayout
+@attribute [Authorize(Policy = PortalPolicies.ServiceAdvisor)]
+
+@using Microsoft.EntityFrameworkCore
+@using TPGLLC.Data
+
+@inject IDbContextFactory<TPGLLCDbContext> DbFactory
+
+<PageTitle>Current Customer Requests</PageTitle>
+
+<section class="portal-dashboard">
+    <div class="portal-header">
+        <p class="section-kicker">Service Advisor</p>
+        <h1>Current Customer Requests</h1>
+        <p>Review open appointment requests submitted by customers.</p>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="portal-loading-card">
+            <div class="portal-loading-icon">⏳</div>
+            <div>
+                <div class="portal-loading-title">Loading requests</div>
+                <div class="portal-loading-text">Please wait while we load current customer requests.</div>
+            </div>
+        </div>
+    }
+    else if (_requests.Count == 0)
+    {
+        <div class="portal-empty-state">
+            <div class="portal-empty-icon">📭</div>
+            <div>
+                <div class="portal-empty-title">No open requests</div>
+                <div class="portal-empty-text">There are no pending requests at this time.</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="portal-activity">
+            @foreach (var request in _requests)
+            {
+                <div class="portal-activity-item" @key="request.RequestId">
+                    <div class="portal-activity-icon">📅</div>
+                    <div>
+                        <strong>@request.Name</strong><br />
+                        @request.ServiceNeeded<br />
+                        @request.VehicleYear @request.VehicleMake @request.VehicleModel<br />
+                        <span class="portal-muted">@request.Status · @request.SubmittedAtUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</span>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private bool _loading = true;
+    private List<AppointmentRequest> _requests = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _requests = await db.AppointmentRequests.AsNoTracking()
+            .Where(x => x.Status != "Cancelled" && x.Status != "Completed" && x.Status != "Declined" && x.Status != "Closed")
+            .OrderByDescending(x => x.SubmittedAtUtc)
+            .ToListAsync();
+        _loading = false;
+    }
+}

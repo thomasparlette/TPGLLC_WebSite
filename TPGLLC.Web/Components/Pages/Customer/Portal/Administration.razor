@@ -1,25 +1,25 @@
 ﻿@page "/portal/admin"
 @layout CustomerLayout
-@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.Administrator)]
+@attribute [Authorize(Policy = PortalPolicies.Administrator)]
 
+@using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using TPGLLC.Shared.Identity
-@using TPGLLC.Web.Authorization
 @using TPGLLC.Web.Components.Shared
+@using TPGLLC.Web.Authorization
 
 @inject UserManager<ApplicationUser> UserManager
-@inject RoleManager<ApplicationRole> RoleManager
-@inject IDbContextFactory<TPGLLC.Data.TPGLLCDbContext> DbFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Administration</PageTitle>
 
 <section class="portal-dashboard">
     <div class="portal-header">
-        <p class="section-kicker">Administration</p>
-        <h1>Administration Dashboard</h1>
-        <p>Quick access to user management and account maintenance tools.</p>
+        <p class="section-kicker">Administrator</p>
+        <h1>User Management</h1>
+        <p>Assign Customer, Service Advisor, Technician, Finance, and Administrator roles for portal users.</p>
     </div>
 
     @if (_loading)
@@ -28,7 +28,7 @@
             <div class="portal-loading-icon">⏳</div>
             <div>
                 <div class="portal-loading-title">Loading administration</div>
-                <div class="portal-loading-text">Please wait while we load the dashboard.</div>
+                <div class="portal-loading-text">Please wait while we load your users and roles.</div>
             </div>
         </div>
     }
@@ -36,75 +36,261 @@
     {
         @if (!string.IsNullOrWhiteSpace(_errorMessage))
         {
-            <PortalNotice Type="danger" Title="Unable to load dashboard">
+            <PortalNotice Type="danger" Title="Unable to save changes">
                 @_errorMessage
             </PortalNotice>
         }
 
+        @if (!string.IsNullOrWhiteSpace(_successMessage))
+        {
+            <PortalNotice Type="success" Title="Saved">
+                @_successMessage
+            </PortalNotice>
+        }
+
+        <PortalNotice Type="info" Title="Role management scope">
+            This page only manages the Customer, Service Advisor, Technician, Finance, and Administrator roles. Other role memberships are left untouched.
+        </PortalNotice>
+
         <div class="portal-stats">
             <div class="portal-stat">
-                <div class="portal-stat-value">@_userCount</div>
+                <div class="portal-stat-value">@_users.Count</div>
                 <div class="portal-stat-label">Users</div>
             </div>
 
             <div class="portal-stat">
-                <div class="portal-stat-value">@_customerCount</div>
+                <div class="portal-stat-value">@_users.Count(x => x.CustomerRole)</div>
                 <div class="portal-stat-label">Customers</div>
             </div>
 
             <div class="portal-stat">
-                <div class="portal-stat-value">@_advisorCount</div>
+                <div class="portal-stat-value">@_users.Count(x => x.ServiceAdvisorRole)</div>
                 <div class="portal-stat-label">Service Advisors</div>
             </div>
 
             <div class="portal-stat">
-                <div class="portal-stat-value">@_technicianCount</div>
+                <div class="portal-stat-value">@_users.Count(x => x.TechnicianRole)</div>
                 <div class="portal-stat-label">Technicians</div>
             </div>
 
             <div class="portal-stat">
-                <div class="portal-stat-value">@_financeCount</div>
+                <div class="portal-stat-value">@_users.Count(x => x.FinanceRole)</div>
                 <div class="portal-stat-label">Finance</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_users.Count(x => x.AdministratorRole)</div>
+                <div class="portal-stat-label">Administrators</div>
             </div>
         </div>
 
-        <div class="portal-dashboard-grid">
-            <a class="portal-card-link" href="/portal/admin/users">
-                <div class="portal-card-icon">👥</div>
-                <h3>User Roles</h3>
-                <p>Assign customer access and employee specialty roles.</p>
-            </a>
+        <div class="portal-section">
+            <div class="portal-section-heading">
+                <h2>Portal Users</h2>
 
-            <a class="portal-card-link" href="/portal/account">
-                <div class="portal-card-icon">👤</div>
-                <h3>Account Detail</h3>
-                <p>Review your administrator profile and change your password.</p>
-            </a>
+                <button type="button" class="portal-action-button" @onclick="@(() => ReloadAsync())">
+                    Refresh
+                </button>
+            </div>
+
+            @if (_users.Count == 0)
+            {
+                <div class="portal-empty-state">
+                    <div class="portal-empty-icon">👥</div>
+                    <div>
+                        <div class="portal-empty-title">No users found</div>
+                        <div class="portal-empty-text">There are no accounts to manage yet.</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="portal-dashboard-grid">
+                    @foreach (var user in _users)
+                    {
+                        <article class="portal-card-link" @key="user.Id">
+                            <div class="portal-card-icon">👤</div>
+
+                            <h3>@GetDisplayName(user)</h3>
+                            <p>@(string.IsNullOrWhiteSpace(user.Email) ? user.UserName : user.Email)</p>
+
+                            <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.75rem;">
+                                @if (user.CustomerRole)
+                                {
+                                    <span class="portal-chip">Customer</span>
+                                }
+
+                                @if (user.ServiceAdvisorRole)
+                                {
+                                    <span class="portal-chip">Service Advisor</span>
+                                }
+
+                                @if (user.TechnicianRole)
+                                {
+                                    <span class="portal-chip">Technician</span>
+                                }
+
+                                @if (user.FinanceRole)
+                                {
+                                    <span class="portal-chip">Finance</span>
+                                }
+
+                                @if (user.AdministratorRole)
+                                {
+                                    <span class="portal-chip">Administrator</span>
+                                }
+
+                                @if (!user.IsActive)
+                                {
+                                    <span class="portal-chip">Inactive</span>
+                                }
+                            </div>
+
+                            <div class="portal-actions" style="margin-top:1rem;">
+                                <button type="button"
+                                        class="portal-action-button"
+                                        @onclick="() => SelectUserAsync(user.Id)">
+                                    Edit Roles
+                                </button>
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
         </div>
+
+        @if (_selectedUser is not null)
+        {
+            <div class="portal-section">
+                <div class="portal-section-heading">
+                    <h2>Selected User</h2>
+                    <span class="portal-muted">Editing role membership only</span>
+                </div>
+
+                <div class="portal-form-grid">
+                    <div class="form-field">
+                        <label>Email</label>
+                        <input class="input" value="@(_selectedUser.Email ?? _selectedUser.UserName)" readonly />
+                    </div>
+
+                    <div class="form-field">
+                        <label>Display Name</label>
+                        <input class="input" value="@_selectedUser.DisplayName" readonly />
+                    </div>
+
+                    <div class="form-field">
+                        <label>First Name</label>
+                        <input class="input" value="@_selectedUser.FirstName" readonly />
+                    </div>
+
+                    <div class="form-field">
+                        <label>Last Name</label>
+                        <input class="input" value="@_selectedUser.LastName" readonly />
+                    </div>
+
+                    <div class="form-field">
+                        <label>Status</label>
+                        <input class="input" value="@GetStatusText(_selectedUser)" readonly />
+                    </div>
+
+                    <div class="form-field full">
+                        <label>Managed Roles</label>
+                        <div style="display:flex; flex-wrap:wrap; gap:0.75rem;">
+                            <label style="display:flex; align-items:center; gap:0.5rem; padding:0.75rem 1rem; border:1px solid #e5e7eb; border-radius:12px; background:#fff;">
+                                <input type="checkbox" class="checkbox" @bind="_selectedUser.CustomerRole" />
+                                <span>Customer</span>
+                            </label>
+
+                            <label style="display:flex; align-items:center; gap:0.5rem; padding:0.75rem 1rem; border:1px solid #e5e7eb; border-radius:12px; background:#fff;">
+                                <input type="checkbox" class="checkbox" @bind="_selectedUser.ServiceAdvisorRole" />
+                                <span>Service Advisor</span>
+                            </label>
+
+                            <label style="display:flex; align-items:center; gap:0.5rem; padding:0.75rem 1rem; border:1px solid #e5e7eb; border-radius:12px; background:#fff;">
+                                <input type="checkbox" class="checkbox" @bind="_selectedUser.TechnicianRole" />
+                                <span>Technician</span>
+                            </label>
+
+                            <label style="display:flex; align-items:center; gap:0.5rem; padding:0.75rem 1rem; border:1px solid #e5e7eb; border-radius:12px; background:#fff;">
+                                <input type="checkbox" class="checkbox" @bind="_selectedUser.FinanceRole" />
+                                <span>Finance</span>
+                            </label>
+
+                            <label style="display:flex; align-items:center; gap:0.5rem; padding:0.75rem 1rem; border:1px solid #e5e7eb; border-radius:12px; background:#fff;">
+                                <input type="checkbox" class="checkbox" @bind="_selectedUser.AdministratorRole" />
+                                <span>Administrator</span>
+                            </label>
+                        </div>
+
+                        <div class="portal-muted" style="margin-top:0.5rem;">
+                            Other role memberships are preserved.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="portal-actions" style="margin-top: 1.25rem;">
+                    <button type="button" class="portal-action-button" @onclick="@(() => SaveAsync())">
+                        Save Role Changes
+                    </button>
+
+                    <button type="button" class="portal-action-button" @onclick="@(() => ReloadAsync())">
+                        Reset
+                    </button>
+                </div>
+            </div>
+        }
     }
 </section>
 
 @code {
+    private static readonly string[] ManagedRoles = ["Customer", "ServiceAdvisor", "Technician", "Finance", "Administrator"];
+
+    private readonly List<AdminUserRow> _users = [];
+    private AdminUserRow? _selectedUser;
+    private string? _selectedUserId;
+    private string? _currentUserId;
     private bool _loading = true;
     private string? _errorMessage;
-    private int _userCount;
-    private int _customerCount;
-    private int _advisorCount;
-    private int _technicianCount;
-    private int _financeCount;
+    private string? _successMessage;
 
     protected override async Task OnInitializedAsync()
     {
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync(bool preserveMessages = false)
+    {
+        _loading = true;
+
+        if (!preserveMessages)
+        {
+            _errorMessage = null;
+            _successMessage = null;
+        }
+
         try
         {
-            await using var db = await DbFactory.CreateDbContextAsync();
-            var users = await UserManager.Users.AsNoTracking().ToListAsync();
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            _currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            _userCount = users.Count;
-            _customerCount = await CountByRoleAsync("Customer");
-            _advisorCount = await CountByRoleAsync("ServiceAdvisor");
-            _technicianCount = await CountByRoleAsync("Technician");
-            _financeCount = await CountByRoleAsync("Finance");
+            var selectedId = _selectedUserId;
+            _users.Clear();
+
+            var users = await UserManager.Users
+                .OrderBy(x => x.Email ?? x.UserName)
+                .ThenBy(x => x.UserName)
+                .ToListAsync();
+
+            foreach (var user in users)
+            {
+                var roles = await UserManager.GetRolesAsync(user);
+                _users.Add(AdminUserRow.FromUser(user, roles));
+            }
+
+            _selectedUser = _users.FirstOrDefault(x => x.Id == selectedId)
+                ?? _users.FirstOrDefault();
+
+            _selectedUserId = _selectedUser?.Id;
         }
         catch (Exception ex)
         {
@@ -116,9 +302,194 @@
         }
     }
 
-    private async Task<int> CountByRoleAsync(string roleName)
+    private async Task SelectUserAsync(string userId)
     {
-        var users = await UserManager.GetUsersInRoleAsync(roleName);
-        return users.Count;
+        _selectedUserId = userId;
+        _selectedUser = CloneUser(_users.FirstOrDefault(x => x.Id == userId));
+        _errorMessage = null;
+        _successMessage = null;
+        await Task.CompletedTask;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_selectedUser is null)
+        {
+            return;
+        }
+
+        if (string.Equals(_currentUserId, _selectedUser.Id, StringComparison.OrdinalIgnoreCase) && !_selectedUser.AdministratorRole)
+        {
+            _errorMessage = "You cannot remove your own Administrator role while signed in.";
+            _successMessage = null;
+            await ReloadAsync(preserveMessages: true);
+            _selectedUserId = _selectedUser.Id;
+            _selectedUser = CloneUser(_users.FirstOrDefault(x => x.Id == _selectedUserId));
+            return;
+        }
+
+        try
+        {
+            var user = await UserManager.FindByIdAsync(_selectedUser.Id);
+            if (user is null)
+            {
+                _errorMessage = "User not found.";
+                _successMessage = null;
+                return;
+            }
+
+            var currentRoles = await UserManager.GetRolesAsync(user);
+            var desiredRoles = GetDesiredRoles(_selectedUser).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var roleName in ManagedRoles)
+            {
+                var hasRole = currentRoles.Any(x => string.Equals(x, roleName, StringComparison.OrdinalIgnoreCase));
+                var shouldHaveRole = desiredRoles.Contains(roleName);
+
+                if (shouldHaveRole && !hasRole)
+                {
+                    var addResult = await UserManager.AddToRoleAsync(user, roleName);
+                    if (!addResult.Succeeded)
+                    {
+                        throw new InvalidOperationException(string.Join(" ", addResult.Errors.Select(x => x.Description)));
+                    }
+                }
+                else if (!shouldHaveRole && hasRole)
+                {
+                    var removeResult = await UserManager.RemoveFromRoleAsync(user, roleName);
+                    if (!removeResult.Succeeded)
+                    {
+                        throw new InvalidOperationException(string.Join(" ", removeResult.Errors.Select(x => x.Description)));
+                    }
+                }
+            }
+
+            await ReloadAsync(preserveMessages: true);
+            _selectedUserId = user.Id;
+            _selectedUser = CloneUser(_users.FirstOrDefault(x => x.Id == _selectedUserId));
+            _successMessage = $"Updated roles for {GetDisplayName(_selectedUser)}.";
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            await ReloadAsync(preserveMessages: true);
+            _errorMessage = ex.Message;
+            _successMessage = null;
+            _selectedUserId = _selectedUser?.Id ?? _selectedUserId;
+            _selectedUser = CloneUser(_users.FirstOrDefault(x => x.Id == _selectedUserId));
+        }
+    }
+
+    private static IEnumerable<string> GetDesiredRoles(AdminUserRow user)
+    {
+        if (user.CustomerRole)
+        {
+            yield return "Customer";
+        }
+
+        if (user.ServiceAdvisorRole)
+        {
+            yield return "ServiceAdvisor";
+        }
+
+        if (user.TechnicianRole)
+        {
+            yield return "Technician";
+        }
+
+        if (user.FinanceRole)
+        {
+            yield return "Finance";
+        }
+
+        if (user.AdministratorRole)
+        {
+            yield return "Administrator";
+        }
+    }
+
+    private static AdminUserRow? CloneUser(AdminUserRow? user)
+    {
+        return user is null ? null : user.Clone();
+    }
+
+
+    private static string GetStatusText(AdminUserRow user)
+    {
+        return user.IsActive ? "Active" : "Inactive";
+    }
+
+    private static string GetDisplayName(AdminUserRow user)
+    {
+        if (!string.IsNullOrWhiteSpace(user.DisplayName))
+        {
+            return user.DisplayName;
+        }
+
+        var name = string.Join(" ", new[] { user.FirstName, user.LastName }
+            .Where(x => !string.IsNullOrWhiteSpace(x)));
+
+        return string.IsNullOrWhiteSpace(name)
+            ? (string.IsNullOrWhiteSpace(user.Email) ? user.UserName : user.Email)
+            : name;
+    }
+
+    private sealed class AdminUserRow
+    {
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string? Email { get; set; }
+        public string DisplayName { get; set; } = string.Empty;
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public bool CustomerRole { get; set; }
+        public bool ServiceAdvisorRole { get; set; }
+        public bool TechnicianRole { get; set; }
+        public bool FinanceRole { get; set; }
+        public bool AdministratorRole { get; set; }
+        public IReadOnlyList<string> Roles { get; set; } = [];
+
+        public static AdminUserRow FromUser(ApplicationUser user, IEnumerable<string> roles)
+        {
+            var roleList = roles.ToList();
+
+            return new AdminUserRow
+            {
+                Id = user.Id,
+                UserName = user.UserName ?? string.Empty,
+                Email = user.Email,
+                DisplayName = user.DisplayName,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                IsActive = user.IsActive,
+                CustomerRole = roleList.Any(x => string.Equals(x, "Customer", StringComparison.OrdinalIgnoreCase)),
+                ServiceAdvisorRole = roleList.Any(x => string.Equals(x, "ServiceAdvisor", StringComparison.OrdinalIgnoreCase)),
+                TechnicianRole = roleList.Any(x => string.Equals(x, "Technician", StringComparison.OrdinalIgnoreCase)),
+                FinanceRole = roleList.Any(x => string.Equals(x, "Finance", StringComparison.OrdinalIgnoreCase)),
+                AdministratorRole = roleList.Any(x => string.Equals(x, "Administrator", StringComparison.OrdinalIgnoreCase)),
+                Roles = roleList
+            };
+        }
+
+        public AdminUserRow Clone()
+        {
+            return new AdminUserRow
+            {
+                Id = Id,
+                UserName = UserName,
+                Email = Email,
+                DisplayName = DisplayName,
+                FirstName = FirstName,
+                LastName = LastName,
+                IsActive = IsActive,
+                CustomerRole = CustomerRole,
+                ServiceAdvisorRole = ServiceAdvisorRole,
+                TechnicianRole = TechnicianRole,
+                FinanceRole = FinanceRole,
+                AdministratorRole = AdministratorRole,
+                Roles = Roles.ToList()
+            };
+        }
     }
 }

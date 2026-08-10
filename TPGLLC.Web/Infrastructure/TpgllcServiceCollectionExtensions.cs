@@ -33,7 +33,8 @@ public static class TpgllcServiceCollectionExtensions
 
         services.AddDbContextFactory<TPGLLCDbContext>(options =>
             options.UseSqlServer(connectionString,
-                sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)));
+                sql => sql.MigrationsAssembly(typeof(TPGLLCDbContext).Assembly.FullName)),
+            ServiceLifetime.Scoped);
 
         services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
         {
@@ -118,6 +119,11 @@ public static class TpgllcServiceCollectionExtensions
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireRole("Customer");
+            })
+            .AddPolicy(PortalPolicies.Employee, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireRole("ServiceAdvisor", "Technician", "Finance");
             })
             .AddPolicy(PortalPolicies.ServiceAdvisor, policy =>
             {

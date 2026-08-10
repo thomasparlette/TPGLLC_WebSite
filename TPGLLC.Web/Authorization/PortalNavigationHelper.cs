@@ -10,6 +10,9 @@ public static class PortalNavigationHelper
     public const string TechnicianDashboardPath = "/portal/employee/technician";
     public const string FinanceDashboardPath = "/portal/employee/finance";
 
+    // Legacy alias kept for callers that still think in terms of a generic employee landing page.
+    public const string EmployeeDashboardPath = ServiceAdvisorDashboardPath;
+
     public static string GetDefaultPortalPath(ClaimsPrincipal user)
     {
         if (user.IsAdministrator())

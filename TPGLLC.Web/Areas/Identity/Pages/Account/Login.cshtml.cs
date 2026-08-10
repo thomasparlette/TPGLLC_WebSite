@@ -211,24 +211,23 @@ public sealed class LoginModel : PageModel
         }
 
         var roles = await _userManager.GetRolesAsync(lookupUser);
-        bool HasRole(string roleName) => roles.Any(role => string.Equals(role, roleName, StringComparison.OrdinalIgnoreCase));
 
-        if (HasRole("Administrator"))
+        if (roles.Any(role => string.Equals(role, "Administrator", StringComparison.OrdinalIgnoreCase)))
         {
             return "/portal/admin";
         }
 
-        if (HasRole("ServiceAdvisor"))
+        if (roles.Any(role => string.Equals(role, "ServiceAdvisor", StringComparison.OrdinalIgnoreCase)))
         {
             return "/portal/employee/service-advisor";
         }
 
-        if (HasRole("Technician"))
+        if (roles.Any(role => string.Equals(role, "Technician", StringComparison.OrdinalIgnoreCase)))
         {
             return "/portal/employee/technician";
         }
 
-        if (HasRole("Finance"))
+        if (roles.Any(role => string.Equals(role, "Finance", StringComparison.OrdinalIgnoreCase)))
         {
             return "/portal/employee/finance";
         }

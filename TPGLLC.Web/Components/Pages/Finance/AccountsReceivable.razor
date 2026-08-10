@@ -1,0 +1,23 @@
+﻿@page "/portal/finance/accounts-received"
+@layout CustomerLayout
+@attribute [Authorize(Policy = PortalPolicies.Finance)]
+
+<PageTitle>Account Received</PageTitle>
+
+<section class="portal-dashboard">
+    <div class="portal-header">
+        <p class="section-kicker">Finance</p>
+        <h1>Account Received</h1>
+        <p>Posted payments and reconciliation items.</p>
+    </div>
+
+    <div class="portal-section">
+        <div class="portal-empty-state">
+            <div class="portal-empty-icon">📒</div>
+            <div>
+                <div class="portal-empty-title">Account Received coming next</div>
+                <div class="portal-empty-text">This page is ready for the billing workflow.</div>
+            </div>
+        </div>
+    </div>
+</section>

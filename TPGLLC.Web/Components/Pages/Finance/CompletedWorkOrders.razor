@@ -1,0 +1,23 @@
+﻿@page "/portal/finance/completed-work-orders"
+@layout CustomerLayout
+@attribute [Authorize(Policy = PortalPolicies.Finance)]
+
+<PageTitle>Work orders completed</PageTitle>
+
+<section class="portal-dashboard">
+    <div class="portal-header">
+        <p class="section-kicker">Finance</p>
+        <h1>Work orders completed</h1>
+        <p>Completed repair orders ready for finance review.</p>
+    </div>
+
+    <div class="portal-section">
+        <div class="portal-empty-state">
+            <div class="portal-empty-icon">✅</div>
+            <div>
+                <div class="portal-empty-title">Work orders completed coming next</div>
+                <div class="portal-empty-text">This page is ready for the billing workflow.</div>
+            </div>
+        </div>
+    </div>
+</section>

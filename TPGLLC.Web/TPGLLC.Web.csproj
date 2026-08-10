@@ -34,7 +34,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="Infrastructure\BuildEnvironmentSeeder.cs" />
     <Compile Remove="Services\Portal\BuildEnvironmentService.cs" />
     <Compile Remove="Services\Portal\IBuildEnvironmentService.cs" />
     <Content Remove="appsettings.Build.json" />

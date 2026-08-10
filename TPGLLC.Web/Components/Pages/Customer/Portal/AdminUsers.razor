@@ -18,7 +18,7 @@
     <div class="portal-header">
         <p class="section-kicker">Administration</p>
         <h1>User Role Management</h1>
-        <p>Assign customer access and employee specialty roles to existing site users.</p>
+        <p>Assign Customer, Service Advisor, Technician, Finance, and Administrator roles to existing site users.</p>
     </div>
 
     @if (_loading)
@@ -57,21 +57,6 @@
             <div class="portal-stat">
                 <div class="portal-stat-value">@_users.Count(x => x.IsServiceAdvisor)</div>
                 <div class="portal-stat-label">Service Advisors</div>
-            </div>
-
-            <div class="portal-stat">
-                <div class="portal-stat-value">@_users.Count(x => x.IsTechnician)</div>
-                <div class="portal-stat-label">Technicians</div>
-            </div>
-
-            <div class="portal-stat">
-                <div class="portal-stat-value">@_users.Count(x => x.IsFinance)</div>
-                <div class="portal-stat-label">Finance</div>
-            </div>
-
-            <div class="portal-stat">
-                <div class="portal-stat-value">@_users.Count(x => x.IsAdministrator)</div>
-                <div class="portal-stat-label">Administrators</div>
             </div>
         </div>
 
@@ -168,11 +153,6 @@
                                     <input type="checkbox" @bind="user.IsFinance" />
                                     Finance
                                 </label>
-
-                                <label class="admin-role-option">
-                                    <input type="checkbox" @bind="user.IsAdministrator" />
-                                    Administrator
-                                </label>
                             </div>
 
                             <div class="portal-actions admin-actions">
@@ -234,11 +214,11 @@
                     UserId = user.Id,
                     Email = user.Email ?? user.UserName ?? string.Empty,
                     DisplayName = BuildDisplayName(user),
-                    IsCustomer = roles.Any(role => string.Equals(role, "Customer", StringComparison.OrdinalIgnoreCase)),
-                    IsServiceAdvisor = roles.Any(role => string.Equals(role, "ServiceAdvisor", StringComparison.OrdinalIgnoreCase)),
-                    IsTechnician = roles.Any(role => string.Equals(role, "Technician", StringComparison.OrdinalIgnoreCase)),
-                    IsFinance = roles.Any(role => string.Equals(role, "Finance", StringComparison.OrdinalIgnoreCase)),
-                    IsAdministrator = roles.Any(role => string.Equals(role, "Administrator", StringComparison.OrdinalIgnoreCase))
+                    IsCustomer = roles.Contains("Customer"),
+                    IsServiceAdvisor = roles.Contains("ServiceAdvisor"),
+                    IsTechnician = roles.Contains("Technician"),
+                    IsFinance = roles.Contains("Finance"),
+                    IsAdministrator = roles.Contains("Administrator")
                 });
             }
 
@@ -262,7 +242,6 @@
             await EnsureRoleAsync("ServiceAdvisor");
             await EnsureRoleAsync("Technician");
             await EnsureRoleAsync("Finance");
-            await EnsureRoleAsync("Administrator");
 
             var user = await UserManager.FindByIdAsync(row.UserId);
             if (user is null)
@@ -275,7 +254,6 @@
             await SyncRoleAsync(user, "ServiceAdvisor", row.IsServiceAdvisor);
             await SyncRoleAsync(user, "Technician", row.IsTechnician);
             await SyncRoleAsync(user, "Finance", row.IsFinance);
-            await SyncRoleAsync(user, "Administrator", row.IsAdministrator);
 
             await LoadUsersAsync();
 
@@ -303,7 +281,7 @@
     private async Task SyncRoleAsync(ApplicationUser user, string roleName, bool shouldHaveRole)
     {
         var roles = await UserManager.GetRolesAsync(user);
-        var hasRole = roles.Any(role => string.Equals(role, roleName, StringComparison.OrdinalIgnoreCase));
+        var hasRole = roles.Any(x => string.Equals(x, roleName, StringComparison.OrdinalIgnoreCase));
 
         if (shouldHaveRole && !hasRole)
         {

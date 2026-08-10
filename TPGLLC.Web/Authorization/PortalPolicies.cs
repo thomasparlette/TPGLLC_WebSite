@@ -7,4 +7,5 @@ public static class PortalPolicies
     public const string Technician = "Technician";
     public const string Finance = "Finance";
     public const string Administrator = "Administrator";
+    public const string Employee = "Employee";
 }

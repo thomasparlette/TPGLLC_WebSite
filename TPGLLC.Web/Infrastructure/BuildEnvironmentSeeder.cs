@@ -250,7 +250,7 @@ public sealed class BuildEnvironmentSeeder
 
     private async Task EnsureRolesAsync()
     {
-        foreach (var roleName in new[] { "Customer", "Employee", "Administrator" })
+        foreach (var roleName in new[] { "Customer", "ServiceAdvisor", "Technician", "Finance", "Administrator" })
         {
             if (!await _roleManager.RoleExistsAsync(roleName))
             {

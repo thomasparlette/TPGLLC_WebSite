@@ -20,7 +20,7 @@ public static class IdentitySeed
         new("Customer", "Customer portal access.")
     ];
 
-    /*public static async Task SeedIdentityAsync(this IServiceProvider services,IConfiguration configuration,CancellationToken cancellationToken = default)
+    public static async Task SeedIdentityAsync(this IServiceProvider services,IConfiguration configuration,CancellationToken cancellationToken = default)
     {
         using var scope = services.CreateScope();
 
@@ -105,7 +105,7 @@ public static class IdentitySeed
 
         await EnsureUserInRoleAsync(userManager, adminUser, "Administrator", logger, cancellationToken);
         await EnsureUserInRoleAsync(userManager, adminUser, "Owner", logger, cancellationToken);
-    } */
+    }
 
     private static async Task EnsureRoleAsync(RoleManager<ApplicationRole> roleManager,RoleSeed roleSeed,ILogger logger,CancellationToken cancellationToken)
     {

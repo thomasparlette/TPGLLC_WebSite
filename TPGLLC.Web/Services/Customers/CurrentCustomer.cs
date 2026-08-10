@@ -1,4 +1,4 @@
-﻿namespace TPGLLC.Web.Services.Customers;
+namespace TPGLLC.Web.Services.Customers;
 
 public sealed class CurrentCustomer
 {

@@ -67,7 +67,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         };
     }
 
-    public async Task<WorkOrderPageViewModel> GetEmployeeAsync()
+    public async Task<WorkOrderPageViewModel> GetServiceAdvisorAsync()
     {
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
@@ -103,7 +103,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
 
     public async Task<WorkOrderPageViewModel> StartEditAsync(Guid workOrderId)
     {
-        var model = await GetEmployeeAsync();
+        var model = await GetServiceAdvisorAsync();
         if (!string.IsNullOrWhiteSpace(model.ErrorMessage))
         {
             return model;
@@ -127,7 +127,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
 
     public async Task<WorkOrderPageViewModel> ResetAsync()
     {
-        return await GetEmployeeAsync();
+        return await GetServiceAdvisorAsync();
     }
 
     public async Task<WorkOrderPageViewModel> SaveAsync(WorkOrderPageViewModel model)
@@ -203,7 +203,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
 
         await db.SaveChangesAsync();
 
-        var refreshed = await GetEmployeeAsync();
+        var refreshed = await GetServiceAdvisorAsync();
         refreshed.SuccessMessage = "Work order updated.";
         return refreshed;
     }

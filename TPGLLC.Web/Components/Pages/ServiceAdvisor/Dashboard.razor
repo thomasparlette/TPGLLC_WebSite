@@ -1,7 +1,7 @@
-﻿@page "/portal/employee/service-advisor"
-@page "/portal/employee/service-advisor/dashboard"
+﻿@page "/portal/service-advisor"
+@page "/portal/service-advisor/dashboard"
 @layout CustomerLayout
-@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.ServiceAdvisor)]
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "ServiceAdvisor,Administrator")]
 
 @using Microsoft.EntityFrameworkCore
 @using TPGLLC.Data
@@ -16,7 +16,7 @@
 
 <section class="portal-dashboard">
     <div class="portal-header">
-        <p class="section-kicker">Service Advisor Portal</p>
+        <p class="section-kicker">Service Advisor</p>
         <h1>Service Advisor Dashboard</h1>
         <p>Track customer requests, schedule appointments, and move work orders through the shop.</p>
     </div>
@@ -51,25 +51,25 @@
         </div>
 
         <div class="portal-dashboard-grid">
-            <a class="portal-card-link" href="/portal/employee/service-advisor/current-requests">
+            <a class="portal-card-link" href="/portal/service-advisor/current-requests">
                 <div class="portal-card-icon">📥</div>
                 <h3>Current Customer Requests</h3>
                 <p>Review new appointment requests and customer check-ins.</p>
             </a>
 
-            <a class="portal-card-link" href="/portal/employee/service-advisor/calendar">
+            <a class="portal-card-link" href="/portal/service-advisor/appointment-calendar">
                 <div class="portal-card-icon">📅</div>
                 <h3>Appointment Calendar</h3>
                 <p>View the shop schedule and upcoming appointments.</p>
             </a>
 
-            <a class="portal-card-link" href="/portal/employee/service-advisor/work-orders">
+            <a class="portal-card-link" href="/portal/service-advisor/work-orders">
                 <div class="portal-card-icon">🛠️</div>
                 <h3>Work Orders</h3>
                 <p>Assign technicians, update approvals, and manage invoices.</p>
             </a>
 
-            <a class="portal-card-link" href="/portal/employee/service-advisor/customers">
+            <a class="portal-card-link" href="/portal/service-advisor/customers">
                 <div class="portal-card-icon">👥</div>
                 <h3>Customers</h3>
                 <p>Open a customer record and review history at a glance.</p>
@@ -85,7 +85,7 @@
         <div class="portal-section" style="margin-top: 1.5rem;">
             <div class="portal-section-heading">
                 <h2>Recent Customer Requests</h2>
-                <a class="portal-action-button" href="/portal/employee/service-advisor/current-requests">View all</a>
+                <a class="portal-action-button" href="/portal/service-advisor/current-requests">View all</a>
             </div>
 
             @if (_recentRequests.Count == 0)

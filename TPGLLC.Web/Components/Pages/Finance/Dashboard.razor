@@ -1,0 +1,33 @@
+﻿@page "/portal/finance"
+@layout CustomerLayout
+@attribute [Authorize(Policy = PortalPolicies.Finance)]
+
+<PageTitle>Finance Dashboard</PageTitle>
+
+<section class="portal-dashboard">
+    <div class="portal-header">
+        <p class="section-kicker">Finance</p>
+        <h1>Finance Dashboard</h1>
+        <p>Manage completed work, payment status, and accounts receivable.</p>
+    </div>
+
+    <div class="portal-dashboard-grid">
+        <a class="portal-card-link" href="/portal/finance/completed-work-orders">
+            <div class="portal-card-icon">✅</div>
+            <h3>Work orders completed</h3>
+            <p>Review completed repair orders awaiting billing closeout.</p>
+        </a>
+
+        <a class="portal-card-link" href="/portal/finance/work-orders-needing-payment">
+            <div class="portal-card-icon">💳</div>
+            <h3>Work Order Needing Payment</h3>
+            <p>See billed work orders that still need payment.</p>
+        </a>
+
+        <a class="portal-card-link" href="/portal/finance/accounts-received">
+            <div class="portal-card-icon">📒</div>
+            <h3>Account Received</h3>
+            <p>Review incoming payments and account reconciliation.</p>
+        </a>
+    </div>
+</section>
