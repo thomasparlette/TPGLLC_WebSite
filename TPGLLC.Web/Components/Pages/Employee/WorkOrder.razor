@@ -1,0 +1,21 @@
+﻿@page "/portal/employee/work-orders"
+@layout CustomerLayout
+@attribute [Authorize(Policy = PortalPolicies.ServiceAdvisor)]
+
+@using Microsoft.AspNetCore.Components
+@using TPGLLC.Web.Infrastructure
+
+<PageTitle>Work Orders</PageTitle>
+
+<div style="padding:2rem; text-align:center;">
+    <p>Redirecting to Service Advisor work orders...</p>
+</div>
+
+@code {
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        Navigation.NavigateTo("/portal/employee/service-advisor/work-orders", forceLoad: true);
+    }
+}

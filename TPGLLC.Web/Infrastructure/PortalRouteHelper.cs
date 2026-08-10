@@ -26,6 +26,7 @@ public static class PortalRouteHelper
             return "/portal/employee/finance";
         }
 
+
         return "/portal/dashboard";
     }
 
@@ -50,6 +51,7 @@ public static class PortalRouteHelper
         {
             return "Finance";
         }
+
 
         if (user.IsInRole("Customer"))
         {

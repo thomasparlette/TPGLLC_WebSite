@@ -56,7 +56,8 @@ public sealed class LoginModel : PageModel
 
         if (result.Succeeded)
         {
-            return LocalRedirect(await GetPostLoginReturnUrl(Input.ReturnUrl, Input.Email.Trim()));
+            var postLoginReturnUrl = await GetPostLoginReturnUrl(Input.ReturnUrl, Input.Email.Trim());
+            return LocalRedirect(postLoginReturnUrl);
         }
 
         if (result.RequiresTwoFactor)
@@ -212,25 +213,26 @@ public sealed class LoginModel : PageModel
 
         var roles = await _userManager.GetRolesAsync(lookupUser);
 
-        if (roles.Any(role => string.Equals(role, "Administrator", StringComparison.OrdinalIgnoreCase)))
+        if (roles.Contains("Administrator", StringComparer.OrdinalIgnoreCase))
         {
             return "/portal/admin";
         }
 
-        if (roles.Any(role => string.Equals(role, "ServiceAdvisor", StringComparison.OrdinalIgnoreCase)))
+        if (roles.Contains("ServiceAdvisor", StringComparer.OrdinalIgnoreCase))
         {
             return "/portal/employee/service-advisor";
         }
 
-        if (roles.Any(role => string.Equals(role, "Technician", StringComparison.OrdinalIgnoreCase)))
+        if (roles.Contains("Technician", StringComparer.OrdinalIgnoreCase))
         {
             return "/portal/employee/technician";
         }
 
-        if (roles.Any(role => string.Equals(role, "Finance", StringComparison.OrdinalIgnoreCase)))
+        if (roles.Contains("Finance", StringComparer.OrdinalIgnoreCase))
         {
             return "/portal/employee/finance";
         }
+
 
         return "/portal";
     }

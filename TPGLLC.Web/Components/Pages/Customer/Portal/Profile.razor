@@ -2,14 +2,18 @@
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
+@using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Forms
+@using TPGLLC.Shared.Identity
 @using TPGLLC.Web.Components.Shared
-@using TPGLLC.Web.Authorization
+@using TPGLLC.Web.Services.Customers
 @using TPGLLC.Web.Services.Portal
 @using TPGLLC.Web.ViewModels.Portal
 
 @inject ICustomerAccountService AccountService
+@inject ICurrentCustomerAccessor CurrentCustomerAccessor
+@inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Navigation
 
 <PageTitle>Account Detail</PageTitle>
@@ -18,7 +22,7 @@
     <div class="portal-header">
         <p class="section-kicker">Portal</p>
         <h1>Account Detail</h1>
-        <p>Update your personal information, contact details, and sign-in profile.</p>
+        <p>Review your account information and update your sign-in security.</p>
     </div>
 
     @if (_loading)
@@ -28,6 +32,49 @@
             <div>
                 <div class="portal-loading-title">Loading account</div>
                 <div class="portal-loading-text">Please wait while we load your account details.</div>
+            </div>
+        </div>
+    }
+    else if (!_isCustomerAccount)
+    {
+        <div class="portal-stats">
+            <div class="portal-stat">
+                <div class="portal-stat-value">@GetDisplayName()</div>
+                <div class="portal-stat-label">Name</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@(_identityUser?.Email ?? _currentCustomer.Email)</div>
+                <div class="portal-stat-label">Email</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@(_identityUser?.PhoneNumber ?? "Not set")</div>
+                <div class="portal-stat-label">Phone</div>
+            </div>
+        </div>
+
+        <div class="portal-section">
+            <div class="portal-section-heading">
+                <h2>Account Security</h2>
+                <a class="portal-action-button" href="/Identity/Account/Manage/ChangePassword">Change Password</a>
+            </div>
+
+            <div class="portal-card-link" style="padding:1rem;">
+                <div class="portal-card-icon">🪪</div>
+                <h3>@GetDisplayName()</h3>
+                <p>@(_identityUser?.Email ?? _currentCustomer.Email)</p>
+
+                <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.75rem;">
+                    @foreach (var role in _roles)
+                    {
+                        <span class="portal-chip">@role</span>
+                    }
+                </div>
+
+                <div class="portal-muted" style="margin-top:0.75rem;">
+                    Non-customer accounts use the standard sign-in security page for password changes.
+                </div>
             </div>
         </div>
     }
@@ -146,20 +193,36 @@
 
 @code {
     private CustomerAccountViewModel _model = new();
+    private CurrentCustomer _currentCustomer = new();
+    private ApplicationUser? _identityUser;
+    private IReadOnlyList<string> _roles = Array.Empty<string>();
+    private bool _isCustomerAccount;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            _model = await AccountService.GetAsync() ?? new CustomerAccountViewModel();
+            _currentCustomer = CurrentCustomerAccessor.GetCurrentCustomer();
+            _isCustomerAccount = _currentCustomer.IsCustomer;
 
-            if (string.IsNullOrWhiteSpace(_model.ErrorMessage) &&
-                string.IsNullOrWhiteSpace(_model.FirstName) &&
-                string.IsNullOrWhiteSpace(_model.LastName))
+            _identityUser = await UserManager.FindByIdAsync(_currentCustomer.UserId);
+            if (_identityUser is not null)
             {
-                _model.FirstName = string.Empty;
-                _model.LastName = string.Empty;
+                _roles = (IReadOnlyList<string>)await UserManager.GetRolesAsync(_identityUser);
+            }
+
+            if (_isCustomerAccount)
+            {
+                _model = await AccountService.GetAsync() ?? new CustomerAccountViewModel();
+
+                if (string.IsNullOrWhiteSpace(_model.ErrorMessage) &&
+                    string.IsNullOrWhiteSpace(_model.FirstName) &&
+                    string.IsNullOrWhiteSpace(_model.LastName))
+                {
+                    _model.FirstName = string.Empty;
+                    _model.LastName = string.Empty;
+                }
             }
         }
         finally
@@ -181,9 +244,20 @@
 
     private string GetDisplayName()
     {
-        var name = string.Join(" ", new[] { _model.FirstName, _model.LastName }
+        if (_identityUser is not null)
+        {
+            var name = string.Join(" ", new[] { _identityUser.FirstName, _identityUser.LastName }
+                .Where(x => !string.IsNullOrWhiteSpace(x)));
+
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                return name;
+            }
+        }
+
+        var fallback = string.Join(" ", new[] { _model.FirstName, _model.LastName }
             .Where(x => !string.IsNullOrWhiteSpace(x)));
 
-        return string.IsNullOrWhiteSpace(name) ? "Customer" : name;
+        return string.IsNullOrWhiteSpace(fallback) ? "Customer" : fallback;
     }
 }

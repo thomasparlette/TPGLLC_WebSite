@@ -110,9 +110,6 @@ public sealed class PortalContextService : IPortalContextService
                 Email = current.Email,
                 DisplayName = displayName,
                 IsCustomer = current.IsCustomer,
-                IsServiceAdvisor = current.IsServiceAdvisor,
-                IsTechnician = current.IsTechnician,
-                IsFinance = current.IsFinance,
                 IsAdministrator = current.IsAdministrator
             },
             Profile = profile,

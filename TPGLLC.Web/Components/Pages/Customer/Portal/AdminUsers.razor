@@ -55,8 +55,8 @@
             </div>
 
             <div class="portal-stat">
-                <div class="portal-stat-value">@_users.Count(x => x.IsServiceAdvisor)</div>
-                <div class="portal-stat-label">Service Advisors</div>
+                <div class="portal-stat-value">@_users.Count(x => x.IsServiceAdvisor || x.IsTechnician || x.IsFinance)</div>
+                <div class="portal-stat-label">Employee Roles</div>
             </div>
         </div>
 
@@ -281,7 +281,7 @@
     private async Task SyncRoleAsync(ApplicationUser user, string roleName, bool shouldHaveRole)
     {
         var roles = await UserManager.GetRolesAsync(user);
-        var hasRole = roles.Any(x => string.Equals(x, roleName, StringComparison.OrdinalIgnoreCase));
+        var hasRole = roles.Contains(roleName, StringComparer.OrdinalIgnoreCase);
 
         if (shouldHaveRole && !hasRole)
         {

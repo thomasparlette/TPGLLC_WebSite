@@ -1,7 +1,7 @@
 ﻿@page "/portal/employee/service-advisor"
 @page "/portal/employee/service-advisor/dashboard"
 @layout CustomerLayout
-@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.ServiceAdvisor)]
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "ServiceAdvisor,Administrator")]
 
 @using Microsoft.EntityFrameworkCore
 @using TPGLLC.Data
@@ -57,7 +57,7 @@
                 <p>Review new appointment requests and customer check-ins.</p>
             </a>
 
-            <a class="portal-card-link" href="/portal/employee/service-advisor/calendar">
+            <a class="portal-card-link" href="/portal/employee/service-advisor/appointment-calendar">
                 <div class="portal-card-icon">📅</div>
                 <h3>Appointment Calendar</h3>
                 <p>View the shop schedule and upcoming appointments.</p>
@@ -78,7 +78,7 @@
             <a class="portal-card-link" href="/portal/account">
                 <div class="portal-card-icon">👤</div>
                 <h3>Account Detail</h3>
-                <p>Update your employee account details.</p>
+                <p>Update your account details and password.</p>
             </a>
         </div>
 
