@@ -1,21 +1,19 @@
-﻿@page "/portal/service-advisor"
+﻿@page "/portal/service-advisor/customers"
 @layout CustomerLayout
 @attribute [Authorize(Policy = PortalPolicies.ServiceAdvisor)]
 
 @using Microsoft.EntityFrameworkCore
 @using TPGLLC.Data
-@using TPGLLC.Web.Services.Customers
 
 @inject IDbContextFactory<TPGLLCDbContext> DbFactory
-@inject ICurrentCustomerAccessor CurrentCustomerAccessor
 
-<PageTitle>Service Advisor Dashboard</PageTitle>
+<PageTitle>Customers</PageTitle>
 
 <section class="portal-dashboard">
     <div class="portal-header">
-        <p class="section-kicker">Service Advisor Portal</p>
-        <h1>Service Advisor Dashboard</h1>
-        <p>Manage customer requests, appointment scheduling, and repair orders from one place.</p>
+        <p class="section-kicker">Employee Portal</p>
+        <h1>Customers</h1>
+        <p>Search customers and view their records before opening a work order.</p>
     </div>
 
     @if (_loading)
@@ -23,8 +21,8 @@
         <div class="portal-loading-card">
             <div class="portal-loading-icon">⏳</div>
             <div>
-                <div class="portal-loading-title">Loading dashboard</div>
-                <div class="portal-loading-text">Please wait while we gather requests and work orders.</div>
+                <div class="portal-loading-title">Loading customers</div>
+                <div class="portal-loading-text">Please wait while we load customer records.</div>
             </div>
         </div>
     }
@@ -32,115 +30,43 @@
     {
         <div class="portal-stats">
             <div class="portal-stat">
-                <div class="portal-stat-value">@_openRequests</div>
-                <div class="portal-stat-label">Open Requests</div>
-            </div>
-
-            <div class="portal-stat">
-                <div class="portal-stat-value">@_activeWorkOrders</div>
-                <div class="portal-stat-label">Active Work Orders</div>
-            </div>
-
-            <div class="portal-stat">
                 <div class="portal-stat-value">@_customerCount</div>
                 <div class="portal-stat-label">Customers</div>
             </div>
-        </div>
-
-        <div class="portal-section">
-            <div class="portal-section-heading">
-                <h2>Quick Actions</h2>
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_vehicleCount</div>
+                <div class="portal-stat-label">Vehicles</div>
             </div>
-
-            <div class="portal-dashboard-grid">
-                <a class="portal-card-link" href="/portal/service-advisor/current-requests">
-                    <div class="portal-card-icon">📅</div>
-                    <h3>Current Customer Requests</h3>
-                    <p>Review incoming service requests and prepare next steps.</p>
-                </a>
-
-                <a class="portal-card-link" href="/portal/service-advisor/appointment-calendar">
-                    <div class="portal-card-icon">🗓️</div>
-                    <h3>Appointment Calendar</h3>
-                    <p>See upcoming appointments and scheduled visits.</p>
-                </a>
-
-                <a class="portal-card-link" href="/portal/service-advisor/work-orders">
-                    <div class="portal-card-icon">🛠️</div>
-                    <h3>Work Orders</h3>
-                    <p>Assign technicians, edit work orders, and track approvals.</p>
-                </a>
-
-                <a class="portal-card-link" href="/portal/service-advisor/customers">
-                    <div class="portal-card-icon">👥</div>
-                    <h3>Customers</h3>
-                    <p>Search customer history and vehicle information quickly.</p>
-                </a>
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_requestCount</div>
+                <div class="portal-stat-label">Requests</div>
             </div>
         </div>
 
         <div class="portal-section">
-            <div class="portal-section-heading">
-                <h2>Recent Requests</h2>
-                <a href="/portal/service-advisor/current-requests">View all</a>
+            <div class="portal-empty-state">
+                <div class="portal-empty-icon">👥</div>
+                <div>
+                    <div class="portal-empty-title">Customer directory coming next</div>
+                    <div class="portal-empty-text">This page is in place for customer search, records, and history lookup.</div>
+                </div>
             </div>
-
-            @if (_recentRequests.Count == 0)
-            {
-                <div class="portal-empty-state">
-                    <div class="portal-empty-icon">📅</div>
-                    <div>
-                        <div class="portal-empty-title">No recent requests</div>
-                        <div class="portal-empty-text">New requests will appear here as customers submit them.</div>
-                    </div>
-                </div>
-            }
-            else
-            {
-                <div class="portal-activity">
-                    @foreach (var request in _recentRequests)
-                    {
-                        <div class="portal-activity-item" @key="request.RequestId">
-                            <div class="portal-activity-icon">📅</div>
-                            <div>
-                                <strong>@request.Name</strong><br />
-                                @request.ServiceNeeded<br />
-                                <span class="portal-muted">@request.SubmittedAtUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</span>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
         </div>
     }
 </section>
 
 @code {
     private bool _loading = true;
-    private int _openRequests;
-    private int _activeWorkOrders;
     private int _customerCount;
-    private List<AppointmentRequest> _recentRequests = [];
+    private int _vehicleCount;
+    private int _requestCount;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadAsync();
-    }
-
-    private async Task LoadAsync()
-    {
-        try
-        {
-            await using var db = await DbFactory.CreateDbContextAsync();
-
-            _openRequests = await db.AppointmentRequests.AsNoTracking().CountAsync(x => x.Status != "Cancelled" && x.Status != "Completed" && x.Status != "Declined" && x.Status != "Closed");
-            _activeWorkOrders = await db.ServiceHistoryEntries.AsNoTracking().CountAsync(x => x.Status != "Completed" && x.Status != "Cancelled" && x.Status != "Closed");
-            _customerCount = await db.Customers.AsNoTracking().CountAsync();
-            _recentRequests = await db.AppointmentRequests.AsNoTracking().OrderByDescending(x => x.SubmittedAtUtc).Take(5).ToListAsync();
-        }
-        finally
-        {
-            _loading = false;
-        }
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _customerCount = await db.Customers.AsNoTracking().CountAsync();
+        _vehicleCount = await db.CustomerVehicles.AsNoTracking().CountAsync();
+        _requestCount = await db.AppointmentRequests.AsNoTracking().CountAsync();
+        _loading = false;
     }
 }

@@ -13,17 +13,17 @@ public static class PortalRouteHelper
 
         if (user.IsInRole("ServiceAdvisor"))
         {
-            return "/portal/employee/service-advisor";
+            return "/portal/service-advisor";
         }
 
         if (user.IsInRole("Technician"))
         {
-            return "/portal/employee/technician";
+            return "/portal/technician";
         }
 
         if (user.IsInRole("Finance"))
         {
-            return "/portal/employee/finance";
+            return "/portal//finance";
         }
 
 

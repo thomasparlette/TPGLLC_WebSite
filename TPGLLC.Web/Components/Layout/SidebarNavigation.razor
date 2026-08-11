@@ -53,10 +53,10 @@
                 else if (authState.User.IsInRole("Customer"))
                 {
                     <NavLink href="/portal/customer" Match="NavLinkMatch.All" class="nav-link" @onclick="HandleNavigate">Dashboard</NavLink>
-                    <NavLink href="/portal/vehicles" class="nav-link" @onclick="HandleNavigate">Vehicles</NavLink>
-                    <NavLink href="/portal/appointments" class="nav-link" @onclick="HandleNavigate">Appointments</NavLink>
-                    <NavLink href="/portal/history" class="nav-link" @onclick="HandleNavigate">Service History</NavLink>
-                    <NavLink href="/portal/work-orders" class="nav-link" @onclick="HandleNavigate">Work Orders &amp; Invoices</NavLink>
+                    <NavLink href="/portal/customers/vehicles" class="nav-link" @onclick="HandleNavigate">Vehicles</NavLink>
+                    <NavLink href="/portal/customers/appointments" class="nav-link" @onclick="HandleNavigate">Appointments</NavLink>
+                    <NavLink href="/portal/customers/history" class="nav-link" @onclick="HandleNavigate">Service History</NavLink>
+                    <NavLink href="/portal/customers/work-orders" class="nav-link" @onclick="HandleNavigate">Work Orders &amp; Invoices</NavLink>
                     <NavLink href="/portal/account" class="nav-link" @onclick="HandleNavigate">Account Detail</NavLink>
                 }
                 else
