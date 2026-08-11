@@ -198,6 +198,13 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             return model;
         }
 
+        if (HasPendingProposal(request))
+        {
+            var model = await GetAsync();
+            model.ErrorMessage = "Please approve or decline the proposed appointment time before requesting another change.";
+            return model;
+        }
+
         request.PreferredDate = form.PreferredDate.Trim();
         request.PreferredTime = form.PreferredTime.Trim();
         request.ServiceNeeded = form.ServiceNeeded.Trim();
@@ -209,6 +216,102 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
 
         var updatedModel = await GetAsync();
         updatedModel.SuccessMessage = "Appointment request updated.";
+        return updatedModel;
+    }
+
+    public async Task<AppointmentPageViewModel> ApproveProposedRescheduleAsync(
+        Guid requestId,
+        CancellationToken cancellationToken = default)
+    {
+        var current = _currentCustomerAccessor.GetCurrentCustomer();
+        if (!current.IsAuthenticated)
+        {
+            return new AppointmentPageViewModel
+            {
+                ErrorMessage = "You must be signed in to approve appointment changes."
+            };
+        }
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        db.ChangeTracker.Clear();
+
+        var request = await db.AppointmentRequests
+            .FirstOrDefaultAsync(
+                x => x.RequestId == requestId && x.Email == current.Email,
+                cancellationToken);
+
+        if (request is null)
+        {
+            var model = await GetAsync();
+            model.ErrorMessage = "Appointment request was not found.";
+            return model;
+        }
+
+        if (!HasPendingProposal(request))
+        {
+            var model = await GetAsync();
+            model.ErrorMessage = "There is no pending appointment time change for this request.";
+            return model;
+        }
+
+        request.PreferredDate = request.ProposedDate!.Trim();
+        request.PreferredTime = request.ProposedTime!.Trim();
+        request.ProposedDate = null;
+        request.ProposedTime = null;
+        request.AdvisorMessage = null;
+        request.Status = "Confirmed";
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        var updatedModel = await GetAsync();
+        updatedModel.SuccessMessage = "The new appointment time has been approved.";
+        return updatedModel;
+    }
+
+    public async Task<AppointmentPageViewModel> DeclineProposedRescheduleAsync(
+        Guid requestId,
+        CancellationToken cancellationToken = default)
+    {
+        var current = _currentCustomerAccessor.GetCurrentCustomer();
+        if (!current.IsAuthenticated)
+        {
+            return new AppointmentPageViewModel
+            {
+                ErrorMessage = "You must be signed in to respond to appointment changes."
+            };
+        }
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        db.ChangeTracker.Clear();
+
+        var request = await db.AppointmentRequests
+            .FirstOrDefaultAsync(
+                x => x.RequestId == requestId && x.Email == current.Email,
+                cancellationToken);
+
+        if (request is null)
+        {
+            var model = await GetAsync();
+            model.ErrorMessage = "Appointment request was not found.";
+            return model;
+        }
+
+        if (!HasPendingProposal(request))
+        {
+            var model = await GetAsync();
+            model.ErrorMessage = "There is no pending appointment time change for this request.";
+            return model;
+        }
+
+        request.ProposedDate = null;
+        request.ProposedTime = null;
+        request.AdvisorMessage = null;
+        request.Status = "Requested";
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        var updatedModel = await GetAsync();
+        updatedModel.SuccessMessage = "The proposed appointment time was declined. Your original request remains active.";
         return updatedModel;
     }
 
@@ -242,6 +345,13 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         var updatedModel = await GetAsync();
         updatedModel.SuccessMessage = "Appointment request cancelled.";
         return updatedModel;
+    }
+
+    private static bool HasPendingProposal(AppointmentRequest request)
+    {
+        return request.Status.Equals("RescheduleProposed", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(request.ProposedDate)
+            && !string.IsNullOrWhiteSpace(request.ProposedTime);
     }
 
     private async Task<List<int>> GetYearsAsync()

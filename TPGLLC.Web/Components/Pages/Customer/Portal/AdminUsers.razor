@@ -18,7 +18,7 @@
     <div class="portal-header">
         <p class="section-kicker">Administration</p>
         <h1>User Role Management</h1>
-        <p>Assign Customer, Service Advisor, Technician, Finance, and Administrator roles to existing site users.</p>
+        <p>Assign Customer, Service Advisor, Technician, Finance, and Administrator access to existing site users.</p>
     </div>
 
     @if (_loading)
@@ -54,10 +54,6 @@
                 <div class="portal-stat-label">Customers</div>
             </div>
 
-            <div class="portal-stat">
-                <div class="portal-stat-value">@_users.Count(x => x.IsServiceAdvisor || x.IsTechnician || x.IsFinance)</div>
-                <div class="portal-stat-label">Employee Roles</div>
-            </div>
         </div>
 
         <div class="portal-section">

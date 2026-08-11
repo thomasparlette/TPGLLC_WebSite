@@ -35,16 +35,18 @@ public sealed class AppointmentRequest
     [Required]
     public string? Message { get; set; }
 
+    // Service advisor scheduling response fields.
+    [MaxLength(20)]
+    public string? ProposedDate { get; set; }
+    [MaxLength(20)]
+    public string? ProposedTime { get; set; }
+    [MaxLength(4000)]
+    public string? AdvisorMessage { get; set; }
+    [MaxLength(128)]
+    public string? ResponseToken { get; set; }
+    public DateTimeOffset? ResponseTokenExpiresUtc { get; set; }
 
     public Guid RequestId { get; set; } = Guid.NewGuid();
     public DateTimeOffset SubmittedAtUtc { get; set; } = DateTimeOffset.UtcNow;
     public string Status { get; set; } = "Pending";
-
-    public string? ProposedDate { get; set; }
-    public string? ProposedTime { get; set; }
-    public string? AdvisorMessage { get; set; }
-
-    [MaxLength(128)]
-    public string? ResponseToken { get; set; }
-    public DateTimeOffset? ResponseTokenExpiresUtc { get; set; }
 }

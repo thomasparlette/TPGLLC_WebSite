@@ -8,7 +8,7 @@ public static class PortalIdentityExtensions
         user.IsInRole(PortalPolicies.Administrator);
 
     public static bool IsCustomerOnly(this ClaimsPrincipal user) =>
-        user.IsInRole(PortalPolicies.Customer) && !user.IsEmployeePortalUser() && !user.IsAdministrator();
+        user.IsInRole(PortalPolicies.Customer) && !user.IsStaffPortalUser() && !user.IsAdministrator();
 
     public static bool IsServiceAdvisor(this ClaimsPrincipal user) =>
         user.IsInRole(PortalPolicies.ServiceAdvisor);
@@ -19,7 +19,7 @@ public static class PortalIdentityExtensions
     public static bool IsFinance(this ClaimsPrincipal user) =>
         user.IsInRole(PortalPolicies.Finance);
 
-    public static bool IsEmployeePortalUser(this ClaimsPrincipal user) =>
+    public static bool IsStaffPortalUser(this ClaimsPrincipal user) =>
         user.IsServiceAdvisor() || user.IsTechnician() || user.IsFinance();
 
     public static string GetPortalHomeHref(this ClaimsPrincipal user)

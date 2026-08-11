@@ -56,8 +56,7 @@ public sealed class LoginModel : PageModel
 
         if (result.Succeeded)
         {
-            var postLoginReturnUrl = await GetPostLoginReturnUrl(Input.ReturnUrl, Input.Email.Trim());
-            return LocalRedirect(postLoginReturnUrl);
+            return LocalRedirect(await GetPostLoginReturnUrl(Input.ReturnUrl, Input.Email.Trim()));
         }
 
         if (result.RequiresTwoFactor)

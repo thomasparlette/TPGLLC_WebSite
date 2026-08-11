@@ -12,5 +12,7 @@ public interface IAppointmentPortalService
     Task<AppointmentPageViewModel> SaveAsync(AppointmentPageViewModel model);
 
     Task<AppointmentPageViewModel> RescheduleAsync(Guid requestId, AppointmentRescheduleFormModel form, CancellationToken cancellationToken = default);
+    Task<AppointmentPageViewModel> ApproveProposedRescheduleAsync(Guid requestId, CancellationToken cancellationToken = default);
+    Task<AppointmentPageViewModel> DeclineProposedRescheduleAsync(Guid requestId, CancellationToken cancellationToken = default);
     Task<AppointmentPageViewModel> CancelAsync(Guid requestId, CancellationToken cancellationToken = default);
 }

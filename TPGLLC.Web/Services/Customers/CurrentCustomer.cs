@@ -10,6 +10,5 @@ public sealed class CurrentCustomer
     public bool IsServiceAdvisor { get; init; }
     public bool IsTechnician { get; init; }
     public bool IsFinance { get; init; }
-    //public bool IsEmployee => IsServiceAdvisor || IsTechnician || IsFinance;
     public bool IsAdministrator { get; init; }
 }

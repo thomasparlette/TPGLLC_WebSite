@@ -137,7 +137,9 @@
                                  NewRequestText="New Request"
                                  ShowActions="true"
                                  OnReschedule="OnRescheduleRequestAsync"
-                                 OnCancel="OnCancelRequestAsync" />
+                                 OnCancel="OnCancelRequestAsync"
+                                 OnApproveReschedule="OnApproveRescheduleAsync"
+                                 OnDeclineReschedule="OnDeclineRescheduleAsync" />
 
         @if (_reschedulingRequest is not null)
         {
@@ -387,6 +389,51 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    private async Task OnApproveRescheduleAsync(AppointmentRequest request)
+    {
+        try
+        {
+            var model = await AppointmentPortalService.ApproveProposedRescheduleAsync(request.RequestId);
+            _portal = await PortalContextService.GetAsync();
+            _successMessage = model.SuccessMessage ?? "The new appointment time has been approved.";
+            _errorMessage = model.ErrorMessage;
+
+            if (_reschedulingRequest?.RequestId == request.RequestId)
+            {
+                CloseRescheduleCore();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            _successMessage = null;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnDeclineRescheduleAsync(AppointmentRequest request)
+    {
+        try
+        {
+            var model = await AppointmentPortalService.DeclineProposedRescheduleAsync(request.RequestId);
+            _portal = await PortalContextService.GetAsync();
+            _successMessage = model.SuccessMessage ?? "The proposed appointment time was declined.";
+            _errorMessage = model.ErrorMessage;
+
+            if (_reschedulingRequest?.RequestId == request.RequestId)
+            {
+                CloseRescheduleCore();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            _successMessage = null;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
     private async Task OnCancelRequestAsync(AppointmentRequest request)
     {
         try

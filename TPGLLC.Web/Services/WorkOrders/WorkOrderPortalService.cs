@@ -19,13 +19,13 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
 
     private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public WorkOrderPortalService(
-        IDbContextFactory<TPGLLCDbContext> dbFactory,
-        ICurrentCustomerAccessor currentCustomerAccessor)
+    public WorkOrderPortalService(IDbContextFactory<TPGLLCDbContext> dbFactory,ICurrentCustomerAccessor currentCustomerAccessor, IHttpContextAccessor httpContextAccessor)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<WorkOrderPageViewModel> GetCustomerAsync()
@@ -78,7 +78,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             };
         }
 
-        if (!current.IsServiceAdvisor && !current.IsAdministrator)
+        if (!IsServiceAdvisorOrAdministrator())
         {
             return new WorkOrderPageViewModel
             {
@@ -139,7 +139,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             return model;
         }
 
-        if (!current.IsServiceAdvisor && !current.IsAdministrator)
+        if (!IsServiceAdvisorOrAdministrator())
         {
             model.ErrorMessage = "You are not authorized to manage work orders.";
             return model;
@@ -239,7 +239,11 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             InternalNotes = entry.InternalNotes
         };
     }
-
+    private bool IsServiceAdvisorOrAdministrator()
+    {
+        var user = _httpContextAccessor.HttpContext?.User;
+        return user?.IsInRole("ServiceAdvisor") == true || user?.IsInRole("Administrator") == true;
+    }
     private static bool TryParseServiceDate(DateTime value, out DateTime parsed)
     {
         parsed = value;

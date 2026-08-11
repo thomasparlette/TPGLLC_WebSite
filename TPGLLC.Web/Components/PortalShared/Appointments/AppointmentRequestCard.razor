@@ -11,9 +11,42 @@
         <span>@FormatAppointmentRequest()</span>
         @if (!string.IsNullOrWhiteSpace(Request.Status))
         {
-            <span>@Request.Status</span>
+            <span>@FormatStatus(Request.Status)</span>
         }
     </div>
+
+    @if (HasPendingReschedule)
+    {
+        <div style="margin-top:1rem; padding:1rem; border:1px solid #dbe3f0; border-radius:12px; background:#f7faff;">
+            <div style="font-weight:700; color:#0b2a59;">A new appointment time has been proposed</div>
+            <div style="margin-top:0.35rem;">@FormatProposedAppointment()</div>
+
+            @if (!string.IsNullOrWhiteSpace(Request.AdvisorMessage))
+            {
+                <div class="portal-muted" style="margin-top:0.5rem;">@Request.AdvisorMessage</div>
+            }
+
+            <div class="portal-actions" style="margin-top:0.85rem;">
+                @if (OnApproveReschedule.HasDelegate)
+                {
+                    <button type="button"
+                            class="portal-action-button"
+                            @onclick="HandleApproveRescheduleAsync">
+                        Approve New Time
+                    </button>
+                }
+
+                @if (OnDeclineReschedule.HasDelegate)
+                {
+                    <button type="button"
+                            class="portal-action-button"
+                            @onclick="HandleDeclineRescheduleAsync">
+                        Decline
+                    </button>
+                }
+            </div>
+        </div>
+    }
 
     @if (!string.IsNullOrWhiteSpace(Request.Message))
     {
@@ -23,17 +56,23 @@
     @if (CanShowActions)
     {
         <div class="portal-actions" style="margin-top:0.9rem;">
-            <button type="button"
-                    class="portal-action-button"
-                    @onclick="HandleRescheduleAsync">
-                Reschedule
-            </button>
+            @if (CanReschedule)
+            {
+                <button type="button"
+                        class="portal-action-button"
+                        @onclick="HandleRescheduleAsync">
+                    Reschedule
+                </button>
+            }
 
-            <button type="button"
-                    class="portal-danger-button"
-                    @onclick="HandleCancelAsync">
-                Cancel
-            </button>
+            @if (CanCancel)
+            {
+                <button type="button"
+                        class="portal-danger-button"
+                        @onclick="HandleCancelAsync">
+                    Cancel
+                </button>
+            }
         </div>
     }
 
@@ -55,7 +94,22 @@
     [Parameter]
     public EventCallback<AppointmentRequest> OnCancel { get; set; }
 
+    [Parameter]
+    public EventCallback<AppointmentRequest> OnApproveReschedule { get; set; }
+
+    [Parameter]
+    public EventCallback<AppointmentRequest> OnDeclineReschedule { get; set; }
+
+    private bool HasPendingReschedule =>
+        Request.Status.Equals("RescheduleProposed", StringComparison.OrdinalIgnoreCase)
+        && !string.IsNullOrWhiteSpace(Request.ProposedDate)
+        && !string.IsNullOrWhiteSpace(Request.ProposedTime);
+
     private bool CanShowActions => ShowActions && !IsClosedStatus(Request.Status);
+
+    private bool CanReschedule => CanShowActions && !HasPendingReschedule;
+
+    private bool CanCancel => CanShowActions;
 
     private Task HandleRescheduleAsync()
     {
@@ -65,6 +119,26 @@
         }
 
         return OnReschedule.InvokeAsync(Request);
+    }
+
+    private Task HandleApproveRescheduleAsync()
+    {
+        if (!OnApproveReschedule.HasDelegate)
+        {
+            return Task.CompletedTask;
+        }
+
+        return OnApproveReschedule.InvokeAsync(Request);
+    }
+
+    private Task HandleDeclineRescheduleAsync()
+    {
+        if (!OnDeclineReschedule.HasDelegate)
+        {
+            return Task.CompletedTask;
+        }
+
+        return OnDeclineReschedule.InvokeAsync(Request);
     }
 
     private Task HandleCancelAsync()
@@ -102,6 +176,26 @@
         return string.IsNullOrWhiteSpace(when)
             ? "No preferred date/time provided"
             : when;
+    }
+
+    private string FormatProposedAppointment()
+    {
+        var when = string.Join(" ", new[]
+        {
+            Request.ProposedDate,
+            Request.ProposedTime
+        }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+        return string.IsNullOrWhiteSpace(when)
+            ? "No proposed date/time provided"
+            : when;
+    }
+
+    private static string FormatStatus(string status)
+    {
+        return status.Equals("RescheduleProposed", StringComparison.OrdinalIgnoreCase)
+            ? "New Time Proposed"
+            : status;
     }
 
     private static bool IsClosedStatus(string? status)

@@ -24,7 +24,9 @@
                 <AppointmentRequestCard Request="request"
                                         ShowActions="ShowActions"
                                         OnReschedule="OnReschedule"
-                                        OnCancel="OnCancel" />
+                                        OnCancel="OnCancel" 
+                                        OnApproveReschedule="OnApproveReschedule"
+                                        OnDeclineReschedule="OnDeclineReschedule" />
             }
         </div>
     }
@@ -39,4 +41,6 @@
     [Parameter] public IReadOnlyList<AppointmentRequest> Requests { get; set; } = Array.Empty<AppointmentRequest>();
     [Parameter] public EventCallback<AppointmentRequest> OnReschedule { get; set; }
     [Parameter] public EventCallback<AppointmentRequest> OnCancel { get; set; }
+    [Parameter] public EventCallback<AppointmentRequest> OnApproveReschedule { get; set; }
+    [Parameter] public EventCallback<AppointmentRequest> OnDeclineReschedule { get; set; }
 }
