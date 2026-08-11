@@ -77,23 +77,42 @@ public sealed class VehicleCatalogImportService
             return;
         }
 
-        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        var executionStrategy = _db.Database.CreateExecutionStrategy();
 
-        if (_settings.ReplaceExisting)
+        var inserted = await executionStrategy.ExecuteAsync(async () =>
         {
-            var deleted = await _db.VehicleCatalogEntries
-                .Where(x => x.ModelYear >= _settings.StartYear && x.ModelYear <= _settings.EndYear)
-                .ExecuteDeleteAsync(cancellationToken);
+            await using var transaction =
+                await _db.Database.BeginTransactionAsync(cancellationToken);
 
-            _logger.LogInformation(
-                "Removed {DeletedCount} existing catalog rows for years {StartYear} through {EndYear}.",
-                deleted,
-                _settings.StartYear,
-                _settings.EndYear);
-        }
+            try
+            {
+                if (_settings.ReplaceExisting)
+                {
+                    var deleted = await _db.VehicleCatalogEntries
+                        .Where(x =>
+                            x.ModelYear >= _settings.StartYear &&
+                            x.ModelYear <= _settings.EndYear)
+                        .ExecuteDeleteAsync(cancellationToken);
 
-        var inserted = await FlushAsync(rows, cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+                    _logger.LogInformation(
+                        "Removed {DeletedCount} existing catalog rows for years {StartYear} through {EndYear}.",
+                        deleted,
+                        _settings.StartYear,
+                        _settings.EndYear);
+                }
+
+                var count = await FlushAsync(rows, cancellationToken);
+
+                await transaction.CommitAsync(cancellationToken);
+
+                return count;
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        });
 
         _logger.LogInformation(
             "vPIC import complete. Imported {Imported} rows for {MakeCount} makes across {StartYear}-{EndYear}.",
@@ -103,9 +122,7 @@ public sealed class VehicleCatalogImportService
             _settings.EndYear);
     }
 
-    private async Task<ConcurrentDictionary<VehicleCatalogKey, VehicleCatalogEntry>> FetchRowsAsync(
-        IReadOnlyList<string> allowedMakes,
-        CancellationToken cancellationToken)
+    private async Task<ConcurrentDictionary<VehicleCatalogKey, VehicleCatalogEntry>> FetchRowsAsync(IReadOnlyList<string> allowedMakes, CancellationToken cancellationToken)
     {
         var years = Enumerable.Range(_settings.StartYear, _settings.EndYear - _settings.StartYear + 1).ToArray();
         var rows = new ConcurrentDictionary<VehicleCatalogKey, VehicleCatalogEntry>();
@@ -194,16 +211,23 @@ public sealed class VehicleCatalogImportService
             return 0;
         }
 
+        var inserted = 0;
+
         for (var index = 0; index < rows.Count; index += BatchSize)
         {
-            var batch = rows.Skip(index).Take(BatchSize).ToList();
+            var batch = rows
+                .Skip(index)
+                .Take(BatchSize)
+                .ToList();
+
             await _db.VehicleCatalogEntries.AddRangeAsync(batch, cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken);
+
+            inserted += batch.Count;
+            _db.ChangeTracker.Clear();
         }
 
-        await _db.SaveChangesAsync(cancellationToken);
-        _db.ChangeTracker.Clear();
-
-        return rows.Count;
+        return inserted;
     }
 
     private void ValidateSettings()

@@ -8,7 +8,7 @@ public sealed class VehicleImportSettings
 
     public int MaxDegreeOfParallelism { get; set; } = Math.Max(1, Environment.ProcessorCount / 2);
 
-    public bool ReplaceExisting { get; set; } = true;
+    public bool ReplaceExisting { get; set; } = false;
 
     public List<string> AllowedMakes { get; set; } = [];
 }

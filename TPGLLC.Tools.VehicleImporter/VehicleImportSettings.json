@@ -2,7 +2,7 @@
   "StartYear": 1996,
   "EndYear": 2026,
   "MaxDegreeOfParallelism": 4,
-  "ReplaceExisting": true,
+  "ReplaceExisting": false,
   "AllowedMakes": [
     "Acura",
     "Audi",

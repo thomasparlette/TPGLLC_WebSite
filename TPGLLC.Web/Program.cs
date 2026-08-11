@@ -21,7 +21,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddRazorPages();
 
 builder.Services.AddTpgllcPlatform(builder.Configuration);
-
+builder.WebHost.UseStaticWebAssets();
 var app = builder.Build();
 
 app.UseTpgllcPipeline();

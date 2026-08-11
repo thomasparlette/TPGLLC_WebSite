@@ -1,20 +1,20 @@
 {
   "profiles": {
-    "TPGLLC.Tools.DatabaseBootstrapper - Development": {
+    "TPGLLC.Tools.VehicleImporter - Development": {
       "commandName": "Project",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development",
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
-    "TPGLLC.Tools.DatabaseBootstrapper - Production": {
+    "TPGLLC.Tools.VehicleImporter - Production": {
       "commandName": "Project",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Production",
         "ASPNETCORE_ENVIRONMENT": "Production"
       }
     },
-    "TPGLLC.Tools.DatabaseBootstrapper - Work": {
+    "TPGLLC.Tools.VehicleImporter - Work": {
       "commandName": "Project",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Work",
