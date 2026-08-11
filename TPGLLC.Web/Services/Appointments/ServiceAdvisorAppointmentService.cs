@@ -30,7 +30,7 @@ public sealed class ServiceAdvisorAppointmentService : IServiceAdvisorAppointmen
     {
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         return await db.AppointmentRequests.AsNoTracking()
-            .Where(x => x.Status != "Cancelled" && x.Status != "Completed" && x.Status != "Declined" && x.Status != "Closed")
+            .Where(x => x.Status == "Pending" || x.Status == "CustomerRequestedChange" || x.Status == "AwaitingCustomerApproval")
             .OrderByDescending(x => x.SubmittedAtUtc)
             .ToListAsync(cancellationToken);
     }

@@ -107,6 +107,7 @@ public static class TpgllcServiceCollectionExtensions
         services.AddScoped<IPortalSessionState, PortalSessionState>();
         services.AddScoped<IAppointmentPortalService, AppointmentPortalService>();
         services.AddScoped<IAppointmentService, AppointmentService>();
+        services.AddScoped<IServiceAdvisorAppointmentService, ServiceAdvisorAppointmentService>();
         services.AddScoped<IEmailTemplateRenderer, FileEmailTemplateRenderer>();
         services.AddScoped<ICustomerAccountService, CustomerAccountService>();
         services.AddScoped<IVehiclePhotoService, VehiclePhotoService>();

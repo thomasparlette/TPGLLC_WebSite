@@ -2,10 +2,12 @@
 @layout CustomerLayout
 @attribute [Authorize(Policy = PortalPolicies.ServiceAdvisor)]
 
-@using Microsoft.EntityFrameworkCore
-@using TPGLLC.Data
+@using System.ComponentModel.DataAnnotations
+@using TPGLLC.Data.Entities
+@using TPGLLC.Web.Authorization
+@using TPGLLC.Web.Services.Appointments
 
-@inject IDbContextFactory<TPGLLCDbContext> DbFactory
+@inject IServiceAdvisorAppointmentService AppointmentService
 
 <PageTitle>Current Customer Requests</PageTitle>
 
@@ -13,8 +15,15 @@
     <div class="portal-header">
         <p class="section-kicker">Service Advisor</p>
         <h1>Current Customer Requests</h1>
-        <p>Review open appointment requests submitted by customers.</p>
+        <p>Review new customer appointment requests, approve them, or recommend a different date and time.</p>
     </div>
+
+    @if (!string.IsNullOrWhiteSpace(_pageMessage))
+    {
+        <div class="portal-section" style="margin-bottom:1rem;">
+            <strong>@_pageMessage</strong>
+        </div>
+    }
 
     @if (_loading)
     {
@@ -31,8 +40,8 @@
         <div class="portal-empty-state">
             <div class="portal-empty-icon">📭</div>
             <div>
-                <div class="portal-empty-title">No open requests</div>
-                <div class="portal-empty-text">There are no pending requests at this time.</div>
+                <div class="portal-empty-title">No current requests</div>
+                <div class="portal-empty-text">There are no customer requests waiting for service advisor action.</div>
             </div>
         </div>
     }
@@ -41,13 +50,92 @@
         <div class="portal-activity">
             @foreach (var request in _requests)
             {
+                var proposal = GetProposal(request.RequestId);
+
                 <div class="portal-activity-item" @key="request.RequestId">
                     <div class="portal-activity-icon">📅</div>
-                    <div>
-                        <strong>@request.Name</strong><br />
-                        @request.ServiceNeeded<br />
-                        @request.VehicleYear @request.VehicleMake @request.VehicleModel<br />
-                        <span class="portal-muted">@request.Status · @request.SubmittedAtUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</span>
+                    <div style="width:100%;">
+                        <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap;">
+                            <div>
+                                <strong>@request.Name</strong>
+                                <div class="portal-muted" style="margin-top:.2rem;">@request.Email · @request.Phone</div>
+                            </div>
+                            <span class="portal-muted">@request.Status</span>
+                        </div>
+
+                        <div style="margin-top:.75rem;">
+                            <strong>@request.ServiceNeeded</strong><br />
+                            @BuildVehicleSummary(request)<br />
+                            <span class="portal-muted">Requested @request.PreferredDate at @request.PreferredTime</span>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(request.Message))
+                        {
+                            <div class="portal-section" style="margin-top:1rem;">
+                                <strong>Customer message</strong>
+                                <div style="margin-top:.35rem;white-space:pre-wrap;">@request.Message</div>
+                            </div>
+                        }
+
+                        <div class="portal-actions" style="margin-top:1rem;">
+                            <button type="button"
+                                    class="portal-action-button"
+                                    disabled="@(_busyRequestId == request.RequestId)"
+                                    @onclick="() => AcceptRequestAsync(request)">
+                                Approve Requested Time
+                            </button>
+
+                            <button type="button"
+                                    class="portal-action-button"
+                                    disabled="@(_busyRequestId == request.RequestId)"
+                                    @onclick="() => ToggleProposalAsync(request.RequestId)">
+                                @(proposal.IsOpen ? "Close Recommendation" : "Recommend New Date / Time")
+                            </button>
+                        </div>
+
+                        @if (proposal.IsOpen)
+                        {
+                            <div class="portal-section" style="margin-top:1rem;">
+                                <div class="portal-section-heading">
+                                    <div>
+                                        <h2 style="margin:0;">Recommend a New Date / Time</h2>
+                                        <div class="portal-muted">The customer will receive an email with a secure review link.</div>
+                                    </div>
+                                </div>
+
+                                <EditForm Model="@proposal.Form" OnValidSubmit="() => ProposeChangeAsync(request)">
+                                    <DataAnnotationsValidator />
+
+                                    <div class="portal-form-grid">
+                                        <div class="form-field">
+                                            <label>Recommended Date</label>
+                                            <InputText class="input" type="date" @bind-Value="proposal.Form.Date" />
+                                            <ValidationMessage For="@(() => proposal.Form.Date)" />
+                                        </div>
+
+                                        <div class="form-field">
+                                            <label>Recommended Time</label>
+                                            <InputText class="input" type="time" @bind-Value="proposal.Form.Time" />
+                                            <ValidationMessage For="@(() => proposal.Form.Time)" />
+                                        </div>
+
+                                        <div class="form-field full">
+                                            <label>Message to Customer (optional)</label>
+                                            <InputTextArea class="input" rows="4" @bind-Value="proposal.Form.Message" />
+                                            <ValidationMessage For="@(() => proposal.Form.Message)" />
+                                        </div>
+                                    </div>
+
+                                    <div class="portal-actions" style="margin-top:1rem;">
+                                        <button type="submit"
+                                                class="portal-action-button"
+                                                disabled="@(_busyRequestId == request.RequestId)">
+                                            Send Recommendation
+                                        </button>
+                                    </div>
+                                </EditForm>
+                            </div>
+                        }
                     </div>
                 </div>
             }
@@ -58,14 +146,139 @@
 @code {
     private bool _loading = true;
     private List<AppointmentRequest> _requests = [];
+    private readonly Dictionary<Guid, ProposalState> _proposalStates = [];
+    private Guid? _busyRequestId;
+    private string? _pageMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        await using var db = await DbFactory.CreateDbContextAsync();
-        _requests = await db.AppointmentRequests.AsNoTracking()
-            .Where(x => x.Status != "Cancelled" && x.Status != "Completed" && x.Status != "Declined" && x.Status != "Closed")
-            .OrderByDescending(x => x.SubmittedAtUtc)
-            .ToListAsync();
-        _loading = false;
+        await LoadRequestsAsync();
+    }
+
+    private async Task LoadRequestsAsync()
+    {
+        _loading = true;
+        try
+        {
+            _requests = await AppointmentService.GetOpenRequestsAsync();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private ProposalState GetProposal(Guid requestId)
+    {
+        if (!_proposalStates.TryGetValue(requestId, out var state))
+        {
+            state = new ProposalState();
+            _proposalStates[requestId] = state;
+        }
+
+        return state;
+    }
+
+    private Task ToggleProposalAsync(Guid requestId)
+    {
+        var state = GetProposal(requestId);
+        state.IsOpen = !state.IsOpen;
+        _pageMessage = null;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task AcceptRequestAsync(AppointmentRequest request)
+    {
+        if (_busyRequestId.HasValue)
+        {
+            return;
+        }
+
+        _busyRequestId = request.RequestId;
+        _pageMessage = null;
+
+        try
+        {
+            var result = await AppointmentService.AcceptAsync(request.RequestId);
+            _pageMessage = result.Message;
+
+            if (result.Succeeded)
+            {
+                _requests.RemoveAll(x => x.RequestId == request.RequestId);
+                _proposalStates.Remove(request.RequestId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _pageMessage = ex.Message;
+        }
+        finally
+        {
+            _busyRequestId = null;
+        }
+    }
+
+    private async Task ProposeChangeAsync(AppointmentRequest request)
+    {
+        if (_busyRequestId.HasValue)
+        {
+            return;
+        }
+
+        var state = GetProposal(request.RequestId);
+        _busyRequestId = request.RequestId;
+        _pageMessage = null;
+
+        try
+        {
+            var result = await AppointmentService.ProposeChangeAsync(
+                request.RequestId,
+                state.Form.Date,
+                state.Form.Time,
+                state.Form.Message);
+
+            _pageMessage = result.Message;
+
+            if (result.Succeeded)
+            {
+                _requests.RemoveAll(x => x.RequestId == request.RequestId);
+                _proposalStates.Remove(request.RequestId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _pageMessage = ex.Message;
+        }
+        finally
+        {
+            _busyRequestId = null;
+        }
+    }
+
+    private static string BuildVehicleSummary(AppointmentRequest request)
+    {
+        var parts = new[] { request.VehicleYear, request.VehicleMake, request.VehicleModel }
+            .Where(x => !string.IsNullOrWhiteSpace(x));
+
+        var summary = string.Join(" ", parts);
+        return string.IsNullOrWhiteSpace(summary) ? "Vehicle not specified" : summary;
+    }
+
+    private sealed class ProposalState
+    {
+        public bool IsOpen { get; set; }
+        public ProposalFormModel Form { get; } = new();
+    }
+
+    private sealed class ProposalFormModel
+    {
+        [Required(ErrorMessage = "Recommended date is required.")]
+        public string Date { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Recommended time is required.")]
+        public string Time { get; set; } = string.Empty;
+
+        [StringLength(4000, ErrorMessage = "Message cannot exceed 4000 characters.")]
+        public string? Message { get; set; }
     }
 }
