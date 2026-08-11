@@ -1,0 +1,136 @@
+﻿@page "/appointment/respond/{Token}"
+@using TPGLLC.Data.Entities
+@using TPGLLC.Web.Services.Appointments
+@inject IServiceAdvisorAppointmentService AppointmentService
+
+<PageTitle>Appointment Response</PageTitle>
+
+<section class="portal-dashboard" style="max-width:900px;margin:2rem auto;">
+    <div class="portal-header">
+        <p class="section-kicker">Appointment</p>
+        <h1>Review Appointment Time</h1>
+        <p>Confirm the service advisor's proposed time or request a different date/time.</p>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="portal-loading-card">Loading appointment...</div>
+    }
+    else if (_request is null)
+    {
+        <div class="portal-section"><h2>Link unavailable</h2><p>This response link is invalid or has expired. Please contact the shop.</p></div>
+    }
+    else if (_completed)
+    {
+        <div class="portal-section"><h2>Response received</h2><p>@_message</p></div>
+    }
+    else
+    {
+        <div class="portal-section">
+            <h2>@_request.ServiceNeeded</h2>
+            <p><strong>Vehicle:</strong> @_request.VehicleYear @_request.VehicleMake @_request.VehicleModel</p>
+            <p><strong>Your original request:</strong> @_request.PreferredDate at @_request.PreferredTime</p>
+            <p><strong>Proposed appointment:</strong> @_request.ProposedDate at @_request.ProposedTime</p>
+            @if (!string.IsNullOrWhiteSpace(_request.AdvisorMessage))
+            {
+                <p><strong>Service advisor note:</strong> @_request.AdvisorMessage</p>
+            }
+            <button class="portal-action-button" type="button" disabled="@_busy" @onclick="AcceptAsync">Accept Proposed Appointment</button>
+        </div>
+
+        <div class="portal-section" style="margin-top:1rem;">
+            <h2>Request a different time</h2>
+            <label>Preferred date</label>
+            <input class="form-control" type="date" value="@_date" @onchange="OnDateChanged" />
+            <label style="margin-top:.75rem;">Preferred time</label>
+            <input class="form-control" type="time" value="@_time" @onchange="OnTimeChanged" />
+            <label style="margin-top:.75rem;">Message (optional)</label>
+            <textarea class="form-control" rows="3" @bind="_customerMessage"></textarea>
+            <button class="portal-action-button" style="margin-top:1rem;" type="button" disabled="@_busy" @onclick="RequestChangeAsync">Send Different Date/Time</button>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(_message))
+        {
+            <div class="portal-section" style="margin-top:1rem;">@_message</div>
+        }
+    }
+</section>
+
+@code {
+    [Parameter] public string Token { get; set; } = string.Empty;
+
+    private AppointmentRequest? _request;
+    private bool _loading = true;
+    private bool _busy;
+    private bool _completed;
+    private string _date = string.Empty;
+    private string _time = string.Empty;
+    private string _customerMessage = string.Empty;
+    private string? _message;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _request = await AppointmentService.GetByResponseTokenAsync(Token);
+
+        if (_request is not null)
+        {
+            _date = ToDateInput(_request.PreferredDate);
+            _time = ToTimeInput(_request.PreferredTime);
+        }
+
+        _loading = false;
+    }
+
+    private void OnDateChanged(ChangeEventArgs e)
+    {
+        _date = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private void OnTimeChanged(ChangeEventArgs e)
+    {
+        _time = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task AcceptAsync()
+    {
+        _busy = true;
+        try
+        {
+            var r = await AppointmentService.AcceptProposedChangeAsync(Token);
+            _message = r.Message;
+            _completed = r.Succeeded;
+        }
+        catch (Exception ex)
+        {
+            _message = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task RequestChangeAsync()
+    {
+        _busy = true;
+        try
+        {
+            var r = await AppointmentService.RequestDifferentTimeAsync(Token, _date, _time, _customerMessage);
+            _message = r.Message;
+            _completed = r.Succeeded;
+        }
+        catch (Exception ex)
+        {
+            _message = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static string ToDateInput(string? value) =>
+        DateOnly.TryParse(value, out var d) ? d.ToString("yyyy-MM-dd") : value ?? string.Empty;
+
+    private static string ToTimeInput(string? value) =>
+        TimeOnly.TryParse(value, out var t) ? t.ToString("HH:mm") : value ?? string.Empty;
+}

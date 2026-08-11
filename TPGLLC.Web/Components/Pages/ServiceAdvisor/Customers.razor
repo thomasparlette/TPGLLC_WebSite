@@ -1,4 +1,4 @@
-﻿@page "/portal/service-advisor/customers"
+﻿@page "/portal/service-advisor"
 @layout CustomerLayout
 @attribute [Authorize(Policy = PortalPolicies.ServiceAdvisor)]
 
@@ -9,13 +9,13 @@
 @inject IDbContextFactory<TPGLLCDbContext> DbFactory
 @inject ICurrentCustomerAccessor CurrentCustomerAccessor
 
-<PageTitle>Service Advisor Customers</PageTitle>
+<PageTitle>Service Advisor Dashboard</PageTitle>
 
 <section class="portal-dashboard">
     <div class="portal-header">
-        <p class="section-kicker">Service Advisor</p>
-        <h1>Customers</h1>
-        <p>Review customer records, vehicle information, and portal access.</p>
+        <p class="section-kicker">Service Advisor Portal</p>
+        <h1>Service Advisor Dashboard</h1>
+        <p>Manage customer requests, appointment scheduling, and repair orders from one place.</p>
     </div>
 
     @if (_loading)

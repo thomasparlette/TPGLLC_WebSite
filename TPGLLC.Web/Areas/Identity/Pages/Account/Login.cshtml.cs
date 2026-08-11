@@ -220,17 +220,17 @@ public sealed class LoginModel : PageModel
 
         if (roles.Contains("ServiceAdvisor", StringComparer.OrdinalIgnoreCase))
         {
-            return "/portal/employee/service-advisor";
+            return "/portal/service-advisor";
         }
 
         if (roles.Contains("Technician", StringComparer.OrdinalIgnoreCase))
         {
-            return "/portal/employee/technician";
+            return "/portal/technician";
         }
 
         if (roles.Contains("Finance", StringComparer.OrdinalIgnoreCase))
         {
-            return "/portal/employee/finance";
+            return "/portal/finance";
         }
         if (roles.Contains("Customer", StringComparer.OrdinalIgnoreCase))
         {

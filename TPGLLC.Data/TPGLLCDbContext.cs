@@ -49,9 +49,14 @@ public sealed class TPGLLCDbContext
             entity.Property(x => x.PreferredTime).HasMaxLength(20);
             entity.Property(x => x.ServiceNeeded).HasMaxLength(100);
             entity.Property(x => x.Status).HasMaxLength(30);
+            entity.Property(x => x.ProposedDate).HasMaxLength(20);
+            entity.Property(x => x.ProposedTime).HasMaxLength(20);
+            entity.Property(x => x.AdvisorMessage).HasMaxLength(2000);
+            entity.Property(x => x.ResponseToken).HasMaxLength(128);
 
             entity.HasIndex(x => x.Status);
             entity.HasIndex(x => x.SubmittedAtUtc);
+            entity.HasIndex(x => x.ResponseToken).IsUnique().HasFilter("[ResponseToken] IS NOT NULL"); 
         });
 
         modelBuilder.Entity<VehicleCatalogEntry>(entity =>

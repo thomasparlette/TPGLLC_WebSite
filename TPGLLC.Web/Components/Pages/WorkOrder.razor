@@ -1,4 +1,4 @@
-﻿@page "/portal/employee/work-orders"
+﻿@page "/portal/work-orders"
 @layout CustomerLayout
 @attribute [Authorize(Policy = PortalPolicies.ServiceAdvisor)]
 
@@ -16,6 +16,6 @@
 
     protected override void OnInitialized()
     {
-        Navigation.NavigateTo("/portal/employee/service-advisor/work-orders", forceLoad: true);
+        Navigation.NavigateTo("/portal/service-advisor/work-orders", forceLoad: true);
     }
 }

@@ -39,4 +39,12 @@ public sealed class AppointmentRequest
     public Guid RequestId { get; set; } = Guid.NewGuid();
     public DateTimeOffset SubmittedAtUtc { get; set; } = DateTimeOffset.UtcNow;
     public string Status { get; set; } = "Pending";
+
+    public string? ProposedDate { get; set; }
+    public string? ProposedTime { get; set; }
+    public string? AdvisorMessage { get; set; }
+
+    [MaxLength(128)]
+    public string? ResponseToken { get; set; }
+    public DateTimeOffset? ResponseTokenExpiresUtc { get; set; }
 }
