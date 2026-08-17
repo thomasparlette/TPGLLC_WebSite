@@ -26,11 +26,39 @@ public sealed class ServiceAdvisorAppointmentService : IServiceAdvisorAppointmen
         _logger = logger;
     }
 
-    public async Task<List<AppointmentRequest>> GetOpenRequestsAsync(CancellationToken cancellationToken = default)
+    public async Task<List<AppointmentRequest>> GetOpenRequestsAsync(
+        string? statusFilter = null,
+        CancellationToken cancellationToken = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-        return await db.AppointmentRequests.AsNoTracking()
-            .Where(x => x.Status == "Pending" || x.Status == "CustomerRequestedChange" || x.Status == "AwaitingCustomerApproval")
+
+        var query = db.AppointmentRequests
+            .AsNoTracking()
+            .Where(x =>
+                x.Status == "Approved" ||
+                x.Status == "Confirmed" ||
+                x.Status == "New" ||
+                x.Status == "Requested" ||
+                x.Status == "Pending" ||
+                x.Status == "CustomerRequestedChange" ||
+                x.Status == "AwaitingCustomerApproval" ||
+                x.Status == "RescheduleProposed" ||
+                x.Status == "Cancelled");
+
+        var normalizedFilter = string.IsNullOrWhiteSpace(statusFilter)
+            ? "All"
+            : statusFilter.Trim();
+
+        query = normalizedFilter.ToUpperInvariant() switch
+        {
+            "APPROVED" => query.Where(x => x.Status == "Approved" || x.Status == "Confirmed"),
+            "NEW" => query.Where(x => x.Status == "New" || x.Status == "Requested" || x.Status == "CustomerRequestedChange"),
+            "PENDING" => query.Where(x => x.Status == "Pending" || x.Status == "AwaitingCustomerApproval" || x.Status == "RescheduleProposed"),
+            "CANCELED" or "CANCELLED" => query.Where(x => x.Status == "Cancelled"),
+            _ => query
+        };
+
+        return await query
             .OrderByDescending(x => x.SubmittedAtUtc)
             .ToListAsync(cancellationToken);
     }

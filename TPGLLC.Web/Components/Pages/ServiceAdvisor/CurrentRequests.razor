@@ -14,8 +14,8 @@
 <section class="portal-dashboard">
     <div class="portal-header">
         <p class="section-kicker">Service Advisor</p>
-        <h1>Current Customer Requests</h1>
-        <p>Review new customer appointment requests, approve them, or recommend a different date and time.</p>
+        <h1>Current & Waiting Customer Requests</h1>
+        <p>Keep approved, new, pending, and canceled customer requests visible in one place. Filter the list by status as needed.</p>
     </div>
 
     @if (!string.IsNullOrWhiteSpace(_pageMessage))
@@ -35,120 +35,198 @@
             </div>
         </div>
     }
-    else if (_requests.Count == 0)
-    {
-        <div class="portal-empty-state">
-            <div class="portal-empty-icon">📭</div>
-            <div>
-                <div class="portal-empty-title">No current requests</div>
-                <div class="portal-empty-text">There are no customer requests waiting for service advisor action.</div>
-            </div>
-        </div>
-    }
+
+								  
+	 
+										
+													 
+				 
+																		 
+																													   
+				  
+			  
     else
     {
-        <div class="portal-activity">
-            @foreach (var request in _requests)
-            {
-                var proposal = GetProposal(request.RequestId);
+        <div class="portal-section" style="margin-bottom:1rem;">
+            <div class="portal-section-heading">
+                <div>
+                    <h2 style="margin:0;">Request Status</h2>
+                    <div class="portal-muted">@_allRequests.Count visible customer requests</div>
+                </div>
+            </div>
 
-                <div class="portal-activity-item" @key="request.RequestId">
-                    <div class="portal-activity-icon">📅</div>
-                    <div style="width:100%;">
-                        <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap;">
-                            <div>
-                                <strong>@request.Name</strong>
-                                <div class="portal-muted" style="margin-top:.2rem;">@request.Email · @request.Phone</div>
+            <div class="portal-actions" style="margin-top:1rem;flex-wrap:wrap;">
+                @foreach (var filter in Filters)
+                {
+                    <button type="button"
+                            class="portal-action-button @(string.Equals(_statusFilter, filter.Key, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)"
+                            @onclick="() => SelectFilter(filter.Key)">
+                        @filter.Label (@GetCount(filter.Key))
+                    </button>
+                }
+            </div>
+        </div>
+
+        @if (_requests.Count == 0)
+        {
+            <div class="portal-empty-state">
+                <div class="portal-empty-icon">📭</div>
+                <div>
+                    <div class="portal-empty-title">No requests in this filter</div>
+                    <div class="portal-empty-text">Try another request status to see more customer activity.</div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="portal-activity">
+                @foreach (var request in _requests)
+                {
+                    var proposal = GetProposal(request.RequestId);
+                    var isTerminal = IsTerminalStatus(request.Status);
+                    var displayStatus = GetDisplayStatus(request.Status);
+
+                    <div class="portal-activity-item" @key="request.RequestId">
+
+                        <div class="portal-activity-icon">📅</div>
+                        <div style="width:100%;">
+                            <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap;">
+                                <div>
+                                    <strong>@request.Name</strong>
+                                    <div class="portal-muted" style="margin-top:.2rem;">@request.Email · @request.Phone</div>
+                                </div>
+                                <span class="portal-muted"><strong>@displayStatus</strong></span>
                             </div>
-                            <span class="portal-muted">@request.Status</span>
-                        </div>
 
-                        <div style="margin-top:.75rem;">
-                            <strong>@request.ServiceNeeded</strong><br />
-                            @BuildVehicleSummary(request)<br />
-                            <span class="portal-muted">Requested @request.PreferredDate at @request.PreferredTime</span>
-                        </div>
-
-                        @if (!string.IsNullOrWhiteSpace(request.Message))
-                        {
-                            <div class="portal-section" style="margin-top:1rem;">
-                                <strong>Customer message</strong>
-                                <div style="margin-top:.35rem;white-space:pre-wrap;">@request.Message</div>
+						 
+                            <div style="margin-top:.75rem;">
+                                <strong>@request.ServiceNeeded</strong><br />
+                                @BuildVehicleSummary(request)<br />
+                                <span class="portal-muted">Requested @request.PreferredDate at @request.PreferredTime</span>
                             </div>
-                        }
 
-                        <div class="portal-actions" style="margin-top:1rem;">
-                            <button type="button"
-                                    class="portal-action-button"
-                                    disabled="@(_busyRequestId == request.RequestId)"
-                                    @onclick="() => AcceptRequestAsync(request)">
-                                Approve Requested Time
-                            </button>
+													  
+									 
 
-                            <button type="button"
-                                    class="portal-action-button"
-                                    disabled="@(_busyRequestId == request.RequestId)"
-                                    @onclick="() => ToggleProposalAsync(request.RequestId)">
-                                @(proposal.IsOpen ? "Close Recommendation" : "Recommend New Date / Time")
-                            </button>
-                        </div>
+												 
+																
+																					 
+																							
+																										 
+									 
+							  
+                            @if (!string.IsNullOrWhiteSpace(request.ProposedDate) || !string.IsNullOrWhiteSpace(request.ProposedTime))
+                            {
+                                <div class="portal-section" style="margin-top:1rem;">
+                                    <strong>Recommended date / time</strong>
+                                    <div style="margin-top:.35rem;">
+                                        @request.ProposedDate at @request.ProposedTime
 
-                        @if (proposal.IsOpen)
-                        {
-                            <div class="portal-section" style="margin-top:1rem;">
-                                <div class="portal-section-heading">
-                                    <div>
-                                        <h2 style="margin:0;">Recommend a New Date / Time</h2>
-                                        <div class="portal-muted">The customer will receive an email with a secure review link.</div>
                                     </div>
+                                    @if (!string.IsNullOrWhiteSpace(request.AdvisorMessage))
+                                    {
+                                        <div class="portal-muted" style="margin-top:.35rem;white-space:pre-wrap;">@request.AdvisorMessage</div>
+                                    }
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(request.Message))
+                            {
+                                <div class="portal-section" style="margin-top:1rem;">
+                                    <strong>Customer message</strong>
+                                    <div style="margin-top:.35rem;white-space:pre-wrap;">@request.Message</div>
+                                </div>
+                            }
+
+                            @if (!isTerminal)
+                            {
+                                <div class="portal-actions" style="margin-top:1rem;">
+                                    <button type="button"
+                                            class="portal-action-button"
+                                            disabled="@(_busyRequestId == request.RequestId)"
+                                            @onclick="() => AcceptRequestAsync(request)">
+                                        Approve Requested Time
+                                    </button>
+
+                                    <button type="button"
+                                            class="portal-action-button"
+                                            disabled="@(_busyRequestId == request.RequestId)"
+                                            @onclick="() => ToggleProposalAsync(request.RequestId)">
+                                        @(proposal.IsOpen ? "Close Recommendation" : "Recommend New Date / Time")
+                                    </button>
                                 </div>
 
-                                <EditForm Model="@proposal.Form" OnValidSubmit="() => ProposeChangeAsync(request)">
-                                    <DataAnnotationsValidator />
-
-                                    <div class="portal-form-grid">
-                                        <div class="form-field">
-                                            <label>Recommended Date</label>
-                                            <InputText class="input" type="date" @bind-Value="proposal.Form.Date" />
-                                            <ValidationMessage For="@(() => proposal.Form.Date)" />
+                                @if (proposal.IsOpen)
+                                {
+                                    <div class="portal-section" style="margin-top:1rem;">
+                                        <div class="portal-section-heading">
+                                            <div>
+                                                <h2 style="margin:0;">Recommend a New Date / Time</h2>
+                                                <div class="portal-muted">The customer will receive an email with a secure review link. The request will remain visible as Pending after the recommendation is sent.</div>
+                                            </div>
                                         </div>
 
-                                        <div class="form-field">
-                                            <label>Recommended Time</label>
-                                            <InputText class="input" type="time" @bind-Value="proposal.Form.Time" />
-                                            <ValidationMessage For="@(() => proposal.Form.Time)" />
-                                        </div>
+										  
+                                        <EditForm Model="@proposal.Form" OnValidSubmit="() => ProposeChangeAsync(request)">
+                                            <DataAnnotationsValidator />
 
-                                        <div class="form-field full">
-                                            <label>Message to Customer (optional)</label>
-                                            <InputTextArea class="input" rows="4" @bind-Value="proposal.Form.Message" />
-                                            <ValidationMessage For="@(() => proposal.Form.Message)" />
-                                        </div>
+                                            <div class="portal-form-grid">
+                                                <div class="form-field">
+                                                    <label>Recommended Date</label>
+                                                    <InputText class="input" type="date" @bind-Value="proposal.Form.Date" />
+                                                    <ValidationMessage For="@(() => proposal.Form.Date)" />
+                                                </div>
+
+                                                <div class="form-field">
+                                                    <label>Recommended Time</label>
+                                                    <InputText class="input" type="time" @bind-Value="proposal.Form.Time" />
+                                                    <ValidationMessage For="@(() => proposal.Form.Time)" />
+                                                </div>
+
+                                                <div class="form-field full">
+                                                    <label>Message to Customer (optional)</label>
+                                                    <InputTextArea class="input" rows="4" @bind-Value="proposal.Form.Message" />
+                                                    <ValidationMessage For="@(() => proposal.Form.Message)" />
+                                                </div>
+                                            </div>
+
+                                            <div class="portal-actions" style="margin-top:1rem;">
+                                                <button type="submit"
+                                                        class="portal-action-button"
+                                                        disabled="@(_busyRequestId == request.RequestId)">
+                                                    Send Recommendation
+                                                </button>
+                                            </div>
+                                        </EditForm>
                                     </div>
-
-                                    <div class="portal-actions" style="margin-top:1rem;">
-                                        <button type="submit"
-                                                class="portal-action-button"
-                                                disabled="@(_busyRequestId == request.RequestId)">
-                                            Send Recommendation
-                                        </button>
-                                    </div>
-                                </EditForm>
-                            </div>
-                        }
+                                }
+                            }
+                        </div>
                     </div>
-                </div>
-            }
-        </div>
+
+                }
+            </div>
+        }
     }
 </section>
 
 @code {
     private bool _loading = true;
+    private List<AppointmentRequest> _allRequests = [];
     private List<AppointmentRequest> _requests = [];
     private readonly Dictionary<Guid, ProposalState> _proposalStates = [];
     private Guid? _busyRequestId;
     private string? _pageMessage;
+    private string _statusFilter = "All";
+
+    private static readonly IReadOnlyList<(string Key, string Label)> Filters =
+    [
+        ("All", "All"),
+        ("Approved", "Approved"),
+        ("New", "New"),
+        ("Pending", "Pending"),
+        ("Canceled", "Canceled")
+    ];
 
     protected override async Task OnInitializedAsync()
     {
@@ -160,13 +238,31 @@
         _loading = true;
         try
         {
-            _requests = await AppointmentService.GetOpenRequestsAsync();
+            _allRequests = await AppointmentService.GetOpenRequestsAsync("All");
+            ApplyFilter();
         }
         finally
         {
             _loading = false;
         }
     }
+
+    private void ApplyFilter()
+    {
+        _requests = _allRequests
+            .Where(x => MatchesFilter(x.Status, _statusFilter))
+            .ToList();
+    }
+
+    private async Task SelectFilter(string filter)
+    {
+        _statusFilter = filter;
+        ApplyFilter();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private int GetCount(string filter) =>
+        _allRequests.Count(x => MatchesFilter(x.Status, filter));
 
     private ProposalState GetProposal(Guid requestId)
     {
@@ -204,8 +300,8 @@
 
             if (result.Succeeded)
             {
-                _requests.RemoveAll(x => x.RequestId == request.RequestId);
-                _proposalStates.Remove(request.RequestId);
+                await LoadRequestsAsync();
+
             }
         }
         catch (Exception ex)
@@ -241,8 +337,9 @@
 
             if (result.Succeeded)
             {
-                _requests.RemoveAll(x => x.RequestId == request.RequestId);
+
                 _proposalStates.Remove(request.RequestId);
+                await LoadRequestsAsync();
             }
         }
         catch (Exception ex)
@@ -254,6 +351,52 @@
             _busyRequestId = null;
         }
     }
+
+    private static bool MatchesFilter(string? status, string filter)
+    {
+        var normalizedStatus = status?.Trim() ?? string.Empty;
+
+        return filter.ToUpperInvariant() switch
+        {
+            "APPROVED" => normalizedStatus.Equals("Approved", StringComparison.OrdinalIgnoreCase)
+                || normalizedStatus.Equals("Confirmed", StringComparison.OrdinalIgnoreCase),
+            "NEW" => normalizedStatus.Equals("New", StringComparison.OrdinalIgnoreCase)
+                || normalizedStatus.Equals("Requested", StringComparison.OrdinalIgnoreCase)
+                || normalizedStatus.Equals("CustomerRequestedChange", StringComparison.OrdinalIgnoreCase),
+            "PENDING" => normalizedStatus.Equals("Pending", StringComparison.OrdinalIgnoreCase)
+                || normalizedStatus.Equals("AwaitingCustomerApproval", StringComparison.OrdinalIgnoreCase)
+                || normalizedStatus.Equals("RescheduleProposed", StringComparison.OrdinalIgnoreCase),
+            "CANCELED" => normalizedStatus.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
+                || normalizedStatus.Equals("Canceled", StringComparison.OrdinalIgnoreCase),
+            _ => normalizedStatus.Equals("Approved", StringComparison.OrdinalIgnoreCase)
+                || normalizedStatus.Equals("Confirmed", StringComparison.OrdinalIgnoreCase)
+                || normalizedStatus.Equals("New", StringComparison.OrdinalIgnoreCase)
+                || normalizedStatus.Equals("Requested", StringComparison.OrdinalIgnoreCase)
+                || normalizedStatus.Equals("CustomerRequestedChange", StringComparison.OrdinalIgnoreCase)
+                || normalizedStatus.Equals("Pending", StringComparison.OrdinalIgnoreCase)
+                || normalizedStatus.Equals("AwaitingCustomerApproval", StringComparison.OrdinalIgnoreCase)
+                || normalizedStatus.Equals("RescheduleProposed", StringComparison.OrdinalIgnoreCase)
+                || normalizedStatus.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
+                || normalizedStatus.Equals("Canceled", StringComparison.OrdinalIgnoreCase)
+        };
+    }
+
+    private static string GetDisplayStatus(string? status)
+    {
+        var normalizedStatus = status?.Trim() ?? string.Empty;
+
+        return normalizedStatus.ToUpperInvariant() switch
+        {
+            "APPROVED" or "CONFIRMED" => "Approved",
+            "NEW" or "REQUESTED" or "CUSTOMERREQUESTEDCHANGE" => "New",
+            "PENDING" or "AWAITINGCUSTOMERAPPROVAL" or "RESCHEDULEPROPOSED" => "Pending",
+            "CANCELLED" or "CANCELED" => "Canceled",
+            _ => string.IsNullOrWhiteSpace(normalizedStatus) ? "Unknown" : normalizedStatus
+        };
+    }
+
+    private static bool IsTerminalStatus(string? status) =>
+        MatchesFilter(status, "Approved") || MatchesFilter(status, "Canceled");
 
     private static string BuildVehicleSummary(AppointmentRequest request)
     {
