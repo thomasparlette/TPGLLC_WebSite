@@ -222,8 +222,7 @@
         }
     }
 
-    private IReadOnlyList<AppointmentRequest> RecentRequests =>
-        (_portal?.AppointmentRequests ?? [])
+    private IReadOnlyList<AppointmentRequest> RecentRequests =>(_portal?.AppointmentRequests ?? [])
             .OrderByDescending(x => x.SubmittedAtUtc)
             .Take(5)
             .ToList();
