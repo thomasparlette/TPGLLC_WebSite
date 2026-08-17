@@ -17,8 +17,7 @@ public sealed class PortalContextViewModel
 
     public IReadOnlyList<AppointmentRequest> AppointmentRequests { get; init; } = Array.Empty<AppointmentRequest>();
 
-    public CustomerVehicle? PrimaryVehicle =>
-        Vehicles.FirstOrDefault(x => x.IsPrimary);
+    public CustomerVehicle? PrimaryVehicle =>Vehicles.FirstOrDefault(x => x.IsPrimary);
 
     public string DisplayName =>
         !string.IsNullOrWhiteSpace(CurrentCustomer.DisplayName)

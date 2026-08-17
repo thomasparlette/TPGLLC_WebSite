@@ -194,6 +194,7 @@
     private string? _successMessage;
     private CustomerVehicle? _selectedVehicle;
     private bool _loading = true;
+    private Customer _customer;
 
     protected override async Task OnInitializedAsync()
     {
@@ -240,11 +241,15 @@
             return;
         }
 
+       
         _form.VehicleYear = _selectedVehicle.ModelYear?.ToString(CultureInfo.InvariantCulture);
         _form.VehicleMake = _selectedVehicle.Make;
         _form.VehicleModel = _selectedVehicle.Model;
         _form.Vin = _selectedVehicle.Vin;
         _form.Mileage = _selectedVehicle.Mileage?.ToString(CultureInfo.InvariantCulture);
+        _form.Name = _portal.CurrentCustomer.DisplayName;
+        _form.Phone = _portal.Profile.Phone;
+        _form.Email = _portal.CurrentCustomer.Email;
 
         _makes = Array.Empty<string>();
         _models = Array.Empty<string>();
@@ -434,6 +439,7 @@
 
         await InvokeAsync(StateHasChanged);
     }
+    
     private async Task OnCancelRequestAsync(AppointmentRequest request)
     {
         try
@@ -486,9 +492,7 @@
         _successMessage = null;
     }
 
-    private static IReadOnlyList<string> EnsureSelectedValue(
-        IReadOnlyList<string> values,
-        string? selectedValue)
+    private static IReadOnlyList<string> EnsureSelectedValue(IReadOnlyList<string> values,string? selectedValue)
     {
         var list = values.ToList();
 
