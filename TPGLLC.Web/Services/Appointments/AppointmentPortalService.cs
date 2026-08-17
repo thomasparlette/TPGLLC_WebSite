@@ -198,17 +198,19 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             return model;
         }
 
-        if (HasPendingProposal(request))
-        {
-            var model = await GetAsync();
-            model.ErrorMessage = "Please approve or decline the proposed appointment time before requesting another change.";
-            return model;
-        }
+        // A customer may choose Reschedule while a service advisor proposal is pending.
+        // The new customer-selected date/time replaces the proposal and returns the
+        // request to an active Requested state.
 
         request.PreferredDate = form.PreferredDate.Trim();
         request.PreferredTime = form.PreferredTime.Trim();
         request.ServiceNeeded = form.ServiceNeeded.Trim();
         request.Message = string.IsNullOrWhiteSpace(form.Message) ? null : form.Message.Trim();
+        request.ProposedDate = null;
+        request.ProposedTime = null;
+        request.AdvisorMessage = null;
+        request.ResponseToken = null;
+        request.ResponseTokenExpiresUtc = null;
         request.Status = "Requested";
         request.SubmittedAtUtc = DateTimeOffset.UtcNow;
 
@@ -253,6 +255,9 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             model.ErrorMessage = "There is no pending appointment time change for this request.";
             return model;
         }
+        // A customer Approved the Reschedule the service advisor proposed.
+        // The servce adviser selected date/time replaces the proposal and returns the
+        // request to an active Confirmed state.
 
         request.PreferredDate = request.ProposedDate!.Trim();
         request.PreferredTime = request.ProposedTime!.Trim();
@@ -306,7 +311,7 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         request.ProposedDate = null;
         request.ProposedTime = null;
         request.AdvisorMessage = null;
-        request.Status = "Requested";
+        request.Status = "Cancelled";
 
         await db.SaveChangesAsync(cancellationToken);
 
@@ -350,6 +355,7 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
     private static bool HasPendingProposal(AppointmentRequest request)
     {
         return request.Status.Equals("RescheduleProposed", StringComparison.OrdinalIgnoreCase)
+            || request.Status.Equals("AwaitingCustomerApproval", StringComparison.OrdinalIgnoreCase)
             && !string.IsNullOrWhiteSpace(request.ProposedDate)
             && !string.IsNullOrWhiteSpace(request.ProposedTime);
     }

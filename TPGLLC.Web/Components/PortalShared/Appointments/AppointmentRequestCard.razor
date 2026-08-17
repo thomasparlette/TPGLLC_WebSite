@@ -32,7 +32,7 @@
                     <button type="button"
                             class="portal-action-button"
                             @onclick="HandleApproveRescheduleAsync">
-                        Approve New Time
+                        Approve
                     </button>
                 }
 
@@ -101,13 +101,14 @@
     public EventCallback<AppointmentRequest> OnDeclineReschedule { get; set; }
 
     private bool HasPendingReschedule =>
-        Request.Status.Equals("RescheduleProposed", StringComparison.OrdinalIgnoreCase)
+        (Request.Status.Equals("RescheduleProposed", StringComparison.OrdinalIgnoreCase)
+        || Request.Status.Equals("AwaitingCustomerApproval", StringComparison.OrdinalIgnoreCase))
         && !string.IsNullOrWhiteSpace(Request.ProposedDate)
         && !string.IsNullOrWhiteSpace(Request.ProposedTime);
 
     private bool CanShowActions => ShowActions && !IsClosedStatus(Request.Status);
 
-    private bool CanReschedule => CanShowActions && !HasPendingReschedule;
+    private bool CanReschedule => CanShowActions;
 
     private bool CanCancel => CanShowActions;
 
@@ -186,6 +187,7 @@
             Request.ProposedTime
         }.Where(x => !string.IsNullOrWhiteSpace(x)));
 
+        
         return string.IsNullOrWhiteSpace(when)
             ? "No proposed date/time provided"
             : when;
@@ -193,9 +195,13 @@
 
     private static string FormatStatus(string status)
     {
-        return status.Equals("RescheduleProposed", StringComparison.OrdinalIgnoreCase)
-            ? "New Time Proposed"
-            : status;
+        if (status.Equals("RescheduleProposed", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("AwaitingCustomerApproval", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Awaiting Customer Approval";
+        }
+
+        return status;
     }
 
     private static bool IsClosedStatus(string? status)
