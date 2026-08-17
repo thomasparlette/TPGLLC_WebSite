@@ -63,6 +63,39 @@ public sealed class ServiceAdvisorAppointmentService : IServiceAdvisorAppointmen
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<AppointmentRequest>> GetCalendarAppointmentsAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default)
+    {
+        if (endDate < startDate)
+        {
+            return [];
+        }
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+
+        var approved = await db.AppointmentRequests
+            .AsNoTracking()
+            .Where(x => x.Status == "Confirmed" || x.Status == "Approved")
+            .OrderBy(x => x.PreferredDate)
+            .ThenBy(x => x.PreferredTime)
+            .ThenBy(x => x.Name)
+            .ToListAsync(cancellationToken);
+
+        return approved
+            .Where(x =>
+                DateOnly.TryParseExact(
+                    x.PreferredDate,
+                    "yyyy-MM-dd",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None,
+                    out var date) &&
+                date >= startDate &&
+                date <= endDate)
+            .ToList();
+    }
+
     public async Task<AppointmentActionResult> AcceptAsync(Guid requestId, CancellationToken cancellationToken = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
@@ -76,6 +109,13 @@ public sealed class ServiceAdvisorAppointmentService : IServiceAdvisorAppointmen
         request.AdvisorMessage = null;
         request.ResponseToken = null;
         request.ResponseTokenExpiresUtc = null;
+
+        var workOrderResult = await CreateWorkOrderIfNeededAsync(db, request, cancellationToken);
+        if (!workOrderResult.Succeeded)
+        {
+            return workOrderResult;
+        }
+
         await db.SaveChangesAsync(cancellationToken);
 
         var date = WebUtility.HtmlEncode(request.PreferredDate ?? string.Empty);
@@ -85,7 +125,7 @@ public sealed class ServiceAdvisorAppointmentService : IServiceAdvisorAppointmen
             "<p>We look forward to seeing you. If you need to make a change, please contact the shop.</p>");
 
         await SendCustomerEmailAsync(request, $"{_options.ShopName} - Appointment Confirmed", body);
-        return AppointmentActionResult.Ok("Appointment accepted and confirmation email sent.");
+        return AppointmentActionResult.Ok("Appointment approved, calendar updated, work order created, and confirmation email sent.");
     }
 
     public async Task<AppointmentActionResult> ProposeChangeAsync(Guid requestId, string date, string time, string? message, CancellationToken cancellationToken = default)
@@ -143,12 +183,19 @@ public sealed class ServiceAdvisorAppointmentService : IServiceAdvisorAppointmen
         request.Status = "Confirmed";
         request.ResponseToken = null;
         request.ResponseTokenExpiresUtc = null;
+
+        var workOrderResult = await CreateWorkOrderIfNeededAsync(db, request, cancellationToken);
+        if (!workOrderResult.Succeeded)
+        {
+            return workOrderResult;
+        }
+
         await db.SaveChangesAsync(cancellationToken);
 
         var body = BuildEmail(request, "Your appointment is confirmed",
             $"<p>Thank you. Your appointment is confirmed for <strong>{WebUtility.HtmlEncode(request.PreferredDate)}</strong> at <strong>{WebUtility.HtmlEncode(request.PreferredTime)}</strong>.</p>");
         await SendCustomerEmailAsync(request, $"{_options.ShopName} - Appointment Confirmed", body);
-        return AppointmentActionResult.Ok("Thank you. Your appointment has been confirmed.");
+        return AppointmentActionResult.Ok("Appointment confirmed, calendar updated, and work order created.");
     }
 
     public async Task<AppointmentActionResult> RequestDifferentTimeAsync(string token, string date, string time, string? message, CancellationToken cancellationToken = default)
@@ -177,6 +224,88 @@ public sealed class ServiceAdvisorAppointmentService : IServiceAdvisorAppointmen
             "<p>A service advisor will review the new request and confirm it with you.</p>");
         await SendCustomerEmailAsync(request, $"{_options.ShopName} - Appointment Change Received", body);
         return AppointmentActionResult.Ok("Your requested date/time was sent to the service advisor.");
+    }
+
+    private static async Task<AppointmentActionResult> CreateWorkOrderIfNeededAsync(
+        TPGLLCDbContext db,
+        AppointmentRequest request,
+        CancellationToken cancellationToken)
+    {
+        var existing = await db.ServiceHistoryEntries
+            .FirstOrDefaultAsync(x => x.AppointmentRequestId == request.RequestId, cancellationToken);
+
+        if (existing is not null)
+        {
+            return AppointmentActionResult.Ok("Appointment approved and its work order is ready.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.PreferredDate) ||
+            !DateOnly.TryParseExact(request.PreferredDate, "yyyy-MM-dd", out var serviceDate))
+        {
+            return AppointmentActionResult.Fail("The approved appointment has an invalid date and could not create its work order.");
+        }
+
+        var customer = await db.Customers
+            .FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
+
+        if (customer is null)
+        {
+            return AppointmentActionResult.Fail("The customer record could not be found, so the work order was not created.");
+        }
+
+        CustomerVehicle? vehicle = null;
+
+        if (!string.IsNullOrWhiteSpace(request.Vin))
+        {
+            vehicle = await db.CustomerVehicles
+                .FirstOrDefaultAsync(
+                    x => x.CustomerId == customer.Id && x.Vin == request.Vin,
+                    cancellationToken);
+        }
+
+        if (vehicle is null &&
+            int.TryParse(request.VehicleYear, out var modelYear) &&
+            !string.IsNullOrWhiteSpace(request.VehicleMake) &&
+            !string.IsNullOrWhiteSpace(request.VehicleModel))
+        {
+            var make = request.VehicleMake.Trim();
+            var model = request.VehicleModel.Trim();
+
+            vehicle = await db.CustomerVehicles
+                .Where(x =>
+                    x.CustomerId == customer.Id &&
+                    x.ModelYear == modelYear &&
+                    x.Make == make &&
+                    x.Model == model)
+                .OrderByDescending(x => x.IsPrimary)
+                .ThenByDescending(x => x.CreatedUtc)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        int? mileage = null;
+        if (int.TryParse(request.Mileage, out var parsedMileage))
+        {
+            mileage = parsedMileage;
+        }
+
+        var workOrder = new ServiceHistoryEntry
+        {
+            CustomerId = customer.Id,
+            CustomerVehicleId = vehicle?.Id,
+            AppointmentRequestId = request.RequestId,
+            VehicleName = BuildVehicle(request),
+            ServiceDate = serviceDate,
+            Service = request.ServiceNeeded?.Trim() ?? "Service Request",
+            WorkOrderNumber = null,
+            Complaint = string.IsNullOrWhiteSpace(request.Message) ? null : request.Message.Trim(),
+            Mileage = mileage,
+            Status = "Open",
+            ApprovalStatus = "Approved",
+            CreatedUtc = DateTimeOffset.UtcNow
+        };
+
+        db.ServiceHistoryEntries.Add(workOrder);
+        return AppointmentActionResult.Ok("Appointment approved and a blank work order was created.");
     }
 
     private static async Task<AppointmentRequest?> FindValidTokenAsync(TPGLLCDbContext db, string token, CancellationToken cancellationToken) =>

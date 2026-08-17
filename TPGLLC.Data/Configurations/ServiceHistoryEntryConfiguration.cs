@@ -65,6 +65,9 @@ public sealed class ServiceHistoryEntryConfiguration
         builder.HasIndex(x => x.CustomerId);
         builder.HasIndex(x => x.CustomerVehicleId);
         builder.HasIndex(x => x.ServiceDate);
+        builder.HasIndex(x => x.AppointmentRequestId)
+            .IsUnique()
+            .HasFilter("[AppointmentRequestId] IS NOT NULL");
         builder.HasIndex(x => new { x.CustomerId, x.ServiceDate });
 
         builder.HasOne(x => x.Customer)
@@ -75,6 +78,11 @@ public sealed class ServiceHistoryEntryConfiguration
         builder.HasOne(x => x.Vehicle)
             .WithMany()
             .HasForeignKey(x => x.CustomerVehicleId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne<AppointmentRequest>()
+            .WithMany()
+            .HasForeignKey(x => x.AppointmentRequestId)
             .OnDelete(DeleteBehavior.SetNull);
     }
 }

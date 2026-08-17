@@ -2,22 +2,261 @@
 @layout CustomerLayout
 @attribute [Authorize(Policy = PortalPolicies.ServiceAdvisor)]
 
+@using System.Globalization
+@using Microsoft.AspNetCore.Components
+@using TPGLLC.Data.Entities
+@using TPGLLC.Web.Authorization
+@using TPGLLC.Web.Services.Appointments
+
+@inject IServiceAdvisorAppointmentService AppointmentService
+
 <PageTitle>Appointment Calendar</PageTitle>
 
 <section class="portal-dashboard">
     <div class="portal-header">
         <p class="section-kicker">Service Advisor Portal</p>
         <h1>Appointment Calendar</h1>
-        <p>Planned next step: calendar scheduling and appointment slot management.</p>
+        <p>View approved customer appointments by day. Approving an appointment automatically creates its work order.</p>
     </div>
 
-    <div class="portal-section">
-        <div class="portal-empty-state">
-            <div class="portal-empty-icon">🗓️</div>
+    @if (!string.IsNullOrWhiteSpace(_pageMessage))
+    {
+        <div class="portal-section" style="margin-bottom:1rem;">
+            <strong>@_pageMessage</strong>
+        </div>
+    }
+
+    @if (_loading)
+    {
+        <div class="portal-loading-card">
+            <div class="portal-loading-icon">⏳</div>
             <div>
-                <div class="portal-empty-title">Calendar setup coming next</div>
-                <div class="portal-empty-text">This page is ready for calendar integration and scheduling controls.</div>
+                <div class="portal-loading-title">Loading calendar</div>
+                <div class="portal-loading-text">Please wait while we load approved appointments.</div>
             </div>
         </div>
-    </div>
+    }
+    else
+    {
+        <div class="portal-section">
+            <div class="portal-section-heading" style="align-items:center;">
+                <div>
+                    <h2 style="margin:0;">@_month.ToString("MMMM yyyy", CultureInfo.InvariantCulture)</h2>
+                    <div class="portal-muted">@_appointments.Count approved appointment(s) in this month</div>
+                </div>
+
+                <div class="portal-actions" style="margin:0;">
+                    <button type="button" class="portal-action-button" @onclick="PreviousMonthAsync">Previous</button>
+                    <button type="button" class="portal-action-button" @onclick="TodayAsync">Today</button>
+                    <button type="button" class="portal-action-button" @onclick="NextMonthAsync">Next</button>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:#d9e1ee;margin-top:1rem;border:1px solid #d9e1ee;overflow:hidden;">
+                @foreach (var dayName in DayNames)
+                {
+                    <div style="background:#0b2f67;color:white;padding:.65rem;font-weight:700;text-align:center;font-size:.85rem;">@dayName</div>
+                }
+
+                @foreach (var cell in CalendarCells)
+                {
+                    var dayAppointments = GetAppointmentsForDay(cell.Date);
+                    <div style="background:@(cell.IsCurrentMonth ? "#ffffff" : "#f4f6fa");min-height:150px;padding:.55rem;vertical-align:top;">
+                        <div style="font-weight:700;color:@(cell.IsToday ? "#c62828" : "#0b2f67");display:flex;justify-content:space-between;align-items:center;">
+                            <span>@cell.Date.Day</span>
+                            @if (cell.IsToday)
+                            {
+                                <span style="font-size:.7rem;">TODAY</span>
+                            }
+                        </div>
+
+                        @if (dayAppointments.Count == 0)
+                        {
+                            <div class="portal-muted" style="margin-top:.5rem;font-size:.78rem;">No appointments</div>
+                        }
+                        else
+                        {
+                            <div style="display:flex;flex-direction:column;gap:.45rem;margin-top:.55rem;">
+                                @foreach (var appointment in dayAppointments)
+                                {
+                                    <a href="/portal/service-advisor/current-requests"
+                                       style="display:block;text-decoration:none;padding:.55rem;border:1px solid #cfd8e6;border-radius:8px;background:#eef4ff;color:#0b2f67;">
+                                        <div style="font-weight:800;font-size:.82rem;">@FormatTime(appointment.PreferredTime)</div>
+                                        <div style="font-weight:700;font-size:.82rem;margin-top:.15rem;">@appointment.Name</div>
+                                        <div style="font-size:.74rem;margin-top:.15rem;">@appointment.ServiceNeeded</div>
+                                        <div class="portal-muted" style="font-size:.72rem;margin-top:.15rem;">@BuildVehicleSummary(appointment)</div>
+                                    </a>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="portal-section" style="margin-top:1rem;">
+            <div class="portal-section-heading">
+                <div>
+                    <h2 style="margin:0;">Upcoming Approved Appointments</h2>
+                    <div class="portal-muted">These appointments are also linked to the work orders created at approval.</div>
+                </div>
+            </div>
+
+            @if (UpcomingAppointments.Count == 0)
+            {
+                <div class="portal-empty-state">
+                    <div class="portal-empty-icon">📭</div>
+                    <div>
+                        <div class="portal-empty-title">No approved appointments</div>
+                        <div class="portal-empty-text">Approve a customer request and it will appear here automatically.</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="portal-dashboard-grid">
+                    @foreach (var appointment in UpcomingAppointments)
+                    {
+                        <article class="portal-card-link" @key="appointment.RequestId">
+                            <div class="portal-card-icon">📅</div>
+                            <h3>@appointment.Name</h3>
+                            <p>@appointment.ServiceNeeded</p>
+                            <div class="portal-primary-meta" style="margin-top:.65rem;">
+                                <span>@FormatDate(appointment.PreferredDate)</span>
+                                <span>@FormatTime(appointment.PreferredTime)</span>
+                            </div>
+                            <div class="portal-muted" style="margin-top:.45rem;">@BuildVehicleSummary(appointment)</div>
+                        </article>
+                    }
+                </div>
+            }
+        </div>
+    }
 </section>
+
+@code {
+    private static readonly string[] DayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    private DateOnly _month = new(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private List<AppointmentRequest> _appointments = [];
+    private bool _loading = true;
+    private string? _pageMessage;
+
+    private IReadOnlyList<CalendarCell> CalendarCells
+    {
+        get
+        {
+            var firstDay = _month;
+            var daysInMonth = DateTime.DaysInMonth(firstDay.Year, firstDay.Month);
+            var leading = (int)new DateTime(firstDay.Year, firstDay.Month, 1).DayOfWeek;
+            var total = leading + daysInMonth;
+            var trailing = (7 - (total % 7)) % 7;
+            var cells = new List<CalendarCell>(total + trailing);
+
+            for (var i = -leading; i < daysInMonth + trailing; i++)
+            {
+                var date = firstDay.AddDays(i);
+                cells.Add(new CalendarCell(
+                    date,
+                    date.Month == _month.Month,
+                    date == DateOnly.FromDateTime(DateTime.Today)));
+            }
+
+            return cells;
+        }
+    }
+
+    private IReadOnlyList<AppointmentRequest> UpcomingAppointments =>
+        _appointments
+            .Where(x => TryParseDate(x.PreferredDate, out _))
+            .OrderBy(x => ParseDate(x.PreferredDate))
+            .ThenBy(x => x.PreferredTime)
+            .Take(12)
+            .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCalendarAsync();
+    }
+
+    private async Task LoadCalendarAsync()
+    {
+        _loading = true;
+        _pageMessage = null;
+
+        try
+        {
+            var first = _month;
+            var last = new DateOnly(_month.Year, _month.Month, DateTime.DaysInMonth(_month.Year, _month.Month));
+            var calendarStart = first.AddDays(-(int)new DateTime(first.Year, first.Month, 1).DayOfWeek);
+            var calendarEnd = last.AddDays((7 - (int)new DateTime(last.Year, last.Month, last.Day).DayOfWeek - 1 + 7) % 7);
+
+            _appointments = await AppointmentService.GetCalendarAppointmentsAsync(calendarStart, calendarEnd);
+        }
+        catch (Exception ex)
+        {
+            _pageMessage = ex.Message;
+            _appointments = [];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task PreviousMonthAsync()
+    {
+        _month = _month.AddMonths(-1);
+        await LoadCalendarAsync();
+    }
+
+    private async Task NextMonthAsync()
+    {
+        _month = _month.AddMonths(1);
+        await LoadCalendarAsync();
+    }
+
+    private async Task TodayAsync()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        _month = new DateOnly(today.Year, today.Month, 1);
+        await LoadCalendarAsync();
+    }
+
+    private List<AppointmentRequest> GetAppointmentsForDay(DateOnly date) =>
+        _appointments
+            .Where(x => TryParseDate(x.PreferredDate, out var parsed) && parsed == date)
+            .OrderBy(x => x.PreferredTime)
+            .ThenBy(x => x.Name)
+            .ToList();
+
+    private static bool TryParseDate(string? value, out DateOnly date) =>
+        DateOnly.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
+
+    private static DateOnly ParseDate(string? value) =>
+        TryParseDate(value, out var date) ? date : DateOnly.MaxValue;
+
+    private static string FormatDate(string? value) =>
+        TryParseDate(value, out var date) ? date.ToString("MMM d, yyyy", CultureInfo.InvariantCulture) : value ?? string.Empty;
+
+    private static string FormatTime(string? value)
+    {
+        if (TimeOnly.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var time))
+        {
+            return time.ToString("h:mm tt", CultureInfo.InvariantCulture);
+        }
+
+        return string.IsNullOrWhiteSpace(value) ? "Time not set" : value;
+    }
+
+    private static string BuildVehicleSummary(AppointmentRequest request)
+    {
+        var parts = new[] { request.VehicleYear, request.VehicleMake, request.VehicleModel }
+            .Where(x => !string.IsNullOrWhiteSpace(x));
+
+        var summary = string.Join(" ", parts);
+        return string.IsNullOrWhiteSpace(summary) ? "Vehicle not specified" : summary;
+    }
+
+    private sealed record CalendarCell(DateOnly Date, bool IsCurrentMonth, bool IsToday);
+}

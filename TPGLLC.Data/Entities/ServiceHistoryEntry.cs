@@ -6,6 +6,7 @@ public sealed class ServiceHistoryEntry
 
     public Guid CustomerId { get; set; }
     public Guid? CustomerVehicleId { get; set; }
+    public Guid? AppointmentRequestId { get; set; }
 
     public string VehicleName { get; set; } = string.Empty;
     public DateOnly ServiceDate { get; set; }
