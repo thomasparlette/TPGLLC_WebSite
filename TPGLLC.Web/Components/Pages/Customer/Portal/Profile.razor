@@ -3,7 +3,6 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
 @using Microsoft.AspNetCore.Identity
-@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Forms
 @using TPGLLC.Shared.Identity
 @using TPGLLC.Web.Components.Shared
@@ -153,7 +152,6 @@
     private CurrentCustomer _currentCustomer = new();
     private ApplicationUser? _identityUser;
     private IReadOnlyList<string> _roles = Array.Empty<string>();
-    private bool _isAdminAccount;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
@@ -171,10 +169,10 @@
             if (string.IsNullOrWhiteSpace(_model.ErrorMessage) &&
                 string.IsNullOrWhiteSpace(_model.FirstName) &&
                 string.IsNullOrWhiteSpace(_model.LastName))
-                {
-                    _model.FirstName = string.Empty;
-                    _model.LastName = string.Empty;
-                }
+            {
+                _model.FirstName = string.Empty;
+                _model.LastName = string.Empty;
+            }
         }
         finally
         {

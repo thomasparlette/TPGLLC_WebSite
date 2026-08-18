@@ -480,6 +480,41 @@
     font-size: 0.9rem;
 }
 
+.portal-primary-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    color: #52627d;
+    line-height: 1.5;
+}
+
+    .portal-primary-meta > span {
+        white-space: nowrap;
+    }
+
+.customer-approval-panel {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .65rem;
+    margin-top: 1rem;
+    padding: .9rem;
+    border: 1px solid #cfe0ff;
+    border-radius: 12px;
+    background: #f6f9ff;
+}
+
+    .customer-approval-panel p {
+        flex-basis: 100%;
+        margin: 0;
+        color: #52627d;
+    }
+
+.portal-action-button-secondary {
+    background: #4268a7;
+}
+
 .portal-notice {
     display: flex;
     gap: 1rem;

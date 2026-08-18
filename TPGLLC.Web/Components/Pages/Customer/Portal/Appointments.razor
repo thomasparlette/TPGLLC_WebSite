@@ -3,7 +3,6 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.Customer)]
 
 @using System.Globalization
-@using Microsoft.AspNetCore.Components
 @using TPGLLC.Data.Entities
 @using TPGLLC.Services.Vehicles
 @using TPGLLC.Web.Components.PortalShared.Appointments
@@ -194,7 +193,6 @@
     private string? _successMessage;
     private CustomerVehicle? _selectedVehicle;
     private bool _loading = true;
-    private Customer? _customer;
 
     protected override async Task OnInitializedAsync()
     {
@@ -222,7 +220,7 @@
         }
     }
 
-    private IReadOnlyList<AppointmentRequest> RecentRequests =>(_portal?.AppointmentRequests ?? [])
+    private IReadOnlyList<AppointmentRequest> RecentRequests => (_portal?.AppointmentRequests ?? [])
             .OrderByDescending(x => x.SubmittedAtUtc)
             .Take(5)
             .ToList();
@@ -247,7 +245,7 @@
         _form.Vin = _selectedVehicle.Vin;
         _form.Mileage = _selectedVehicle.Mileage?.ToString(CultureInfo.InvariantCulture);
         _form.Name = _portal.CurrentCustomer.DisplayName;
-        _form.Phone = _portal.Profile.Phone;
+        _form.Phone = _portal.Profile?.Phone ?? string.Empty;
         _form.Email = _portal.CurrentCustomer.Email;
 
         _makes = Array.Empty<string>();
@@ -438,7 +436,7 @@
 
         await InvokeAsync(StateHasChanged);
     }
-    
+
     private async Task OnCancelRequestAsync(AppointmentRequest request)
     {
         try
@@ -491,7 +489,7 @@
         _successMessage = null;
     }
 
-    private static IReadOnlyList<string> EnsureSelectedValue(IReadOnlyList<string> values,string? selectedValue)
+    private static IReadOnlyList<string> EnsureSelectedValue(IReadOnlyList<string> values, string? selectedValue)
     {
         var list = values.ToList();
 

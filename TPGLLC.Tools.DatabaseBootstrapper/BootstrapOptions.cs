@@ -14,7 +14,6 @@ public sealed class BootstrapOptions
         "Owner",
         "ServiceAdvisor",
         "Technician",
-        "Employee",
         "Finance",
         "Customer"
     ];

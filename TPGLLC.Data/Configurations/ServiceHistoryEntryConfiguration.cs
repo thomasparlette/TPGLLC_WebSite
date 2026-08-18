@@ -47,6 +47,9 @@ public sealed class ServiceHistoryEntryConfiguration
         builder.Property(x => x.EstimateAmount)
             .HasColumnType("decimal(18,2)");
 
+        builder.Property(x => x.LaborAmount)
+            .HasColumnType("decimal(18,2)");
+
         builder.Property(x => x.InvoiceNumber)
             .HasMaxLength(50);
 

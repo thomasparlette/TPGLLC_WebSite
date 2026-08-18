@@ -40,6 +40,13 @@
             </PortalNotice>
         }
 
+        @if (!string.IsNullOrWhiteSpace(_model.SuccessMessage))
+        {
+            <PortalNotice Type="success" Title="Updated">
+                @_model.SuccessMessage
+            </PortalNotice>
+        }
+
         <div class="portal-stats">
             <div class="portal-stat">
                 <div class="portal-stat-value">@_model.WorkOrders.Count</div>
@@ -78,7 +85,11 @@
                 <div class="portal-dashboard-grid">
                     @foreach (var workOrder in _model.WorkOrders.OrderByDescending(x => x.ServiceDate).ThenByDescending(x => x.CreatedUtc))
                     {
-                        <ServiceHistoryCard Entry="@workOrder" @key="workOrder.Id" />
+                        <ServiceHistoryCard Entry="@workOrder"
+                                            CanApprove="@IsWaitingForCustomerApproval(workOrder.Status)"
+                                            OnApprovePart="@(partId => ApprovePartAsync(partId, workOrder.Id))"
+                                            OnApproveWorkOrder="ApproveWorkOrderAsync"
+                                            @key="workOrder.Id" />
                     }
                 </div>
             }
@@ -159,5 +170,20 @@
             || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
             || status.Equals("Declined", StringComparison.OrdinalIgnoreCase)
             || status.Equals("Closed", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsWaitingForCustomerApproval(string? status) =>
+        string.Equals(status, "Waiting on Customer Approval", StringComparison.OrdinalIgnoreCase);
+
+    private async Task ApprovePartAsync(Guid partId, Guid workOrderId)
+    {
+        _model = await WorkOrderService.ApprovePartAsync(workOrderId, partId);
+        _errorMessage = _model.ErrorMessage;
+    }
+
+    private async Task ApproveWorkOrderAsync(Guid workOrderId)
+    {
+        _model = await WorkOrderService.ApproveWorkOrderAsync(workOrderId);
+        _errorMessage = _model.ErrorMessage;
     }
 }

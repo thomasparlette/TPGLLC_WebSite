@@ -11,11 +11,15 @@
         <span>@Entry.Status</span>
         @if (!string.IsNullOrWhiteSpace(Entry.ApprovalStatus))
         {
-            <span>@Entry.ApprovalStatus</span>
+            <span>Appointment: @Entry.ApprovalStatus</span>
         }
         @if (Entry.Mileage.HasValue)
         {
-            <span>@Entry.Mileage.Value.ToString("N0") mi</span>
+            <span>Mileage in: @Entry.Mileage.Value.ToString("N0")</span>
+        }
+        @if (Entry.MileageOut.HasValue)
+        {
+            <span>Mileage out: @Entry.MileageOut.Value.ToString("N0")</span>
         }
     </div>
 
@@ -39,7 +43,58 @@
     @if (!string.IsNullOrWhiteSpace(Entry.Complaint))
     {
         <div style="margin-top:0.75rem; color:#6b7280;">
-            Concern: @Entry.Complaint
+            Customer concern: @Entry.Complaint
+        </div>
+    }
+
+    @if (Entry.Parts.Count > 0 || Entry.LaborAmount.HasValue)
+    {
+        <div class="service-record-details">
+            <div class="service-record-details-title">Service details</div>
+            <div class="service-record-line service-record-line-header">
+                <span>Part / labor</span><span>Qty</span><span>Amount</span><span>Status</span>
+            </div>
+            @foreach (var part in Entry.Parts.Where(x => x.IsApplied || x.IsApproved))
+            {
+                <div class="service-record-line">
+                    <span>@part.Description</span>
+                    <span>@part.Quantity.ToString("0.##")</span>
+                    <span>@((part.Quantity * (part.UnitPrice ?? 0m)).ToString("C"))</span>
+                    <span>@(part.IsApproved ? "Approved" : "Proposed")</span>
+                </div>
+            }
+            @if (Entry.LaborAmount.HasValue)
+            {
+                <div class="service-record-line">
+                    <span>Labor</span><span>—</span><span>@Entry.LaborAmount.Value.ToString("C")</span><span>Service</span>
+                </div>
+            }
+            @if (Entry.EstimateAmount.HasValue)
+            {
+                <div class="service-record-total"><span>Estimate</span><strong>@Entry.EstimateAmount.Value.ToString("C")</strong></div>
+            }
+            @if (Entry.InvoiceAmount.HasValue)
+            {
+                <div class="service-record-total"><span>Final invoice</span><strong>@Entry.InvoiceAmount.Value.ToString("C")</strong></div>
+            }
+        </div>
+    }
+
+    @if (CanApprove)
+    {
+        <div class="customer-approval-panel">
+            <strong>Customer approval required</strong>
+            <p>Approve individual parts or approve the complete work order to allow work to continue.</p>
+            @foreach (var part in Entry.Parts.Where(x => !x.IsApproved))
+            {
+                <button type="button" class="portal-action-button portal-action-button-secondary"
+                        @onclick="() => OnApprovePart.InvokeAsync(part.Id)">
+                    Approve @part.Description
+                </button>
+            }
+            <button type="button" class="portal-action-button" @onclick="() => OnApproveWorkOrder.InvokeAsync(Entry.Id)">
+                Approve complete work order
+            </button>
         </div>
     }
 
@@ -65,4 +120,7 @@
 
 @code {
     [Parameter, EditorRequired] public ServiceHistoryEntry Entry { get; set; } = default!;
+    [Parameter] public bool CanApprove { get; set; }
+    [Parameter] public EventCallback<Guid> OnApprovePart { get; set; }
+    [Parameter] public EventCallback<Guid> OnApproveWorkOrder { get; set; }
 }

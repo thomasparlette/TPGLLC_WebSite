@@ -71,7 +71,7 @@ public sealed class VehiclePortalService : IVehiclePortalService
 
         var vehicle = await db.CustomerVehicles
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == vehicleId && x.Customer.ApplicationUserId == current.UserId);
+            .FirstOrDefaultAsync(x => x.Id == vehicleId && x.Customer != null && x.Customer.ApplicationUserId == current.UserId);
 
         if (vehicle is null)
         {
@@ -233,7 +233,7 @@ public sealed class VehiclePortalService : IVehiclePortalService
         await using var db = await _dbFactory.CreateDbContextAsync();
 
         var vehicle = await db.CustomerVehicles
-            .FirstOrDefaultAsync(x => x.Id == vehicleId && x.Customer.ApplicationUserId == current.UserId);
+            .FirstOrDefaultAsync(x => x.Id == vehicleId && x.Customer != null && x.Customer.ApplicationUserId == current.UserId);
 
         if (vehicle is null)
         {
@@ -247,7 +247,7 @@ public sealed class VehiclePortalService : IVehiclePortalService
         if (wasPrimary)
         {
             var fallback = await db.CustomerVehicles
-                .Where(x => x.Customer.ApplicationUserId == current.UserId)
+                .Where(x => x.Customer != null && x.Customer.ApplicationUserId == current.UserId)
                 .OrderByDescending(x => x.CreatedUtc)
                 .FirstOrDefaultAsync();
 
@@ -276,7 +276,7 @@ public sealed class VehiclePortalService : IVehiclePortalService
         await using var db = await _dbFactory.CreateDbContextAsync();
 
         var selected = await db.CustomerVehicles
-            .FirstOrDefaultAsync(x => x.Id == vehicleId && x.Customer.ApplicationUserId == current.UserId);
+            .FirstOrDefaultAsync(x => x.Id == vehicleId && x.Customer != null && x.Customer.ApplicationUserId == current.UserId);
 
         if (selected is null)
         {
@@ -284,7 +284,7 @@ public sealed class VehiclePortalService : IVehiclePortalService
         }
 
         var others = await db.CustomerVehicles
-            .Where(x => x.Customer.ApplicationUserId == current.UserId && x.Id != vehicleId && x.IsPrimary)
+            .Where(x => x.Customer != null && x.Customer.ApplicationUserId == current.UserId && x.Id != vehicleId && x.IsPrimary)
             .ToListAsync();
 
         foreach (var other in others)

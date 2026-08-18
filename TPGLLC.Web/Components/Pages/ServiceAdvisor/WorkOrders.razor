@@ -14,7 +14,7 @@
 <PageTitle>Work Orders</PageTitle>
 <section class="portal-dashboard">
     <div class="portal-header">
-        <p class="section-kicker">Employee Portal</p>
+        <p class="section-kicker">Staff Work Orders</p>
         <h1>Work Orders</h1>
         <p>Review active repair orders, update their details, and keep each order indexed by a unique work order number.</p>
     </div>
@@ -110,7 +110,7 @@
                                 <span class="workorder-badge">@workOrder.Status</span>
                                 @if (!string.IsNullOrWhiteSpace(workOrder.ApprovalStatus))
                                 {
-                                    <span class="workorder-badge">Approval: @workOrder.ApprovalStatus</span>
+                                    <span class="workorder-badge">Appointment: @workOrder.ApprovalStatus</span>
                                 }
                                 @if (workOrder.EstimateAmount.HasValue)
                                 {
@@ -174,12 +174,17 @@
 
                         <div class="workorder-field">
                             <label class="portal-field-label">Primary concern</label>
-                            <InputText class="portal-input" @bind-Value="_model.Form.Service" />
+                            <InputText class="portal-input" @bind-Value="_model.Form.Service" readonly />
                         </div>
 
                         <div class="workorder-field">
-                            <label class="portal-field-label">Mileage</label>
+                            <label class="portal-field-label">Mileage in</label>
                             <InputText class="portal-input" @bind-Value="_model.Form.Mileage" />
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Mileage out</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.MileageOut" />
                         </div>
 
                         <div class="workorder-field">
@@ -188,13 +193,19 @@
                         </div>
 
                         <div class="workorder-field">
-                            <label class="portal-field-label">Approval status</label>
-                            <InputText class="portal-input" @bind-Value="_model.Form.ApprovalStatus" />
+                            <label class="portal-field-label">Appointment status</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.ApprovalStatus" readonly />
                         </div>
 
                         <div class="workorder-field">
                             <label class="portal-field-label">Estimate amount</label>
-                            <InputText class="portal-input" @bind-Value="_model.Form.EstimateAmount" />
+                            <input class="portal-input" value="@EstimatedAmountText" readonly />
+                            <div class="workorder-required-note">Applied parts plus labor.</div>
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Labor amount</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.LaborAmount" />
                         </div>
 
                         <div class="workorder-field">
@@ -204,19 +215,20 @@
 
                         <div class="workorder-field">
                             <label class="portal-field-label">Invoice amount</label>
-                            <InputText class="portal-input" @bind-Value="_model.Form.InvoiceAmount" />
+                            <input class="portal-input" value="@InvoiceAmountText" readonly />
+                            <div class="workorder-required-note">Approved parts plus labor.</div>
                         </div>
                     </div>
 
                     <div class="workorder-notes-grid">
                         <div class="workorder-field">
                             <label class="portal-field-label">Customer complaint</label>
-                            <InputTextArea class="portal-input" @bind-Value="_model.Form.Complaint" />
+                            <InputTextArea class="portal-input" @bind-Value="_model.Form.Complaint" readonly />
                         </div>
 
                         <div class="workorder-field">
                             <label class="portal-field-label">Diagnosis</label>
-                            <InputTextArea class="portal-input" @bind-Value="_model.Form.Diagnosis" />
+                            <InputTextArea class="portal-input" @bind-Value="_model.Form.Diagnosis" readonly />
                         </div>
 
                         <div class="workorder-field">
@@ -228,6 +240,35 @@
                             <label class="portal-field-label">Internal notes</label>
                             <InputTextArea class="portal-input" @bind-Value="_model.Form.InternalNotes" />
                         </div>
+                    </div>
+
+                    <div class="workorder-parts-section">
+                        <div class="portal-section-heading">
+                            <div>
+                                <h3>Parts applied</h3>
+                                <div class="portal-muted">Review the full parts layout. Individual parts can be approved while the order is Quoted.</div>
+                            </div>
+                            <button type="button" class="portal-action-button" @onclick="AddPart">Add part</button>
+                        </div>
+                        <div class="workorder-part-header" aria-hidden="true">
+                            <span>Part description</span>
+                            <span>Quantity</span>
+                            <span>Unit price</span>
+                            <span>Applied to estimate</span>
+                            <span>Approved for invoice</span>
+                            <span></span>
+                        </div>
+                        @foreach (var part in _model.Form.Parts)
+                        {
+                            <div class="workorder-part-row">
+                                <InputText class="portal-input" placeholder="Part description" @bind-Value="part.Description" />
+                                <InputText class="portal-input" placeholder="Qty" @bind-Value="part.Quantity" />
+                                <InputText class="portal-input" placeholder="Unit price" @bind-Value="part.UnitPrice" />
+                                <label><InputCheckbox @bind-Value="part.IsApplied" /> Applied</label>
+                                <label><InputCheckbox @bind-Value="part.IsApproved" disabled="@(!IsQuoted)" /> Approved</label>
+                                <button type="button" class="portal-action-button" @onclick="() => RemovePart(part)">Remove</button>
+                            </div>
+                        }
                     </div>
 
                     <div class="workorder-editor-actions">
@@ -248,7 +289,7 @@
     {
         try
         {
-            _model = await WorkOrderService.GetEmployeeAsync();
+            _model = await WorkOrderService.GetStaffWorkOrdersAsync();
         }
         finally
         {
@@ -270,6 +311,35 @@
     {
         _model = await WorkOrderService.ResetAsync();
     }
+
+    private bool IsQuoted => string.Equals(_model.Form.Status, "Quoted", StringComparison.OrdinalIgnoreCase);
+
+    private void AddPart() => _model.Form.Parts.Add(new WorkOrderPartEditViewModel());
+
+    private void RemovePart(WorkOrderPartEditViewModel part) => _model.Form.Parts.Remove(part);
+
+    private string EstimatedAmountText => FormatCurrency(PartsTotal(onlyApplied: true) + ParseAmount(_model.Form.LaborAmount));
+
+    private string InvoiceAmountText => FormatCurrency(PartsTotal(onlyApplied: false) + ParseAmount(_model.Form.LaborAmount));
+
+    private decimal PartsTotal(bool onlyApplied)
+    {
+        return _model.Form.Parts
+            .Where(x => onlyApplied ? x.IsApplied : x.IsApproved)
+            .Sum(x => ParseAmount(x.Quantity) * ParseAmount(x.UnitPrice));
+    }
+
+    private static decimal ParseAmount(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return 0m;
+        var normalized = value.Replace("$", string.Empty, StringComparison.Ordinal)
+            .Replace(",", string.Empty, StringComparison.Ordinal).Trim();
+        return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var amount) && amount >= 0
+            ? amount
+            : 0m;
+    }
+
+    private static string FormatCurrency(decimal amount) => amount.ToString("C2", CultureInfo.CurrentCulture);
 
     private static bool IsClosedStatus(string? status)
     {

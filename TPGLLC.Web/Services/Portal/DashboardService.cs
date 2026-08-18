@@ -134,7 +134,7 @@ public sealed class DashboardService : IDashboardService
             items.Add(new ActivityItem(
                 "📅",
                 "Appointment request",
-                latestRequest.ServiceNeeded,
+                latestRequest.ServiceNeeded ?? "Appointment request",
                 latestRequest.SubmittedAtUtc.ToLocalTime().ToString("MMM d, yyyy")));
         }
 

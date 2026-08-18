@@ -94,13 +94,18 @@
 
 .workorder-form-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: .85rem 1rem;
 }
 
 .workorder-field {
     min-width: 0;
 }
+
+    .workorder-field .portal-field-label {
+        display: block;
+        margin-bottom: .35rem;
+    }
 
 .workorder-field-full {
     grid-column: 1 / -1;
@@ -132,9 +137,91 @@
     flex-wrap: wrap;
     margin-top: 1rem;
 }
+
+.workorder-parts-section {
+    margin-top: 1.5rem;
+}
+
+.workorder-part-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) 90px 120px auto auto auto;
+    gap: .75rem;
+    align-items: center;
+    margin-top: .75rem;
+}
+
+.workorder-part-header {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) 90px 120px auto auto auto;
+    gap: .75rem;
+    padding: .75rem 0 .25rem;
+    color: #64748b;
+    font-size: .78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.workorder-part-row label {
+    white-space: nowrap;
+}
+
+.service-record-details {
+    margin-top: 1rem;
+    border-top: 1px solid rgba(9, 43, 91, .12);
+    padding-top: .85rem;
+}
+
+.service-record-details-title {
+    color: #0b2e59;
+    font-weight: 800;
+    margin-bottom: .5rem;
+}
+
+.service-record-line,
+.service-record-total {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 70px 110px 100px;
+    gap: .6rem;
+    padding: .35rem 0;
+    align-items: center;
+}
+
+.service-record-line-header {
+    color: #64748b;
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.service-record-total {
+    grid-template-columns: 1fr auto;
+    border-top: 1px solid rgba(9, 43, 91, .08);
+}
+
+@media (max-width: 900px) {
+    .workorder-part-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .workorder-part-header {
+        display: none;
+    }
+
+    .service-record-line {
+        grid-template-columns: minmax(0, 1fr) 55px 90px;
+    }
+
+        .service-record-line span:last-child {
+            grid-column: 1 / -1;
+            color: #64748b;
+            font-size: .85rem;
+        }
+}
+
 @media (max-width: 1000px) {
     .workorder-form-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 

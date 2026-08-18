@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TPGLLC.Data;
 
@@ -11,9 +12,11 @@ using TPGLLC.Data;
 namespace TPGLLC.Data.Migrations
 {
     [DbContext(typeof(TPGLLCDbContext))]
-    partial class TPGLLCDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260818165154_AddServiceHistoryParts_fix_Warnings")]
+    partial class AddServiceHistoryParts_fix_Warnings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -450,17 +453,13 @@ namespace TPGLLC.Data.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ApprovalStatus")
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Complaint")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset>("CreatedUtc")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetimeoffset")
-                        .HasDefaultValueSql("SYSUTCDATETIME()");
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("uniqueidentifier");
@@ -469,80 +468,57 @@ namespace TPGLLC.Data.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Diagnosis")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("EstimateAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("InternalNotes")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("InvoiceAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("InvoiceNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<decimal?>("LaborAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("Mileage")
                         .HasColumnType("int");
 
-                    b.Property<int?>("MileageOut")
-                        .HasColumnType("int");
-
                     b.Property<string>("Notes")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Service")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateOnly>("ServiceDate")
                         .HasColumnType("date");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Technician")
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset?>("UpdatedUtc")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<string>("VehicleName")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("WorkOrderNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AppointmentRequestId")
-                        .IsUnique()
-                        .HasFilter("[AppointmentRequestId] IS NOT NULL");
 
                     b.HasIndex("CustomerId");
 
                     b.HasIndex("CustomerVehicleId");
 
-                    b.HasIndex("ServiceDate");
-
-                    b.HasIndex("CustomerId", "ServiceDate");
-
-                    b.ToTable("ServiceHistoryEntries", (string)null);
+                    b.ToTable("ServiceHistoryEntries");
                 });
 
             modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryPart", b =>
@@ -878,21 +854,15 @@ namespace TPGLLC.Data.Migrations
 
             modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryEntry", b =>
                 {
-                    b.HasOne("TPGLLC.Data.Entities.AppointmentRequest", null)
-                        .WithMany()
-                        .HasForeignKey("AppointmentRequestId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("TPGLLC.Data.Entities.Customer", "Customer")
                         .WithMany()
                         .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("TPGLLC.Data.Entities.CustomerVehicle", "Vehicle")
                         .WithMany()
-                        .HasForeignKey("CustomerVehicleId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("CustomerVehicleId");
 
                     b.Navigation("Customer");
 

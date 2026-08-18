@@ -17,11 +17,13 @@ public sealed class ServiceHistoryEntry
     public string? Diagnosis { get; set; }
 
     public int? Mileage { get; set; }
+    public int? MileageOut { get; set; }
     public string? Technician { get; set; }
 
     public string Status { get; set; } = "Completed";
     public string? ApprovalStatus { get; set; }
     public decimal? EstimateAmount { get; set; }
+    public decimal? LaborAmount { get; set; }
     public string? InvoiceNumber { get; set; }
     public decimal? InvoiceAmount { get; set; }
 
@@ -33,4 +35,5 @@ public sealed class ServiceHistoryEntry
 
     public Customer? Customer { get; set; }
     public CustomerVehicle? Vehicle { get; set; }
+    public ICollection<ServiceHistoryPart> Parts { get; set; } = [];
 }

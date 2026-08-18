@@ -389,8 +389,13 @@
         return user.IsActive ? "Active" : "Inactive";
     }
 
-    private static string GetDisplayName(AdminUserRow user)
+    private static string GetDisplayName(AdminUserRow? user)
     {
+        if (user is null)
+        {
+            return "the selected user";
+        }
+
         if (!string.IsNullOrWhiteSpace(user.DisplayName))
         {
             return user.DisplayName;

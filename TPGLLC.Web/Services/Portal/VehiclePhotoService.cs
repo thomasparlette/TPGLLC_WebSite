@@ -53,7 +53,7 @@ public sealed class VehiclePhotoService : IVehiclePhotoService
         await using var db = await _dbFactory.CreateDbContextAsync();
 
         var vehicle = await db.CustomerVehicles
-            .FirstOrDefaultAsync(x => x.Id == vehicleId && x.Customer.ApplicationUserId == current.UserId);
+            .FirstOrDefaultAsync(x => x.Id == vehicleId && x.Customer != null && x.Customer.ApplicationUserId == current.UserId);
 
         if (vehicle is null)
         {
@@ -93,7 +93,7 @@ public sealed class VehiclePhotoService : IVehiclePhotoService
         await using var db = await _dbFactory.CreateDbContextAsync();
 
         var vehicle = await db.CustomerVehicles
-            .FirstOrDefaultAsync(x => x.Id == vehicleId && x.Customer.ApplicationUserId == current.UserId);
+            .FirstOrDefaultAsync(x => x.Id == vehicleId && x.Customer != null && x.Customer.ApplicationUserId == current.UserId);
 
         if (vehicle is null)
         {

@@ -10,6 +10,7 @@ public sealed class WorkOrderPageViewModel
     public List<string> StatusOptions { get; set; } = [
         "Requested",
         "Quoted",
+        "Waiting on Customer Approval",
         "Approved",
         "In Progress",
         "Completed",

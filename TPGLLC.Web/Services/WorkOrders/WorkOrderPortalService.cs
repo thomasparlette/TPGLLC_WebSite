@@ -57,10 +57,13 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
 
         var workOrders = await db.ServiceHistoryEntries
             .AsNoTracking()
+            .Include(x => x.Parts)
             .Where(x => x.CustomerId == customer.Id)
             .OrderByDescending(x => x.ServiceDate)
             .ThenByDescending(x => x.CreatedUtc)
             .ToListAsync();
+
+        await ApplyAppointmentFieldsAsync(db, workOrders);
 
         return new WorkOrderPageViewModel
         {
@@ -69,7 +72,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         };
     }
 
-    public async Task<WorkOrderPageViewModel> GetEmployeeAsync()
+    public async Task<WorkOrderPageViewModel> GetStaffWorkOrdersAsync()
     {
         var current = _currentCustomerAccessor.GetCurrentCustomer();
         if (!current.IsAuthenticated)
@@ -98,6 +101,8 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             .ThenByDescending(x => x.CreatedUtc)
             .ToListAsync();
 
+        await ApplyAppointmentFieldsAsync(db, workOrders);
+
         return new WorkOrderPageViewModel
         {
             WorkOrders = workOrders,
@@ -107,7 +112,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
 
     public async Task<WorkOrderPageViewModel> StartEditAsync(Guid workOrderId)
     {
-        var model = await GetEmployeeAsync();
+        var model = await GetStaffWorkOrdersAsync();
         if (!string.IsNullOrWhiteSpace(model.ErrorMessage))
         {
             return model;
@@ -125,13 +130,28 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         }
 
         model.EditingWorkOrderId = selectedOrder.Id;
-        model.Form = MapToForm(selectedOrder);
+        var appointment = selectedOrder.AppointmentRequestId.HasValue
+            ? await db.AppointmentRequests.AsNoTracking().FirstOrDefaultAsync(x => x.RequestId == selectedOrder.AppointmentRequestId.Value)
+            : null;
+        model.Form = MapToForm(selectedOrder, appointment);
+        model.Form.Parts = await db.ServiceHistoryParts.AsNoTracking()
+            .Where(x => x.ServiceHistoryEntryId == selectedOrder.Id)
+            .OrderBy(x => x.Description)
+            .Select(x => new WorkOrderPartEditViewModel
+            {
+                Id = x.Id,
+                Description = x.Description,
+                Quantity = x.Quantity.ToString("0.##"),
+                UnitPrice = x.UnitPrice.HasValue ? x.UnitPrice.Value.ToString("0.00") : null,
+                IsApplied = x.IsApplied,
+                IsApproved = x.IsApproved
+            }).ToListAsync();
         return model;
     }
 
     public async Task<WorkOrderPageViewModel> ResetAsync()
     {
-        return await GetEmployeeAsync();
+        return await GetStaffWorkOrdersAsync();
     }
 
     public async Task<WorkOrderPageViewModel> SaveAsync(WorkOrderPageViewModel model)
@@ -167,15 +187,15 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             return model;
         }
 
-        if (!TryParseDecimal(model.Form.EstimateAmount, out var estimateAmount))
+        if (!TryParseMileage(model.Form.MileageOut, out var mileageOut))
         {
-            model.ErrorMessage = "Estimate amount must be a valid number.";
+            model.ErrorMessage = "Mileage out must be a whole number.";
             return model;
         }
 
-        if (!TryParseDecimal(model.Form.InvoiceAmount, out var invoiceAmount))
+        if (!TryParseDecimal(model.Form.LaborAmount, out var laborAmount))
         {
-            model.ErrorMessage = "Invoice amount must be a valid number.";
+            model.ErrorMessage = "Labor amount must be a valid number.";
             return model;
         }
 
@@ -210,25 +230,139 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         workOrder.WorkOrderNumber = requestedWorkOrderNumber;
         workOrder.VehicleName = Normalize(model.Form.VehicleName) ?? workOrder.VehicleName;
         workOrder.ServiceDate = DateOnly.FromDateTime(serviceDate);
-        workOrder.Service = Normalize(model.Form.Service) ?? workOrder.Service;
-        workOrder.Complaint = Normalize(model.Form.Complaint);
-        workOrder.Diagnosis = Normalize(model.Form.Diagnosis);
+        var appointment = workOrder.AppointmentRequestId.HasValue
+            ? await db.AppointmentRequests.FirstOrDefaultAsync(x => x.RequestId == workOrder.AppointmentRequestId.Value)
+            : null;
+        if (appointment is not null)
+        {
+            workOrder.Service = Normalize(appointment.ServiceNeeded) ?? workOrder.Service;
+            workOrder.Complaint = Normalize(appointment.Message);
+            workOrder.ApprovalStatus = Normalize(appointment.Status);
+        }
         workOrder.Technician = Normalize(model.Form.Technician);
         workOrder.Status = Normalize(model.Form.Status) ?? workOrder.Status;
-        workOrder.ApprovalStatus = Normalize(model.Form.ApprovalStatus);
         workOrder.Mileage = mileage;
-        workOrder.EstimateAmount = estimateAmount;
+        workOrder.MileageOut = mileageOut;
+        workOrder.LaborAmount = laborAmount;
         workOrder.InvoiceNumber = Normalize(model.Form.InvoiceNumber);
-        workOrder.InvoiceAmount = invoiceAmount;
         workOrder.Notes = Normalize(model.Form.Notes);
         workOrder.InternalNotes = Normalize(model.Form.InternalNotes);
         workOrder.UpdatedUtc = DateTimeOffset.UtcNow;
 
+        var existingParts = await db.ServiceHistoryParts
+            .Where(x => x.ServiceHistoryEntryId == workOrder.Id)
+            .ToListAsync();
+        var existingById = existingParts.ToDictionary(x => x.Id);
+        var appliedPartsTotal = 0m;
+        var approvedPartsTotal = 0m;
+        foreach (var part in model.Form.Parts.Where(x => !string.IsNullOrWhiteSpace(x.Description)))
+        {
+            if (!TryParseDecimal(part.Quantity, out var quantity) || quantity is null || quantity <= 0)
+            {
+                model.ErrorMessage = "Part quantities must be greater than zero.";
+                return model;
+            }
+            if (!TryParseDecimal(part.UnitPrice, out var unitPrice))
+            {
+                model.ErrorMessage = "Part prices must be valid numbers.";
+                return model;
+            }
+
+            var savedPart = existingById.TryGetValue(part.Id, out var existing)
+                ? existing
+                : new ServiceHistoryPart { ServiceHistoryEntryId = workOrder.Id };
+            savedPart.Description = part.Description.Trim();
+            savedPart.Quantity = quantity.Value;
+            savedPart.UnitPrice = unitPrice;
+            savedPart.IsApplied = part.IsApplied;
+            savedPart.IsApproved = string.Equals(workOrder.Status, "Quoted", StringComparison.OrdinalIgnoreCase)
+                ? part.IsApproved
+                : savedPart.IsApproved;
+            var partTotal = savedPart.Quantity * (savedPart.UnitPrice ?? 0m);
+            if (savedPart.IsApplied) appliedPartsTotal += partTotal;
+            if (savedPart.IsApproved) approvedPartsTotal += partTotal;
+            if (existing is null) db.ServiceHistoryParts.Add(savedPart);
+        }
+        var submittedIds = model.Form.Parts.Where(x => x.Id != Guid.Empty).Select(x => x.Id).ToHashSet();
+        db.ServiceHistoryParts.RemoveRange(existingParts.Where(x => !submittedIds.Contains(x.Id)));
+
+        var laborTotal = laborAmount ?? 0m;
+        workOrder.EstimateAmount = appliedPartsTotal + laborTotal;
+        workOrder.InvoiceAmount = approvedPartsTotal + laborTotal;
+
         await db.SaveChangesAsync();
 
-        var refreshed = await GetEmployeeAsync();
+        var refreshed = await GetStaffWorkOrdersAsync();
         refreshed.SuccessMessage = $"Work order {requestedWorkOrderNumber} updated.";
         return refreshed;
+    }
+
+    public async Task<WorkOrderPageViewModel> ApprovePartAsync(Guid workOrderId, Guid partId)
+    {
+        var current = _currentCustomerAccessor.GetCurrentCustomer();
+        if (!current.IsAuthenticated)
+        {
+            return new WorkOrderPageViewModel { ErrorMessage = "You must be signed in to approve work." };
+        }
+
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var workOrder = await GetCustomerWorkOrderAsync(db, workOrderId, current.UserId);
+        if (workOrder is null)
+        {
+            return new WorkOrderPageViewModel { ErrorMessage = "Work order not found." };
+        }
+
+        if (!IsWaitingForCustomerApproval(workOrder.Status))
+        {
+            return await GetCustomerErrorAsync("This work order is not waiting for customer approval.");
+        }
+
+        var part = workOrder.Parts.FirstOrDefault(x => x.Id == partId);
+        if (part is null)
+        {
+            return new WorkOrderPageViewModel { ErrorMessage = "Part not found." };
+        }
+
+        part.IsApproved = true;
+        workOrder.Status = "In Progress";
+        workOrder.InvoiceAmount = CalculateApprovedTotal(workOrder);
+        workOrder.UpdatedUtc = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync();
+
+        return await GetCustomerResultAsync("Part approved and work is now in progress.");
+    }
+
+    public async Task<WorkOrderPageViewModel> ApproveWorkOrderAsync(Guid workOrderId)
+    {
+        var current = _currentCustomerAccessor.GetCurrentCustomer();
+        if (!current.IsAuthenticated)
+        {
+            return new WorkOrderPageViewModel { ErrorMessage = "You must be signed in to approve work." };
+        }
+
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var workOrder = await GetCustomerWorkOrderAsync(db, workOrderId, current.UserId);
+        if (workOrder is null)
+        {
+            return new WorkOrderPageViewModel { ErrorMessage = "Work order not found." };
+        }
+
+        if (!IsWaitingForCustomerApproval(workOrder.Status))
+        {
+            return await GetCustomerErrorAsync("This work order is not waiting for customer approval.");
+        }
+
+        foreach (var part in workOrder.Parts)
+        {
+            part.IsApproved = true;
+        }
+
+        workOrder.Status = "In Progress";
+        workOrder.InvoiceAmount = CalculateApprovedTotal(workOrder);
+        workOrder.UpdatedUtc = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync();
+
+        return await GetCustomerResultAsync("Work order approved and now in progress.");
     }
 
     private static async Task EnsureWorkOrderNumbersAsync(TPGLLCDbContext db, Guid? customerId = null)
@@ -264,6 +398,35 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             await db.SaveChangesAsync();
         }
     }
+
+    private async Task<WorkOrderPageViewModel> GetCustomerResultAsync(string message)
+    {
+        var result = await GetCustomerAsync();
+        result.SuccessMessage = message;
+        return result;
+    }
+
+    private async Task<WorkOrderPageViewModel> GetCustomerErrorAsync(string message)
+    {
+        var result = await GetCustomerAsync();
+        result.ErrorMessage = message;
+        return result;
+    }
+
+    private static async Task<ServiceHistoryEntry?> GetCustomerWorkOrderAsync(TPGLLCDbContext db, Guid workOrderId, string userId)
+    {
+        return await db.ServiceHistoryEntries
+            .Include(x => x.Parts)
+            .Where(x => x.Id == workOrderId && x.Customer != null && x.Customer.ApplicationUserId == userId)
+            .FirstOrDefaultAsync();
+    }
+
+    private static bool IsWaitingForCustomerApproval(string? status) =>
+        string.Equals(status, "Waiting on Customer Approval", StringComparison.OrdinalIgnoreCase);
+
+    private static decimal CalculateApprovedTotal(ServiceHistoryEntry workOrder) =>
+        workOrder.Parts.Where(x => x.IsApproved)
+            .Sum(x => x.Quantity * (x.UnitPrice ?? 0m)) + (workOrder.LaborAmount ?? 0m);
 
     private static async Task<string> GetNextWorkOrderNumberAsync(TPGLLCDbContext db)
     {
@@ -307,7 +470,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         return false;
     }
 
-    private static WorkOrderEditViewModel MapToForm(ServiceHistoryEntry entry)
+    private static WorkOrderEditViewModel MapToForm(ServiceHistoryEntry entry, AppointmentRequest? appointment = null)
     {
         return new WorkOrderEditViewModel
         {
@@ -315,19 +478,39 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             WorkOrderNumber = entry.WorkOrderNumber ?? string.Empty,
             ServiceDate = entry.ServiceDate.ToDateTime(TimeOnly.MinValue),
             VehicleName = entry.VehicleName,
-            Service = entry.Service,
-            Complaint = entry.Complaint,
+            Service = appointment?.ServiceNeeded ?? entry.Service,
+            Complaint = appointment?.Message ?? entry.Complaint,
             Diagnosis = entry.Diagnosis,
             Technician = entry.Technician,
             Status = entry.Status,
-            ApprovalStatus = entry.ApprovalStatus,
+            ApprovalStatus = appointment?.Status ?? entry.ApprovalStatus,
             Mileage = entry.Mileage?.ToString(CultureInfo.InvariantCulture),
+            MileageOut = entry.MileageOut?.ToString(CultureInfo.InvariantCulture),
             EstimateAmount = entry.EstimateAmount?.ToString("0.00", CultureInfo.InvariantCulture),
+            LaborAmount = entry.LaborAmount?.ToString("0.00", CultureInfo.InvariantCulture),
             InvoiceNumber = entry.InvoiceNumber,
             InvoiceAmount = entry.InvoiceAmount?.ToString("0.00", CultureInfo.InvariantCulture),
             Notes = entry.Notes,
             InternalNotes = entry.InternalNotes
         };
+    }
+
+    private static async Task ApplyAppointmentFieldsAsync(TPGLLCDbContext db, List<ServiceHistoryEntry> workOrders)
+    {
+        var appointmentIds = workOrders.Where(x => x.AppointmentRequestId.HasValue)
+            .Select(x => x.AppointmentRequestId!.Value).ToList();
+        if (appointmentIds.Count == 0) return;
+
+        var appointments = await db.AppointmentRequests.AsNoTracking()
+            .Where(x => appointmentIds.Contains(x.RequestId))
+            .ToDictionaryAsync(x => x.RequestId);
+        foreach (var workOrder in workOrders)
+        {
+            if (workOrder.AppointmentRequestId is not Guid appointmentId || !appointments.TryGetValue(appointmentId, out var appointment)) continue;
+            workOrder.Service = appointment.ServiceNeeded ?? workOrder.Service;
+            workOrder.Complaint = appointment.Message;
+            workOrder.ApprovalStatus = appointment.Status;
+        }
     }
     private bool IsServiceAdvisorOrAdministrator()
     {

@@ -47,8 +47,14 @@ public sealed class WorkOrderEditViewModel
     [Display(Name = "Mileage")]
     public string? Mileage { get; set; }
 
+    [Display(Name = "Mileage out")]
+    public string? MileageOut { get; set; }
+
     [Display(Name = "Estimate")]
     public string? EstimateAmount { get; set; }
+
+    [Display(Name = "Labor")]
+    public string? LaborAmount { get; set; }
 
     [StringLength(50)]
     [Display(Name = "Invoice number")]
@@ -64,4 +70,16 @@ public sealed class WorkOrderEditViewModel
     [StringLength(4000)]
     [Display(Name = "Internal notes")]
     public string? InternalNotes { get; set; }
+
+    public List<WorkOrderPartEditViewModel> Parts { get; set; } = [];
+}
+
+public sealed class WorkOrderPartEditViewModel
+{
+    public Guid Id { get; set; }
+    public string Description { get; set; } = string.Empty;
+    public string Quantity { get; set; } = "1";
+    public string? UnitPrice { get; set; }
+    public bool IsApplied { get; set; }
+    public bool IsApproved { get; set; }
 }

@@ -1,0 +1,17 @@
+﻿<div class="portal-section">
+    <div class="portal-empty-state">
+        <div class="portal-empty-icon">🧾</div>
+        <div>
+            <div class="portal-empty-title">@Title</div>
+            <div class="portal-empty-text">@Description</div>
+            <a class="portal-action-button" href="@BackHref">@BackText</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Description { get; set; } = string.Empty;
+    [Parameter] public string BackHref { get; set; } = "/portal";
+    [Parameter] public string BackText { get; set; } = "Back";
+}

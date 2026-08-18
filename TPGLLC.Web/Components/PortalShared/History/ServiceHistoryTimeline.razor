@@ -28,13 +28,38 @@
                         <div>@entry.Service</div>
                         @if (entry.Mileage.HasValue)
                         {
-                            <div>@entry.Mileage.Value.ToString("N0") mi</div>
+                            <div>Mileage in: @entry.Mileage.Value.ToString("N0")</div>
+                        }
+                        @if (entry.MileageOut.HasValue)
+                        {
+                            <div>Mileage out: @entry.MileageOut.Value.ToString("N0")</div>
                         }
                         @if (!string.IsNullOrWhiteSpace(entry.Technician))
                         {
                             <div>Technician: @entry.Technician</div>
                         }
                         <div class="portal-muted">@entry.Status</div>
+                        @if (!string.IsNullOrWhiteSpace(entry.ApprovalStatus))
+                        {
+                            <div class="portal-muted">Appointment: @entry.ApprovalStatus</div>
+                        }
+                        @if (entry.Parts.Count > 0 || entry.LaborAmount.HasValue)
+                        {
+                            <div style="margin-top:0.5rem;">
+                                @foreach (var part in entry.Parts.Where(x => x.IsApplied || x.IsApproved))
+                                {
+                                    <div>@part.Description — @((part.Quantity * (part.UnitPrice ?? 0m)).ToString("C"))</div>
+                                }
+                                @if (entry.LaborAmount.HasValue)
+                                {
+                                    <div>Labor — @entry.LaborAmount.Value.ToString("C")</div>
+                                }
+                                @if (entry.InvoiceAmount.HasValue)
+                                {
+                                    <strong>Final invoice — @entry.InvoiceAmount.Value.ToString("C")</strong>
+                                }
+                            </div>
+                        }
                         @if (!string.IsNullOrWhiteSpace(entry.Notes))
                         {
                             <div style="margin-top:0.35rem;">@entry.Notes</div>

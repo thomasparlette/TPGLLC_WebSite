@@ -148,8 +148,8 @@ public sealed class AppointmentService : IAppointmentService
         var entity = new AppointmentRequest
         {
             RequestId = requestId,
-            Name = request.Name.Trim(),
-            Phone = request.Phone.Trim(),
+            Name = request.Name?.Trim() ?? string.Empty,
+            Phone = request.Phone?.Trim() ?? string.Empty,
             Email = string.IsNullOrWhiteSpace(request.Email)
                 ? current.Email?.Trim()
                 : request.Email.Trim(),
@@ -158,10 +158,10 @@ public sealed class AppointmentService : IAppointmentService
             VehicleModel = string.IsNullOrWhiteSpace(request.VehicleModel) ? null : request.VehicleModel.Trim(),
             Vin = string.IsNullOrWhiteSpace(request.Vin) ? null : request.Vin.Trim(),
             Mileage = string.IsNullOrWhiteSpace(request.Mileage) ? null : request.Mileage.Trim(),
-            PreferredDate = request.PreferredDate.Trim(),
-            PreferredTime = request.PreferredTime.Trim(),
-            ServiceNeeded = request.ServiceNeeded.Trim(),
-            Message = request.Message.Trim(),
+            PreferredDate = request.PreferredDate?.Trim() ?? string.Empty,
+            PreferredTime = request.PreferredTime?.Trim() ?? string.Empty,
+            ServiceNeeded = request.ServiceNeeded?.Trim() ?? string.Empty,
+            Message = request.Message?.Trim() ?? string.Empty,
             Status = string.IsNullOrWhiteSpace(request.Status) ? "Requested" : request.Status.Trim(),
             SubmittedAtUtc = submittedAtUtc
         };

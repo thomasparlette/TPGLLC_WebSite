@@ -46,7 +46,7 @@ public sealed class AuthenticationService : IAuthenticationService
         {
             UserName = normalizedEmail,
             Email = normalizedEmail,
-            DisplayName = string.IsNullOrWhiteSpace(displayName) ? null : displayName.Trim(),
+            DisplayName = string.IsNullOrWhiteSpace(displayName) ? string.Empty : displayName.Trim(),
             IsActive = true,
             CreatedUtc = DateTimeOffset.UtcNow
         };
