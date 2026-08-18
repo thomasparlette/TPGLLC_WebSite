@@ -21,7 +21,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public WorkOrderPortalService(IDbContextFactory<TPGLLCDbContext> dbFactory,ICurrentCustomerAccessor currentCustomerAccessor, IHttpContextAccessor httpContextAccessor)
+    public WorkOrderPortalService(IDbContextFactory<TPGLLCDbContext> dbFactory, ICurrentCustomerAccessor currentCustomerAccessor, IHttpContextAccessor httpContextAccessor)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
@@ -52,6 +52,8 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
                 ErrorMessage = "Customer record not found."
             };
         }
+
+        await EnsureWorkOrderNumbersAsync(db, customer.Id);
 
         var workOrders = await db.ServiceHistoryEntries
             .AsNoTracking()
@@ -87,6 +89,8 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         }
 
         await using var db = await _dbFactory.CreateDbContextAsync();
+
+        await EnsureWorkOrderNumbersAsync(db);
 
         var workOrders = await db.ServiceHistoryEntries
             .AsNoTracking()
@@ -184,7 +188,26 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             return model;
         }
 
-        workOrder.WorkOrderNumber = Normalize(model.Form.WorkOrderNumber);
+        var requestedWorkOrderNumber = Normalize(model.Form.WorkOrderNumber);
+        if (string.IsNullOrWhiteSpace(requestedWorkOrderNumber))
+        {
+            requestedWorkOrderNumber = await GetNextWorkOrderNumberAsync(db);
+        }
+        else
+        {
+            var duplicateNumber = await db.ServiceHistoryEntries
+                .AsNoTracking()
+                .AnyAsync(x => x.Id != workOrder.Id && x.WorkOrderNumber != null &&
+                    x.WorkOrderNumber.ToUpper() == requestedWorkOrderNumber.ToUpper());
+
+            if (duplicateNumber)
+            {
+                model.ErrorMessage = $"Work order number '{requestedWorkOrderNumber}' is already in use.";
+                return model;
+            }
+        }
+
+        workOrder.WorkOrderNumber = requestedWorkOrderNumber;
         workOrder.VehicleName = Normalize(model.Form.VehicleName) ?? workOrder.VehicleName;
         workOrder.ServiceDate = DateOnly.FromDateTime(serviceDate);
         workOrder.Service = Normalize(model.Form.Service) ?? workOrder.Service;
@@ -204,17 +227,84 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         await db.SaveChangesAsync();
 
         var refreshed = await GetEmployeeAsync();
-        refreshed.SuccessMessage = "Work order updated.";
+        refreshed.SuccessMessage = $"Work order {requestedWorkOrderNumber} updated.";
         return refreshed;
     }
 
-    private static WorkOrderPageViewModel BuildModel(List<ServiceHistoryEntry> entries, bool canEdit)
+    private static async Task EnsureWorkOrderNumbersAsync(TPGLLCDbContext db, Guid? customerId = null)
     {
-        return new WorkOrderPageViewModel
+        var query = db.ServiceHistoryEntries.AsQueryable();
+        if (customerId.HasValue)
         {
-            WorkOrders = entries,
-            CanEdit = canEdit
-        };
+            query = query.Where(x => x.CustomerId == customerId.Value);
+        }
+
+        var entries = await query
+            .OrderBy(x => x.CreatedUtc)
+            .ThenBy(x => x.Id)
+            .ToListAsync();
+
+        var changed = false;
+        var nextNumber = await GetNextSequenceNumberAsync(db);
+
+        foreach (var entry in entries)
+        {
+            if (!string.IsNullOrWhiteSpace(entry.WorkOrderNumber))
+            {
+                continue;
+            }
+
+            entry.WorkOrderNumber = FormatWorkOrderNumber(nextNumber++);
+            entry.UpdatedUtc = DateTimeOffset.UtcNow;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            await db.SaveChangesAsync();
+        }
+    }
+
+    private static async Task<string> GetNextWorkOrderNumberAsync(TPGLLCDbContext db)
+    {
+        var nextSequence = await GetNextSequenceNumberAsync(db);
+        return FormatWorkOrderNumber(nextSequence);
+    }
+
+    private static async Task<int> GetNextSequenceNumberAsync(TPGLLCDbContext db)
+    {
+        var numbers = await db.ServiceHistoryEntries
+            .AsNoTracking()
+            .Where(x => x.WorkOrderNumber != null)
+            .Select(x => x.WorkOrderNumber!)
+            .ToListAsync();
+
+        var max = 0;
+        foreach (var number in numbers)
+        {
+            if (TryExtractSequence(number, out var value) && value > max)
+            {
+                max = value;
+            }
+        }
+
+        return max + 1;
+    }
+
+    private static string FormatWorkOrderNumber(int sequence)
+        => $"WO-{DateTime.UtcNow:yyyy}-{sequence:D5}";
+
+    private static bool TryExtractSequence(string value, out int sequence)
+    {
+        sequence = 0;
+        var parts = value.Split('-', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length == 3 && int.TryParse(parts[2], NumberStyles.None, CultureInfo.InvariantCulture, out var parsed))
+        {
+            sequence = parsed;
+            return true;
+        }
+
+        return false;
     }
 
     private static WorkOrderEditViewModel MapToForm(ServiceHistoryEntry entry)

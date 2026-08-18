@@ -1,0 +1,150 @@
+﻿/* Service Advisor portal-specific styling. Keep role-dashboard styles out of Razor components. */
+.service-advisor-dashboard .portal-header p:last-child {
+    max-width: 760px;
+}
+
+.service-advisor-dashboard .portal-stat {
+    min-height: 96px;
+}
+
+.service-advisor-dashboard .portal-dashboard-grid {
+    align-items: stretch;
+}
+
+.service-advisor-dashboard .portal-card-link {
+    height: 100%;
+}
+
+.service-advisor-dashboard .portal-activity-item {
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+    .service-advisor-dashboard .portal-activity-item:last-child {
+        border-bottom: 0;
+    }
+
+.workorder-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.workorder-card {
+    background: #fff;
+    border: 1px solid rgba(9, 43, 91, 0.12);
+    border-radius: 14px;
+    padding: 1.25rem;
+    box-shadow: 0 8px 20px rgba(9, 43, 91, 0.06);
+}
+
+.workorder-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.workorder-number {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0b3a78;
+    letter-spacing: 0.02em;
+}
+
+.workorder-title {
+    margin: 0.2rem 0 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0b2e59;
+}
+
+.workorder-subtitle {
+    margin: 0.2rem 0 0;
+    color: #5f6f85;
+}
+
+.workorder-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.85rem;
+}
+
+.workorder-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+    background: #eef4ff;
+    color: #113d76;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.workorder-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.workorder-editor {
+    margin-top: 1.25rem;
+}
+
+.workorder-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.workorder-field {
+    min-width: 0;
+}
+
+.workorder-field-full {
+    grid-column: 1 / -1;
+}
+
+.workorder-notes-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.workorder-field textarea {
+    width: 100%;
+    min-height: 120px;
+    resize: vertical;
+}
+
+.workorder-required-note {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: #697a91;
+}
+
+.workorder-editor-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+@media (max-width: 1000px) {
+    .workorder-form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .workorder-form-grid,
+    .workorder-notes-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .workorder-field-full {
+        grid-column: auto;
+    }
+}

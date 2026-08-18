@@ -1,25 +1,22 @@
 ﻿@page "/portal/service-advisor/work-orders"
 @layout CustomerLayout
-@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.ServiceAdvisor)]
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "ServiceAdvisor,Technician,Finance,Administrator")]
 
 @using System.Globalization
 @using Microsoft.AspNetCore.Components.Forms
 @using TPGLLC.Data.Entities
-@using TPGLLC.Web.Components.PortalShared.History
 @using TPGLLC.Web.Components.Shared
 @using TPGLLC.Web.Services.WorkOrders
-@using TPGLLC.Web.Authorization
 @using TPGLLC.Web.ViewModels.Portal
 
 @inject IWorkOrderPortalService WorkOrderService
 
-<PageTitle>Service Advisor Work Orders</PageTitle>
-
+<PageTitle>Work Orders</PageTitle>
 <section class="portal-dashboard">
     <div class="portal-header">
-        <p class="section-kicker">Service Advisor</p>
+        <p class="section-kicker">Employee Portal</p>
         <h1>Work Orders</h1>
-        <p>Update estimates, approvals, diagnoses, and invoices from the shop side.</p>
+        <p>Review active repair orders, update their details, and keep each order indexed by a unique work order number.</p>
     </div>
 
     @if (_loading)
@@ -53,12 +50,10 @@
                 <div class="portal-stat-value">@_model.WorkOrders.Count</div>
                 <div class="portal-stat-label">Total Orders</div>
             </div>
-
             <div class="portal-stat">
                 <div class="portal-stat-value">@_model.WorkOrders.Count(x => !IsClosedStatus(x.Status))</div>
                 <div class="portal-stat-label">Active</div>
             </div>
-
             <div class="portal-stat">
                 <div class="portal-stat-value">@_model.WorkOrders.Count(x => x.InvoiceAmount.HasValue)</div>
                 <div class="portal-stat-label">Billed</div>
@@ -67,8 +62,14 @@
 
         <div class="portal-section">
             <div class="portal-section-heading">
-                <h2>All Work Orders</h2>
-                <button type="button" class="portal-action-button" @onclick="ResetEditorAsync">Close Editor</button>
+                <div>
+                    <h2>Work Orders</h2>
+                    <div class="portal-muted">Every order is assigned a work order number. Use Edit to update the record.</div>
+                </div>
+                @if (_model.EditingWorkOrderId is not null)
+                {
+                    <button type="button" class="portal-action-button" @onclick="ResetEditorAsync">Close Editor</button>
+                }
             </div>
 
             @if (_model.WorkOrders.Count == 0)
@@ -77,52 +78,52 @@
                     <div class="portal-empty-icon">📝</div>
                     <div>
                         <div class="portal-empty-title">No work orders on file</div>
-                        <div class="portal-empty-text">As soon as a customer checks in, the work order list will populate.</div>
+                        <div class="portal-empty-text">As soon as a repair order is created, it will appear here with its assigned work order number.</div>
                     </div>
                 </div>
             }
             else
             {
-                <div class="portal-dashboard-grid">
-                    @foreach (var workOrder in _model.WorkOrders.OrderByDescending(x => x.ServiceDate).ThenByDescending(x => x.CreatedUtc))
+                <div class="workorder-list">
+                    @foreach (var workOrder in _model.WorkOrders
+                        .OrderByDescending(x => x.ServiceDate)
+                        .ThenByDescending(x => x.CreatedUtc))
                     {
-                        <article class="portal-card-link" @key="workOrder.Id">
-                            <div class="portal-card-icon">🛠️</div>
-                            <h3>@workOrder.VehicleName</h3>
-                            <p>@workOrder.Service</p>
+                        <article class="workorder-card" @key="workOrder.Id">
+                            <div class="workorder-card-header">
+                                <div>
+                                    <div class="workorder-number">@(string.IsNullOrWhiteSpace(workOrder.WorkOrderNumber) ? "Work Order Number Pending" : workOrder.WorkOrderNumber)</div>
+                                    <h3 class="workorder-title">@workOrder.VehicleName</h3>
+                                    <p class="workorder-subtitle">@workOrder.Service</p>
+                                </div>
+                                <div class="workorder-actions" style="margin-top:0;">
+                                    <button type="button"
+                                            class="portal-action-button"
+                                            @onclick="@(async () => await BeginEditAsync(workOrder.Id))">
+                                        Edit
+                                    </button>
+                                </div>
+                            </div>
 
-                            <div class="portal-primary-meta" style="margin-top:0.75rem;">
-                                <span>@workOrder.ServiceDate.ToString("MMM d, yyyy")</span>
-                                <span>@workOrder.Status</span>
+                            <div class="workorder-meta">
+                                <span class="workorder-badge">Service @workOrder.ServiceDate.ToString("MMM d, yyyy")</span>
+                                <span class="workorder-badge">@workOrder.Status</span>
                                 @if (!string.IsNullOrWhiteSpace(workOrder.ApprovalStatus))
                                 {
-                                    <span>@workOrder.ApprovalStatus</span>
+                                    <span class="workorder-badge">Approval: @workOrder.ApprovalStatus</span>
                                 }
-                            </div>
-
-                            <div style="margin-top:0.75rem; display:flex; flex-wrap:wrap; gap:0.5rem;">
-                                @if (!string.IsNullOrWhiteSpace(workOrder.WorkOrderNumber))
-                                {
-                                    <span class="portal-chip">@workOrder.WorkOrderNumber</span>
-                                }
-
                                 @if (workOrder.EstimateAmount.HasValue)
                                 {
-                                    <span class="portal-chip">Estimate @workOrder.EstimateAmount.Value.ToString("C")</span>
+                                    <span class="workorder-badge">Estimate @workOrder.EstimateAmount.Value.ToString("C")</span>
                                 }
-
                                 @if (workOrder.InvoiceAmount.HasValue)
                                 {
-                                    <span class="portal-chip">Invoice @workOrder.InvoiceAmount.Value.ToString("C")</span>
+                                    <span class="workorder-badge">Invoice @workOrder.InvoiceAmount.Value.ToString("C")</span>
                                 }
-                            </div>
-
-                            <div class="portal-actions" style="margin-top: 1rem;">
-                                <button type="button"
-                                        class="portal-action-button"
-                                        @onclick="@(async () => await BeginEditAsync(workOrder.Id))">
-                                    Edit
-                                </button>
+                                @if (workOrder.Mileage.HasValue)
+                                {
+                                    <span class="workorder-badge">Mileage @workOrder.Mileage.Value.ToString("N0")</span>
+                                }
                             </div>
                         </article>
                     }
@@ -132,11 +133,11 @@
 
         @if (_model.EditingWorkOrderId is not null)
         {
-            <div class="portal-section" id="workorder-editor">
+            <div class="portal-section workorder-editor" id="workorder-editor">
                 <div class="portal-section-heading">
                     <div>
                         <h2>Edit Work Order</h2>
-                        <div class="portal-muted">Update estimate and invoice details for the selected repair order.</div>
+                        <div class="portal-muted">The work order number is editable, but it must remain unique.</div>
                     </div>
                 </div>
 
@@ -144,38 +145,19 @@
                     <DataAnnotationsValidator />
                     <ValidationSummary />
 
-                    <div class="portal-dashboard-grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1rem;">
-                        <div>
+                    <div class="workorder-form-grid">
+                        <div class="workorder-field">
                             <label class="portal-field-label">Work order number</label>
                             <InputText class="portal-input" @bind-Value="_model.Form.WorkOrderNumber" />
+                            <div class="workorder-required-note">Assigned automatically when a work order has no number.</div>
                         </div>
 
-                        <div>
+                        <div class="workorder-field">
                             <label class="portal-field-label">Service date</label>
                             <InputDate class="portal-input" @bind-Value="_model.Form.ServiceDate" />
                         </div>
 
-                        <div>
-                            <label class="portal-field-label">Vehicle</label>
-                            <InputText class="portal-input" @bind-Value="_model.Form.VehicleName" />
-                        </div>
-
-                        <div>
-                            <label class="portal-field-label">Primary concern</label>
-                            <InputText class="portal-input" @bind-Value="_model.Form.Service" />
-                        </div>
-
-                        <div>
-                            <label class="portal-field-label">Mileage</label>
-                            <InputText class="portal-input" @bind-Value="_model.Form.Mileage" />
-                        </div>
-
-                        <div>
-                            <label class="portal-field-label">Technician</label>
-                            <InputText class="portal-input" @bind-Value="_model.Form.Technician" />
-                        </div>
-
-                        <div>
+                        <div class="workorder-field">
                             <label class="portal-field-label">Status</label>
                             <InputSelect class="portal-input" @bind-Value="_model.Form.Status">
                                 @foreach (var status in _model.StatusOptions)
@@ -185,52 +167,71 @@
                             </InputSelect>
                         </div>
 
-                        <div>
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Vehicle</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.VehicleName" />
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Primary concern</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.Service" />
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Mileage</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.Mileage" />
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Technician</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.Technician" />
+                        </div>
+
+                        <div class="workorder-field">
                             <label class="portal-field-label">Approval status</label>
                             <InputText class="portal-input" @bind-Value="_model.Form.ApprovalStatus" />
                         </div>
 
-                        <div>
+                        <div class="workorder-field">
                             <label class="portal-field-label">Estimate amount</label>
                             <InputText class="portal-input" @bind-Value="_model.Form.EstimateAmount" />
                         </div>
 
-                        <div>
+                        <div class="workorder-field">
                             <label class="portal-field-label">Invoice number</label>
                             <InputText class="portal-input" @bind-Value="_model.Form.InvoiceNumber" />
                         </div>
 
-                        <div>
+                        <div class="workorder-field">
                             <label class="portal-field-label">Invoice amount</label>
                             <InputText class="portal-input" @bind-Value="_model.Form.InvoiceAmount" />
                         </div>
                     </div>
 
-                    <div class="portal-dashboard-grid" style="grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem;">
-                        <div>
+                    <div class="workorder-notes-grid">
+                        <div class="workorder-field">
                             <label class="portal-field-label">Customer complaint</label>
-                            <InputTextArea class="portal-input" style="min-height:120px;" @bind-Value="_model.Form.Complaint" />
+                            <InputTextArea class="portal-input" @bind-Value="_model.Form.Complaint" />
                         </div>
 
-                        <div>
+                        <div class="workorder-field">
                             <label class="portal-field-label">Diagnosis</label>
-                            <InputTextArea class="portal-input" style="min-height:120px;" @bind-Value="_model.Form.Diagnosis" />
+                            <InputTextArea class="portal-input" @bind-Value="_model.Form.Diagnosis" />
                         </div>
-                    </div>
 
-                    <div class="portal-dashboard-grid" style="grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem;">
-                        <div>
+                        <div class="workorder-field">
                             <label class="portal-field-label">Customer notes</label>
-                            <InputTextArea class="portal-input" style="min-height:120px;" @bind-Value="_model.Form.Notes" />
+                            <InputTextArea class="portal-input" @bind-Value="_model.Form.Notes" />
                         </div>
 
-                        <div>
+                        <div class="workorder-field">
                             <label class="portal-field-label">Internal notes</label>
-                            <InputTextArea class="portal-input" style="min-height:120px;" @bind-Value="_model.Form.InternalNotes" />
+                            <InputTextArea class="portal-input" @bind-Value="_model.Form.InternalNotes" />
                         </div>
                     </div>
 
-                    <div class="portal-actions" style="margin-top:1rem;">
+                    <div class="workorder-editor-actions">
+                        <button type="button" class="portal-action-button" @onclick="ResetEditorAsync">Cancel</button>
                         <button type="submit" class="portal-action-button">Save Work Order</button>
                     </div>
                 </EditForm>
