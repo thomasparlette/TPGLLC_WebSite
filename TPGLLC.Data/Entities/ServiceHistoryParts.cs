@@ -9,5 +9,6 @@ public sealed class ServiceHistoryPart
     public decimal? UnitPrice { get; set; }
     public bool IsApplied { get; set; }
     public bool IsApproved { get; set; }
+    public bool IsCustomerDeclined { get; set; }
     public ServiceHistoryEntry? ServiceHistoryEntry { get; set; }
 }

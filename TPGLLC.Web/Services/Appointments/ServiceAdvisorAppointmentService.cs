@@ -236,6 +236,13 @@ public sealed class ServiceAdvisorAppointmentService : IServiceAdvisorAppointmen
 
         if (existing is not null)
         {
+            if (IsInitialWorkOrderStatus(existing.Status))
+            {
+                existing.Status = "Requested";
+            }
+
+            existing.ApprovalStatus = request.Status;
+            existing.UpdatedUtc = DateTimeOffset.UtcNow;
             return AppointmentActionResult.Ok("Appointment approved and its work order is ready.");
         }
 
@@ -299,14 +306,20 @@ public sealed class ServiceAdvisorAppointmentService : IServiceAdvisorAppointmen
             WorkOrderNumber = null,
             Complaint = string.IsNullOrWhiteSpace(request.Message) ? null : request.Message.Trim(),
             Mileage = mileage,
-            Status = "Open",
-            ApprovalStatus = "Approved",
+            Status = "Requested",
+            ApprovalStatus = request.Status,
             CreatedUtc = DateTimeOffset.UtcNow
         };
 
         db.ServiceHistoryEntries.Add(workOrder);
         return AppointmentActionResult.Ok("Appointment approved and a blank work order was created.");
     }
+
+    private static bool IsInitialWorkOrderStatus(string? status) =>
+        string.IsNullOrWhiteSpace(status)
+        || status.Equals("Open", StringComparison.OrdinalIgnoreCase)
+        || status.Equals("New", StringComparison.OrdinalIgnoreCase)
+        || status.Equals("Requested", StringComparison.OrdinalIgnoreCase);
 
     private static async Task<AppointmentRequest?> FindValidTokenAsync(TPGLLCDbContext db, string token, CancellationToken cancellationToken) =>
         await db.AppointmentRequests.FirstOrDefaultAsync(

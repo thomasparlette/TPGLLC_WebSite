@@ -66,6 +66,16 @@
                     <h2>Work Orders</h2>
                     <div class="portal-muted">Every order is assigned a work order number. Use Edit to update the record.</div>
                 </div>
+                <div class="workorder-status-filter">
+                    <label class="portal-field-label" for="workorder-status-filter">Show status</label>
+                    <select id="workorder-status-filter" class="portal-input" @bind="_statusFilter">
+                        <option value="">All statuses</option>
+                        @foreach (var status in _model.StatusOptions)
+                        {
+                            <option value="@status">@GetStatusLabel(status)</option>
+                        }
+                    </select>
+                </div>
                 @if (_model.EditingWorkOrderId is not null)
                 {
                     <button type="button" class="portal-action-button" @onclick="ResetEditorAsync">Close Editor</button>
@@ -86,6 +96,7 @@
             {
                 <div class="workorder-list">
                     @foreach (var workOrder in _model.WorkOrders
+                        .Where(ShouldShowWorkOrder)
                         .OrderByDescending(x => x.ServiceDate)
                         .ThenByDescending(x => x.CreatedUtc))
                     {
@@ -123,6 +134,12 @@
                                 @if (workOrder.Mileage.HasValue)
                                 {
                                     <span class="workorder-badge">Mileage @workOrder.Mileage.Value.ToString("N0")</span>
+                                }
+                                @if (workOrder.Parts.Any(x => x.IsCustomerDeclined))
+                                {
+                                    <span class="workorder-badge workorder-badge-declined">
+                                        Customer declined @workOrder.Parts.Count(x => x.IsCustomerDeclined) part(s)
+                                    </span>
                                 }
                             </div>
                         </article>
@@ -261,7 +278,13 @@
                         @foreach (var part in _model.Form.Parts)
                         {
                             <div class="workorder-part-row">
-                                <InputText class="portal-input" placeholder="Part description" @bind-Value="part.Description" />
+                                <div class="workorder-part-description">
+                                    <InputText class="portal-input" placeholder="Part description" @bind-Value="part.Description" />
+                                    @if (part.IsCustomerDeclined)
+                                    {
+                                        <span class="workorder-part-status workorder-part-status-declined">Not approved by customer</span>
+                                    }
+                                </div>
                                 <InputText class="portal-input" placeholder="Qty" @bind-Value="part.Quantity" />
                                 <InputText class="portal-input" placeholder="Unit price" @bind-Value="part.UnitPrice" />
                                 <label><InputCheckbox @bind-Value="part.IsApplied" /> Applied</label>
@@ -284,6 +307,7 @@
 @code {
     private WorkOrderPageViewModel _model = new();
     private bool _loading = true;
+    private string _statusFilter = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -340,6 +364,13 @@
     }
 
     private static string FormatCurrency(decimal amount) => amount.ToString("C2", CultureInfo.CurrentCulture);
+
+    private bool ShouldShowWorkOrder(ServiceHistoryEntry workOrder) =>
+        string.IsNullOrWhiteSpace(_statusFilter)
+        || string.Equals(workOrder.Status, _statusFilter, StringComparison.OrdinalIgnoreCase);
+
+    private static string GetStatusLabel(string status) =>
+        string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase) ? "Canceled" : status;
 
     private static bool IsClosedStatus(string? status)
     {

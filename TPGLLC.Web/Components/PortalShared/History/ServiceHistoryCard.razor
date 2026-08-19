@@ -54,13 +54,13 @@
             <div class="service-record-line service-record-line-header">
                 <span>Part / labor</span><span>Qty</span><span>Amount</span><span>Status</span>
             </div>
-            @foreach (var part in Entry.Parts.Where(x => x.IsApplied || x.IsApproved))
+            @foreach (var part in Entry.Parts.Where(x => x.IsApplied || x.IsApproved || x.IsCustomerDeclined))
             {
                 <div class="service-record-line">
                     <span>@part.Description</span>
                     <span>@part.Quantity.ToString("0.##")</span>
                     <span>@((part.Quantity * (part.UnitPrice ?? 0m)).ToString("C"))</span>
-                    <span>@(part.IsApproved ? "Approved" : "Proposed")</span>
+                    <span>@(part.IsCustomerDeclined ? "Not approved" : part.IsApproved ? "Approved" : "Proposed")</span>
                 </div>
             }
             @if (Entry.LaborAmount.HasValue)
@@ -84,17 +84,30 @@
     {
         <div class="customer-approval-panel">
             <strong>Customer approval required</strong>
-            <p>Approve individual parts or approve the complete work order to allow work to continue.</p>
-            @foreach (var part in Entry.Parts.Where(x => !x.IsApproved))
+            <p>Approve or decline each proposed part, or choose an action for all work proposed.</p>
+            @foreach (var part in Entry.Parts.Where(x => x.IsApplied && !x.IsApproved && !x.IsCustomerDeclined))
             {
-                <button type="button" class="portal-action-button portal-action-button-secondary"
-                        @onclick="() => OnApprovePart.InvokeAsync(part.Id)">
-                    Approve @part.Description
-                </button>
+                <div class="customer-approval-item">
+                    <span>@part.Description</span>
+                    <button type="button" class="portal-action-button portal-action-button-secondary"
+                            @onclick="() => OnApprovePart.InvokeAsync(part.Id)">
+                        Approve
+                    </button>
+                    <button type="button" class="portal-danger-button"
+                            @onclick="() => OnDeclinePart.InvokeAsync(part.Id)">
+                        Do not approve
+                    </button>
+                </div>
             }
-            <button type="button" class="portal-action-button" @onclick="() => OnApproveWorkOrder.InvokeAsync(Entry.Id)">
-                Approve complete work order
-            </button>
+            <div class="customer-approval-item customer-approval-item-complete">
+                <span>All work proposed</span>
+                <button type="button" class="portal-action-button" @onclick="() => OnApproveWorkOrder.InvokeAsync(Entry.Id)">
+                    Approve all work proposed
+                </button>
+                <button type="button" class="portal-danger-button" @onclick="() => OnDeclineWorkOrder.InvokeAsync(Entry.Id)">
+                    Do not approve all work proposed
+                </button>
+            </div>
         </div>
     }
 
@@ -122,5 +135,7 @@
     [Parameter, EditorRequired] public ServiceHistoryEntry Entry { get; set; } = default!;
     [Parameter] public bool CanApprove { get; set; }
     [Parameter] public EventCallback<Guid> OnApprovePart { get; set; }
+    [Parameter] public EventCallback<Guid> OnDeclinePart { get; set; }
     [Parameter] public EventCallback<Guid> OnApproveWorkOrder { get; set; }
+    [Parameter] public EventCallback<Guid> OnDeclineWorkOrder { get; set; }
 }

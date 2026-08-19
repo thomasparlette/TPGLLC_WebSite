@@ -57,6 +57,8 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
                 .ToListAsync();
         }
 
+        await ApplyCancellationAvailabilityAsync(db, requests);
+
         return new AppointmentPageViewModel
         {
             Requests = requests,
@@ -195,6 +197,16 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
         {
             var model = await GetAsync();
             model.ErrorMessage = "Appointment request was not found.";
+            return model;
+        }
+
+        var linkedWorkOrder = await db.ServiceHistoryEntries
+            .FirstOrDefaultAsync(x => x.AppointmentRequestId == request.RequestId, cancellationToken);
+
+        if (linkedWorkOrder is not null && IsCancellationLocked(linkedWorkOrder.Status))
+        {
+            var model = await GetAsync();
+            model.ErrorMessage = "This appointment cannot be changed after the work order has been quoted.";
             return model;
         }
 
@@ -344,7 +356,22 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             return model;
         }
 
+        var workOrder = await db.ServiceHistoryEntries
+            .FirstOrDefaultAsync(x => x.AppointmentRequestId == request.RequestId, cancellationToken);
+
+        if (workOrder is not null && IsCancellationLocked(workOrder.Status))
+        {
+            var model = await GetAsync();
+            model.ErrorMessage = "This appointment cannot be cancelled after the work order has been quoted.";
+            return model;
+        }
+
         request.Status = "Cancelled";
+        if (workOrder is not null)
+        {
+            workOrder.Status = "Cancelled";
+            workOrder.UpdatedUtc = DateTimeOffset.UtcNow;
+        }
         await db.SaveChangesAsync(cancellationToken);
 
         var updatedModel = await GetAsync();
@@ -408,6 +435,39 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             || status.Equals("Declined", StringComparison.OrdinalIgnoreCase)
             || status.Equals("Closed", StringComparison.OrdinalIgnoreCase);
     }
+
+    private static async Task ApplyCancellationAvailabilityAsync(
+        TPGLLCDbContext db,
+        IReadOnlyList<AppointmentRequest> requests)
+    {
+        var requestIds = requests.Select(x => x.RequestId).ToList();
+        if (requestIds.Count == 0)
+        {
+            return;
+        }
+
+        var workOrderStatuses = await db.ServiceHistoryEntries
+            .AsNoTracking()
+            .Where(x => x.AppointmentRequestId.HasValue && requestIds.Contains(x.AppointmentRequestId.Value))
+            .ToDictionaryAsync(x => x.AppointmentRequestId!.Value, x => x.Status);
+
+        foreach (var request in requests)
+        {
+            request.CanCustomerCancel = !workOrderStatuses.TryGetValue(request.RequestId, out var status)
+                || !IsCancellationLocked(status);
+        }
+    }
+
+    private static bool IsCancellationLocked(string? status) =>
+        status is not null && (status.Equals("Quoted", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Waiting on Customer Approval", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Approved", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("In Progress", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Completed", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Invoiced", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Declined", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Closed", StringComparison.OrdinalIgnoreCase));
 
     private static bool TryParseYear(string? value, out int? year)
     {

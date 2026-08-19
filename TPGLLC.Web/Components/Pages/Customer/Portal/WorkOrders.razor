@@ -86,9 +86,11 @@
                     @foreach (var workOrder in _model.WorkOrders.OrderByDescending(x => x.ServiceDate).ThenByDescending(x => x.CreatedUtc))
                     {
                         <ServiceHistoryCard Entry="@workOrder"
-                                            CanApprove="@IsWaitingForCustomerApproval(workOrder.Status)"
+                                            CanApprove="@CanCustomerApprove(workOrder)"
                                             OnApprovePart="@(partId => ApprovePartAsync(partId, workOrder.Id))"
+                                            OnDeclinePart="@(partId => DeclinePartAsync(partId, workOrder.Id))"
                                             OnApproveWorkOrder="ApproveWorkOrderAsync"
+                                            OnDeclineWorkOrder="DeclineWorkOrderAsync"
                                             @key="workOrder.Id" />
                     }
                 </div>
@@ -172,8 +174,14 @@
             || status.Equals("Closed", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsWaitingForCustomerApproval(string? status) =>
-        string.Equals(status, "Waiting on Customer Approval", StringComparison.OrdinalIgnoreCase);
+    private static bool CanCustomerApprove(ServiceHistoryEntry workOrder)
+    {
+        var statusIsOpen = string.Equals(workOrder.Status, "Waiting on Customer Approval", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(workOrder.Status, "In Progress", StringComparison.OrdinalIgnoreCase);
+
+        return statusIsOpen && (workOrder.Parts.Any(x => x.IsApplied && !x.IsApproved && !x.IsCustomerDeclined)
+            || string.Equals(workOrder.Status, "Waiting on Customer Approval", StringComparison.OrdinalIgnoreCase));
+    }
 
     private async Task ApprovePartAsync(Guid partId, Guid workOrderId)
     {
@@ -184,6 +192,18 @@
     private async Task ApproveWorkOrderAsync(Guid workOrderId)
     {
         _model = await WorkOrderService.ApproveWorkOrderAsync(workOrderId);
+        _errorMessage = _model.ErrorMessage;
+    }
+
+    private async Task DeclinePartAsync(Guid partId, Guid workOrderId)
+    {
+        _model = await WorkOrderService.DeclinePartAsync(workOrderId, partId);
+        _errorMessage = _model.ErrorMessage;
+    }
+
+    private async Task DeclineWorkOrderAsync(Guid workOrderId)
+    {
+        _model = await WorkOrderService.DeclineWorkOrderAsync(workOrderId);
         _errorMessage = _model.ErrorMessage;
     }
 }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TPGLLC.Data;
 
@@ -11,9 +12,11 @@ using TPGLLC.Data;
 namespace TPGLLC.Data.Migrations
 {
     [DbContext(typeof(TPGLLCDbContext))]
-    partial class TPGLLCDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260818235440_UpdatesToAppointments")]
+    partial class UpdatesToAppointments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -560,9 +563,6 @@ namespace TPGLLC.Data.Migrations
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsApproved")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsCustomerDeclined")
                         .HasColumnType("bit");
 
                     b.Property<decimal>("Quantity")

@@ -10,5 +10,7 @@ public interface IWorkOrderPortalService
     Task<WorkOrderPageViewModel> ResetAsync();
     Task<WorkOrderPageViewModel> SaveAsync(WorkOrderPageViewModel model);
     Task<WorkOrderPageViewModel> ApprovePartAsync(Guid workOrderId, Guid partId);
+    Task<WorkOrderPageViewModel> DeclinePartAsync(Guid workOrderId, Guid partId);
     Task<WorkOrderPageViewModel> ApproveWorkOrderAsync(Guid workOrderId);
+    Task<WorkOrderPageViewModel> DeclineWorkOrderAsync(Guid workOrderId);
 }

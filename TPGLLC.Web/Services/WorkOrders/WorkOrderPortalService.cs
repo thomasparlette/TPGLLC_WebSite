@@ -56,7 +56,6 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         await EnsureWorkOrderNumbersAsync(db, customer.Id);
 
         var workOrders = await db.ServiceHistoryEntries
-            .AsNoTracking()
             .Include(x => x.Parts)
             .Where(x => x.CustomerId == customer.Id)
             .OrderByDescending(x => x.ServiceDate)
@@ -64,6 +63,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             .ToListAsync();
 
         await ApplyAppointmentFieldsAsync(db, workOrders);
+        await db.SaveChangesAsync();
 
         return new WorkOrderPageViewModel
         {
@@ -96,12 +96,13 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         await EnsureWorkOrderNumbersAsync(db);
 
         var workOrders = await db.ServiceHistoryEntries
-            .AsNoTracking()
+            .Include(x => x.Parts)
             .OrderByDescending(x => x.ServiceDate)
             .ThenByDescending(x => x.CreatedUtc)
             .ToListAsync();
 
         await ApplyAppointmentFieldsAsync(db, workOrders);
+        await db.SaveChangesAsync();
 
         return new WorkOrderPageViewModel
         {
@@ -133,6 +134,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         var appointment = selectedOrder.AppointmentRequestId.HasValue
             ? await db.AppointmentRequests.AsNoTracking().FirstOrDefaultAsync(x => x.RequestId == selectedOrder.AppointmentRequestId.Value)
             : null;
+        ApplyAppointmentStatusToWorkOrder(selectedOrder, appointment?.Status);
         model.Form = MapToForm(selectedOrder, appointment);
         model.Form.Parts = await db.ServiceHistoryParts.AsNoTracking()
             .Where(x => x.ServiceHistoryEntryId == selectedOrder.Id)
@@ -144,7 +146,8 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
                 Quantity = x.Quantity.ToString("0.##"),
                 UnitPrice = x.UnitPrice.HasValue ? x.UnitPrice.Value.ToString("0.00") : null,
                 IsApplied = x.IsApplied,
-                IsApproved = x.IsApproved
+                IsApproved = x.IsApproved,
+                IsCustomerDeclined = x.IsCustomerDeclined
             }).ToListAsync();
         return model;
     }
@@ -241,6 +244,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         }
         workOrder.Technician = Normalize(model.Form.Technician);
         workOrder.Status = Normalize(model.Form.Status) ?? workOrder.Status;
+        ApplyAppointmentStatusToWorkOrder(workOrder, appointment?.Status);
         workOrder.Mileage = mileage;
         workOrder.MileageOut = mileageOut;
         workOrder.LaborAmount = laborAmount;
@@ -278,6 +282,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             savedPart.IsApproved = string.Equals(workOrder.Status, "Quoted", StringComparison.OrdinalIgnoreCase)
                 ? part.IsApproved
                 : savedPart.IsApproved;
+            savedPart.IsCustomerDeclined = existing?.IsCustomerDeclined ?? part.IsCustomerDeclined;
             var partTotal = savedPart.Quantity * (savedPart.UnitPrice ?? 0m);
             if (savedPart.IsApplied) appliedPartsTotal += partTotal;
             if (savedPart.IsApproved) approvedPartsTotal += partTotal;
@@ -312,7 +317,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             return new WorkOrderPageViewModel { ErrorMessage = "Work order not found." };
         }
 
-        if (!IsWaitingForCustomerApproval(workOrder.Status))
+        if (!IsCustomerApprovalOpen(workOrder.Status))
         {
             return await GetCustomerErrorAsync("This work order is not waiting for customer approval.");
         }
@@ -324,12 +329,54 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         }
 
         part.IsApproved = true;
+        part.IsCustomerDeclined = false;
         workOrder.Status = "In Progress";
         workOrder.InvoiceAmount = CalculateApprovedTotal(workOrder);
         workOrder.UpdatedUtc = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync();
 
         return await GetCustomerResultAsync("Part approved and work is now in progress.");
+    }
+
+    public async Task<WorkOrderPageViewModel> DeclinePartAsync(Guid workOrderId, Guid partId)
+    {
+        var current = _currentCustomerAccessor.GetCurrentCustomer();
+        if (!current.IsAuthenticated)
+        {
+            return new WorkOrderPageViewModel { ErrorMessage = "You must be signed in to decline work." };
+        }
+
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var workOrder = await GetCustomerWorkOrderAsync(db, workOrderId, current.UserId);
+        if (workOrder is null)
+        {
+            return new WorkOrderPageViewModel { ErrorMessage = "Work order not found." };
+        }
+
+        if (!IsCustomerApprovalOpen(workOrder.Status))
+        {
+            return await GetCustomerErrorAsync("This work order is not open for customer decisions.");
+        }
+
+        var part = workOrder.Parts.FirstOrDefault(x => x.Id == partId);
+        if (part is null)
+        {
+            return new WorkOrderPageViewModel { ErrorMessage = "Part not found." };
+        }
+
+        part.IsApproved = false;
+        part.IsCustomerDeclined = true;
+        if (!workOrder.Parts.Any(x => x.IsApproved)
+            && !workOrder.Parts.Any(x => x.IsApplied && !x.IsCustomerDeclined))
+        {
+            workOrder.Status = "Declined";
+        }
+
+        workOrder.InvoiceAmount = CalculateApprovedTotal(workOrder);
+        workOrder.UpdatedUtc = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync();
+
+        return await GetCustomerResultAsync("Part marked as not approved.");
     }
 
     public async Task<WorkOrderPageViewModel> ApproveWorkOrderAsync(Guid workOrderId)
@@ -347,14 +394,15 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             return new WorkOrderPageViewModel { ErrorMessage = "Work order not found." };
         }
 
-        if (!IsWaitingForCustomerApproval(workOrder.Status))
+        if (!IsCustomerApprovalOpen(workOrder.Status))
         {
             return await GetCustomerErrorAsync("This work order is not waiting for customer approval.");
         }
 
-        foreach (var part in workOrder.Parts)
+        foreach (var part in workOrder.Parts.Where(x => x.IsApplied))
         {
             part.IsApproved = true;
+            part.IsCustomerDeclined = false;
         }
 
         workOrder.Status = "In Progress";
@@ -363,6 +411,40 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         await db.SaveChangesAsync();
 
         return await GetCustomerResultAsync("Work order approved and now in progress.");
+    }
+
+    public async Task<WorkOrderPageViewModel> DeclineWorkOrderAsync(Guid workOrderId)
+    {
+        var current = _currentCustomerAccessor.GetCurrentCustomer();
+        if (!current.IsAuthenticated)
+        {
+            return new WorkOrderPageViewModel { ErrorMessage = "You must be signed in to decline work." };
+        }
+
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var workOrder = await GetCustomerWorkOrderAsync(db, workOrderId, current.UserId);
+        if (workOrder is null)
+        {
+            return new WorkOrderPageViewModel { ErrorMessage = "Work order not found." };
+        }
+
+        if (!IsCustomerApprovalOpen(workOrder.Status))
+        {
+            return await GetCustomerErrorAsync("This work order is not open for customer decisions.");
+        }
+
+        foreach (var part in workOrder.Parts.Where(x => x.IsApplied))
+        {
+            part.IsApproved = false;
+            part.IsCustomerDeclined = true;
+        }
+
+        workOrder.Status = "Declined";
+        workOrder.InvoiceAmount = CalculateApprovedTotal(workOrder);
+        workOrder.UpdatedUtc = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync();
+
+        return await GetCustomerResultAsync("All proposed work was not approved.");
     }
 
     private static async Task EnsureWorkOrderNumbersAsync(TPGLLCDbContext db, Guid? customerId = null)
@@ -421,12 +503,20 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             .FirstOrDefaultAsync();
     }
 
-    private static bool IsWaitingForCustomerApproval(string? status) =>
-        string.Equals(status, "Waiting on Customer Approval", StringComparison.OrdinalIgnoreCase);
+    private static bool IsCustomerApprovalOpen(string? status) =>
+        string.Equals(status, "Waiting on Customer Approval", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(status, "In Progress", StringComparison.OrdinalIgnoreCase);
 
-    private static decimal CalculateApprovedTotal(ServiceHistoryEntry workOrder) =>
-        workOrder.Parts.Where(x => x.IsApproved)
+    private static decimal CalculateApprovedTotal(ServiceHistoryEntry workOrder)
+    {
+        if (string.Equals(workOrder.Status, "Declined", StringComparison.OrdinalIgnoreCase))
+        {
+            return 0m;
+        }
+
+        return workOrder.Parts.Where(x => x.IsApproved)
             .Sum(x => x.Quantity * (x.UnitPrice ?? 0m)) + (workOrder.LaborAmount ?? 0m);
+    }
 
     private static async Task<string> GetNextWorkOrderNumberAsync(TPGLLCDbContext db)
     {
@@ -482,7 +572,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             Complaint = appointment?.Message ?? entry.Complaint,
             Diagnosis = entry.Diagnosis,
             Technician = entry.Technician,
-            Status = entry.Status,
+            Status = string.IsNullOrWhiteSpace(entry.Status) ? "Requested" : entry.Status,
             ApprovalStatus = appointment?.Status ?? entry.ApprovalStatus,
             Mileage = entry.Mileage?.ToString(CultureInfo.InvariantCulture),
             MileageOut = entry.MileageOut?.ToString(CultureInfo.InvariantCulture),
@@ -510,6 +600,32 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             workOrder.Service = appointment.ServiceNeeded ?? workOrder.Service;
             workOrder.Complaint = appointment.Message;
             workOrder.ApprovalStatus = appointment.Status;
+            ApplyAppointmentStatusToWorkOrder(workOrder, appointment.Status);
+        }
+    }
+
+    private static void ApplyAppointmentStatusToWorkOrder(ServiceHistoryEntry workOrder, string? appointmentStatus)
+    {
+        if (string.Equals(appointmentStatus, "Cancelled", StringComparison.OrdinalIgnoreCase))
+        {
+            workOrder.Status = "Cancelled";
+            return;
+        }
+
+        if (string.Equals(appointmentStatus, "Declined", StringComparison.OrdinalIgnoreCase))
+        {
+            workOrder.Status = "Declined";
+            return;
+        }
+
+        if ((string.Equals(appointmentStatus, "Confirmed", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(appointmentStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+            && (string.IsNullOrWhiteSpace(workOrder.Status)
+                || string.Equals(workOrder.Status, "Open", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(workOrder.Status, "New", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(workOrder.Status, "Requested", StringComparison.OrdinalIgnoreCase)))
+        {
+            workOrder.Status = "Requested";
         }
     }
     private bool IsServiceAdvisorOrAdministrator()

@@ -82,4 +82,5 @@ public sealed class WorkOrderPartEditViewModel
     public string? UnitPrice { get; set; }
     public bool IsApplied { get; set; }
     public bool IsApproved { get; set; }
+    public bool IsCustomerDeclined { get; set; }
 }

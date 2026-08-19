@@ -73,6 +73,10 @@
                     Cancel
                 </button>
             }
+            else if (!Request.CanCustomerCancel)
+            {
+                <span class="portal-muted">Appointment changes are unavailable after the work order is quoted.</span>
+            }
         </div>
     }
 
@@ -108,9 +112,9 @@
 
     private bool CanShowActions => ShowActions && !IsClosedStatus(Request.Status);
 
-    private bool CanReschedule => CanShowActions;
+    private bool CanReschedule => CanShowActions && Request.CanCustomerCancel;
 
-    private bool CanCancel => CanShowActions;
+    private bool CanCancel => CanShowActions && Request.CanCustomerCancel;
 
     private Task HandleRescheduleAsync()
     {

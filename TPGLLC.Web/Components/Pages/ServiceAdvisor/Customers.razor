@@ -2,8 +2,10 @@
 @layout CustomerLayout
 @attribute [Authorize(Policy = PortalPolicies.ServiceAdvisor)]
 
+@using System.Globalization
 @using Microsoft.EntityFrameworkCore
 @using TPGLLC.Data
+@using TPGLLC.Data.Entities
 
 @inject IDbContextFactory<TPGLLCDbContext> DbFactory
 
@@ -13,7 +15,7 @@
     <div class="portal-header">
         <p class="section-kicker">Service Advisor Portal</p>
         <h1>Customers</h1>
-        <p>Search customers and view their records before opening a work order.</p>
+        <p>Search customers and review their appointments and work orders by vehicle.</p>
     </div>
 
     @if (_loading)
@@ -28,45 +30,351 @@
     }
     else
     {
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <PortalNotice Type="danger" Title="Customers unavailable">
+                @_errorMessage
+            </PortalNotice>
+        }
+
         <div class="portal-stats">
             <div class="portal-stat">
-                <div class="portal-stat-value">@_customerCount</div>
+                <div class="portal-stat-value">@_customers.Count</div>
                 <div class="portal-stat-label">Customers</div>
             </div>
             <div class="portal-stat">
-                <div class="portal-stat-value">@_vehicleCount</div>
+                <div class="portal-stat-value">@_customers.Sum(x => x.Vehicles.Count)</div>
                 <div class="portal-stat-label">Vehicles</div>
             </div>
             <div class="portal-stat">
-                <div class="portal-stat-value">@_requestCount</div>
-                <div class="portal-stat-label">Requests</div>
+                <div class="portal-stat-value">@_customers.Sum(x => x.Appointments.Count)</div>
+                <div class="portal-stat-label">Appointments</div>
             </div>
         </div>
 
         <div class="portal-section">
-            <div class="portal-empty-state">
-                <div class="portal-empty-icon">👥</div>
+            <div class="customer-directory-toolbar">
                 <div>
-                    <div class="portal-empty-title">Customer directory coming next</div>
-                    <div class="portal-empty-text">This page is in place for customer search, records, and history lookup.</div>
+                    <label class="portal-field-label" for="customer-search">Search customers</label>
+                    <input id="customer-search"
+                           class="portal-input"
+                           @bind="_search"
+                           @bind:event="oninput"
+                           placeholder="Name, email, phone, VIN, or vehicle" />
                 </div>
+                <div class="portal-muted">Showing @FilteredCustomers.Count() of @_customers.Count customers</div>
             </div>
         </div>
+
+        @if (!FilteredCustomers.Any())
+        {
+            <div class="portal-empty-state">
+                <div class="portal-empty-icon">🔎</div>
+                <div>
+                    <div class="portal-empty-title">No matching customers</div>
+                    <div class="portal-empty-text">Try a different name, email address, phone number, VIN, or vehicle.</div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="customer-directory-grid">
+                @foreach (var customer in FilteredCustomers)
+                {
+                    <article class="customer-directory-card" @key="customer.Customer.Id">
+                        <div class="customer-directory-card-header">
+                            <div>
+                                <h2>@GetCustomerName(customer.Customer)</h2>
+                                <div class="customer-directory-contact">@customer.Customer.Email</div>
+                                @if (!string.IsNullOrWhiteSpace(customer.Customer.Phone))
+                                {
+                                    <div class="customer-directory-contact">@customer.Customer.Phone</div>
+                                }
+                            </div>
+                            <div class="customer-directory-counts">
+                                <span class="portal-chip">@customer.Vehicles.Count vehicle(s)</span>
+                                <span class="portal-chip">@customer.Appointments.Count appointment(s)</span>
+                            </div>
+                        </div>
+
+                        @foreach (var vehicle in customer.Vehicles)
+                        {
+                            <section class="customer-vehicle-record">
+                                <div class="customer-vehicle-heading">
+                                    <div>
+                                        <h3>@GetVehicleTitle(vehicle.Vehicle)</h3>
+                                        @if (!string.IsNullOrWhiteSpace(vehicle.Vehicle.Vin))
+                                        {
+                                            <div class="customer-directory-contact">VIN: @vehicle.Vehicle.Vin</div>
+                                        }
+                                    </div>
+                                    @if (vehicle.Vehicle.IsPrimary)
+                                    {
+                                        <span class="portal-chip">Primary</span>
+                                    }
+                                </div>
+
+                                <div class="customer-record-group">
+                                    <h4>Appointments</h4>
+                                    @if (vehicle.Appointments.Count == 0)
+                                    {
+                                        <div class="portal-muted">No appointments for this vehicle.</div>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var appointment in vehicle.Appointments.OrderByDescending(x => x.SubmittedAtUtc))
+                                        {
+                                            <div class="customer-record-row">
+                                                <div>
+                                                    <strong>@appointment.ServiceNeeded</strong>
+                                                    <div class="portal-muted">@FormatAppointmentDate(appointment)</div>
+                                                    @if (!string.IsNullOrWhiteSpace(appointment.Message))
+                                                    {
+                                                        <div class="customer-record-note">@appointment.Message</div>
+                                                    }
+                                                </div>
+                                                <span class="portal-chip">@FormatStatus(appointment.Status)</span>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+
+                                <div class="customer-record-group">
+                                    <h4>Work orders</h4>
+                                    @if (vehicle.WorkOrders.Count == 0)
+                                    {
+                                        <div class="portal-muted">No work orders for this vehicle.</div>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var workOrder in vehicle.WorkOrders.OrderByDescending(x => x.ServiceDate))
+                                        {
+                                            <div class="customer-record-row">
+                                                <div>
+                                                    <strong>@(workOrder.WorkOrderNumber ?? "Work order")</strong>
+                                                    <div class="portal-muted">@workOrder.ServiceDate.ToString("MMM d, yyyy", CultureInfo.InvariantCulture) · @workOrder.Service</div>
+                                                </div>
+                                                <span class="portal-chip">@FormatStatus(workOrder.Status)</span>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            </section>
+                        }
+
+                        @if (customer.UnmatchedAppointments.Count > 0 || customer.UnmatchedWorkOrders.Count > 0)
+                        {
+                            <section class="customer-vehicle-record customer-unmatched-records">
+                                <h3>Other records</h3>
+                                @foreach (var appointment in customer.UnmatchedAppointments.OrderByDescending(x => x.SubmittedAtUtc))
+                                {
+                                    <div class="customer-record-row">
+                                        <div>
+                                            <strong>Appointment: @appointment.ServiceNeeded</strong>
+                                            <div class="portal-muted">@FormatAppointmentDate(appointment)</div>
+                                        </div>
+                                        <span class="portal-chip">@FormatStatus(appointment.Status)</span>
+                                    </div>
+                                }
+                                @foreach (var workOrder in customer.UnmatchedWorkOrders.OrderByDescending(x => x.ServiceDate))
+                                {
+                                    <div class="customer-record-row">
+                                        <div>
+                                            <strong>Work order: @(workOrder.WorkOrderNumber ?? "Unnumbered")</strong>
+                                            <div class="portal-muted">@workOrder.VehicleName · @workOrder.Service</div>
+                                        </div>
+                                        <span class="portal-chip">@FormatStatus(workOrder.Status)</span>
+                                    </div>
+                                }
+                            </section>
+                        }
+                    </article>
+                }
+            </div>
+        }
     }
 </section>
 
 @code {
     private bool _loading = true;
-    private int _customerCount;
-    private int _vehicleCount;
-    private int _requestCount;
+    private string? _errorMessage;
+    private string _search = string.Empty;
+    private List<AdvisorCustomerRecord> _customers = [];
+
+    private IEnumerable<AdvisorCustomerRecord> FilteredCustomers =>
+        string.IsNullOrWhiteSpace(_search) ? _customers : _customers.Where(MatchesSearch);
 
     protected override async Task OnInitializedAsync()
     {
-        await using var db = await DbFactory.CreateDbContextAsync();
-        _customerCount = await db.Customers.AsNoTracking().CountAsync();
-        _vehicleCount = await db.CustomerVehicles.AsNoTracking().CountAsync();
-        _requestCount = await db.AppointmentRequests.AsNoTracking().CountAsync();
-        _loading = false;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var customers = await db.Customers.AsNoTracking()
+                .OrderBy(x => x.LastName)
+                .ThenBy(x => x.FirstName)
+                .ToListAsync();
+            var customerIds = customers.Select(x => x.Id).ToList();
+            var vehicles = await db.CustomerVehicles.AsNoTracking()
+                .Where(x => customerIds.Contains(x.CustomerId))
+                .OrderByDescending(x => x.IsPrimary)
+                .ThenBy(x => x.Make)
+                .ThenBy(x => x.Model)
+                .ToListAsync();
+            var workOrders = await db.ServiceHistoryEntries.AsNoTracking()
+                .Where(x => customerIds.Contains(x.CustomerId))
+                .ToListAsync();
+            var customerEmails = customers.Select(x => x.Email)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x!)
+                .ToList();
+            List<AppointmentRequest> appointments = customerEmails.Count == 0
+                ? []
+                : await db.AppointmentRequests.AsNoTracking()
+                    .Where(x => x.Email != null && customerEmails.Contains(x.Email))
+                    .ToListAsync();
+
+            foreach (var customer in customers)
+            {
+                var customerVehicles = vehicles.Where(x => x.CustomerId == customer.Id).ToList();
+                var customerWorkOrders = workOrders.Where(x => x.CustomerId == customer.Id).ToList();
+                var customerAppointments = appointments
+                    .Where(x => string.Equals(x.Email, customer.Email, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                var matchedAppointments = new HashSet<Guid>();
+
+                var vehicleRecords = customerVehicles.Select(vehicle =>
+                {
+                    var vehicleAppointments = customerAppointments.Where(x => MatchesVehicle(x, vehicle)).ToList();
+                    foreach (var appointment in vehicleAppointments)
+                    {
+                        matchedAppointments.Add(appointment.RequestId);
+                    }
+
+                    return new AdvisorVehicleRecord
+                    {
+                        Vehicle = vehicle,
+                        Appointments = vehicleAppointments,
+                        WorkOrders = customerWorkOrders.Where(x => x.CustomerVehicleId == vehicle.Id).ToList()
+                    };
+                }).ToList();
+
+                var matchedWorkOrderIds = vehicleRecords.SelectMany(x => x.WorkOrders).Select(x => x.Id).ToHashSet();
+                _customers.Add(new AdvisorCustomerRecord
+                {
+                    Customer = customer,
+                    Vehicles = vehicleRecords,
+                    Appointments = customerAppointments,
+                    UnmatchedAppointments = customerAppointments.Where(x => !matchedAppointments.Contains(x.RequestId)).ToList(),
+                    UnmatchedWorkOrders = customerWorkOrders.Where(x => !matchedWorkOrderIds.Contains(x.Id)).ToList()
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static bool MatchesVehicle(AppointmentRequest appointment, CustomerVehicle vehicle)
+    {
+        if (!string.IsNullOrWhiteSpace(appointment.Vin) && !string.IsNullOrWhiteSpace(vehicle.Vin))
+        {
+            return string.Equals(appointment.Vin.Trim(), vehicle.Vin.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        var hasVehicleDetail = false;
+        if (!string.IsNullOrWhiteSpace(appointment.VehicleYear))
+        {
+            hasVehicleDetail = true;
+            if (!int.TryParse(appointment.VehicleYear, out var year) || vehicle.ModelYear != year) return false;
+        }
+        if (!string.IsNullOrWhiteSpace(appointment.VehicleMake))
+        {
+            hasVehicleDetail = true;
+            if (!string.Equals(appointment.VehicleMake.Trim(), vehicle.Make?.Trim(), StringComparison.OrdinalIgnoreCase)) return false;
+        }
+        if (!string.IsNullOrWhiteSpace(appointment.VehicleModel))
+        {
+            hasVehicleDetail = true;
+            if (!string.Equals(appointment.VehicleModel.Trim(), vehicle.Model?.Trim(), StringComparison.OrdinalIgnoreCase)) return false;
+        }
+
+        return hasVehicleDetail;
+    }
+
+    private bool MatchesSearch(AdvisorCustomerRecord customer)
+    {
+        var values = new List<string?>
+        {
+            customer.Customer.FirstName,
+            customer.Customer.LastName,
+            customer.Customer.Email,
+            customer.Customer.Phone
+        };
+        values.AddRange(customer.Vehicles.SelectMany(x => new[]
+        {
+            x.Vehicle.Make,
+            x.Vehicle.Model,
+            x.Vehicle.ModelYear?.ToString(CultureInfo.InvariantCulture),
+            x.Vehicle.Vin,
+            x.Vehicle.Nickname,
+            x.Vehicle.LicensePlate
+        }));
+
+        var search = _search.Trim();
+        return values.Any(x => !string.IsNullOrWhiteSpace(x) && x.Contains(search, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string GetCustomerName(Customer customer)
+    {
+        var name = $"{customer.FirstName} {customer.LastName}".Trim();
+        return string.IsNullOrWhiteSpace(name) ? customer.Email ?? "Customer" : name;
+    }
+
+    private static string GetVehicleTitle(CustomerVehicle vehicle)
+    {
+        var title = string.Join(" ", new[]
+        {
+            vehicle.ModelYear?.ToString(CultureInfo.InvariantCulture), vehicle.Make, vehicle.Model
+        }.Where(x => !string.IsNullOrWhiteSpace(x)));
+        return string.IsNullOrWhiteSpace(title) ? vehicle.Nickname ?? "Vehicle" : title;
+    }
+
+    private static string FormatAppointmentDate(AppointmentRequest appointment)
+    {
+        var value = string.Join(" ", new[] { appointment.PreferredDate, appointment.PreferredTime }
+            .Where(x => !string.IsNullOrWhiteSpace(x)));
+        return string.IsNullOrWhiteSpace(value) ? "No date/time provided" : value;
+    }
+
+    private static string FormatStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status)) return "Requested";
+        if (status.Equals("AwaitingCustomerApproval", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("RescheduleProposed", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Waiting on Customer Approval";
+        }
+        return status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) ? "Canceled" : status;
+    }
+
+    private sealed class AdvisorCustomerRecord
+    {
+        public Customer Customer { get; init; } = default!;
+        public List<AdvisorVehicleRecord> Vehicles { get; init; } = [];
+        public List<AppointmentRequest> Appointments { get; init; } = [];
+        public List<AppointmentRequest> UnmatchedAppointments { get; init; } = [];
+        public List<ServiceHistoryEntry> UnmatchedWorkOrders { get; init; } = [];
+    }
+
+    private sealed class AdvisorVehicleRecord
+    {
+        public CustomerVehicle Vehicle { get; init; } = default!;
+        public List<AppointmentRequest> Appointments { get; init; } = [];
+        public List<ServiceHistoryEntry> WorkOrders { get; init; } = [];
     }
 }

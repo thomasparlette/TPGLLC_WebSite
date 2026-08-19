@@ -49,4 +49,7 @@ public sealed class AppointmentRequest
     public Guid RequestId { get; set; } = Guid.NewGuid();
     public DateTimeOffset SubmittedAtUtc { get; set; } = DateTimeOffset.UtcNow;
     public string Status { get; set; } = "Pending";
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public bool CanCustomerCancel { get; set; } = true;
 }

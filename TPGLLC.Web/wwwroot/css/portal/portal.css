@@ -511,6 +511,26 @@
         color: #52627d;
     }
 
+.customer-approval-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    width: 100%;
+}
+
+    .customer-approval-item > span {
+        min-width: 12rem;
+        flex: 1 1 auto;
+        font-weight: 700;
+        color: #0d2a63;
+    }
+
+.customer-approval-item-complete {
+    padding-top: .65rem;
+    border-top: 1px solid #dbe7fb;
+}
+
 .portal-action-button-secondary {
     background: #4268a7;
 }

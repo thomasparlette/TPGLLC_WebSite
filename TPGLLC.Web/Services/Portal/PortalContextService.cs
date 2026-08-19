@@ -78,6 +78,16 @@ public sealed class PortalContextService : IPortalContextService
                 .ToListAsync(cancellationToken);
         }
 
+        var workOrderStatuses = serviceHistory
+            .Where(x => x.AppointmentRequestId.HasValue)
+            .ToDictionary(x => x.AppointmentRequestId!.Value, x => x.Status);
+
+        foreach (var request in appointmentRequests)
+        {
+            request.CanCustomerCancel = !workOrderStatuses.TryGetValue(request.RequestId, out var status)
+                || !IsCancellationLocked(status);
+        }
+
         var displayName =
             user?.DisplayName?.Trim()
             ?? string.Join(" ", new[] { user?.FirstName, user?.LastName }
@@ -131,4 +141,15 @@ public sealed class PortalContextService : IPortalContextService
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == vehicleId, cancellationToken);
     }
+
+    private static bool IsCancellationLocked(string? status) =>
+        status is not null && (status.Equals("Quoted", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Waiting on Customer Approval", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Approved", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("In Progress", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Completed", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Invoiced", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Declined", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Closed", StringComparison.OrdinalIgnoreCase));
 }
