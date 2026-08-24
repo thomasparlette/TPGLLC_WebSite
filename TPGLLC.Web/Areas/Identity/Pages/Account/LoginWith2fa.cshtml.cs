@@ -9,10 +9,14 @@ namespace TPGLLC.Web.Areas.Identity.Pages.Account;
 public sealed class LoginWith2faModel : PageModel
 {
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly UserManager<ApplicationUser> _userManager;
 
-    public LoginWith2faModel(SignInManager<ApplicationUser> signInManager)
+    public LoginWith2faModel(
+        SignInManager<ApplicationUser> signInManager,
+        UserManager<ApplicationUser> userManager)
     {
         _signInManager = signInManager;
+        _userManager = userManager;
     }
 
     [BindProperty]
@@ -36,6 +40,7 @@ public sealed class LoginWith2faModel : PageModel
         }
 
         var code = Input.TwoFactorCode.Replace(" ", string.Empty).Replace("-", string.Empty);
+        var user = await _signInManager.GetTwoFactorAuthenticationUserAsync();
         var result = await _signInManager.TwoFactorAuthenticatorSignInAsync(
             code,
             Input.RememberMe,
@@ -43,6 +48,7 @@ public sealed class LoginWith2faModel : PageModel
 
         if (result.Succeeded)
         {
+            await RecordLoginAsync(user);
             return LocalRedirect(string.IsNullOrWhiteSpace(Input.ReturnUrl) ? "/portal" : Input.ReturnUrl!);
         }
 
@@ -64,10 +70,12 @@ public sealed class LoginWith2faModel : PageModel
         }
 
         var code = Input.RecoveryCode.Replace(" ", string.Empty).Replace("-", string.Empty);
+        var user = await _signInManager.GetTwoFactorAuthenticationUserAsync();
         var result = await _signInManager.TwoFactorRecoveryCodeSignInAsync(code);
 
         if (result.Succeeded)
         {
+            await RecordLoginAsync(user);
             return LocalRedirect(string.IsNullOrWhiteSpace(returnUrl) ? "/portal" : returnUrl);
         }
 
@@ -79,6 +87,17 @@ public sealed class LoginWith2faModel : PageModel
 
         ErrorMessage = "Invalid recovery code.";
         return Page();
+    }
+
+    private async Task RecordLoginAsync(ApplicationUser? user)
+    {
+        if (user is null)
+        {
+            return;
+        }
+
+        user.LastLoginUtc = DateTimeOffset.UtcNow;
+        await _userManager.UpdateAsync(user);
     }
 
     public sealed class InputModel

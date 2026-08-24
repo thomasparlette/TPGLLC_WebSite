@@ -56,6 +56,14 @@ public sealed class LoginModel : PageModel
 
         if (result.Succeeded)
         {
+            var user = await _userManager.FindByEmailAsync(Input.Email.Trim())
+                ?? await _userManager.FindByNameAsync(Input.Email.Trim());
+
+            if (user is not null)
+            {
+                await RecordLoginAsync(user);
+            }
+
             return LocalRedirect(await GetPostLoginReturnUrl(Input.ReturnUrl, Input.Email.Trim()));
         }
 
@@ -120,6 +128,12 @@ public sealed class LoginModel : PageModel
 
         if (externalSignIn.Succeeded)
         {
+            var linkedUser = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
+            if (linkedUser is not null)
+            {
+                await RecordLoginAsync(linkedUser);
+            }
+
             return LocalRedirect(await GetPostLoginReturnUrl(safeReturnUrl, email ?? string.Empty));
         }
 
@@ -174,8 +188,15 @@ public sealed class LoginModel : PageModel
             return Page();
         }
 
+        await RecordLoginAsync(lookupUser);
         await _signInManager.SignInAsync(lookupUser, isPersistent: true);
         return LocalRedirect(await GetPostLoginReturnUrl(safeReturnUrl, email));
+    }
+
+    private async Task RecordLoginAsync(ApplicationUser user)
+    {
+        user.LastLoginUtc = DateTimeOffset.UtcNow;
+        await _userManager.UpdateAsync(user);
     }
 
     private string GetReturnUrl(string? returnUrl)
