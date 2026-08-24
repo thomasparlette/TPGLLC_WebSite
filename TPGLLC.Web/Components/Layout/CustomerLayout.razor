@@ -27,9 +27,30 @@
                         Welcome, @(GetDisplayName(authState.User))
                     </div>
 
-                    <a class="portal-admin-link" href="@GetPortalHomeHref(authState.User)">
-                        @GetPortalLabel(authState.User)
-                    </a>
+                    @if (authState.User.IsInRole("Administrator"))
+                    {
+                        <a class="portal-admin-link" href="/portal/admin">Administration</a>
+                    }
+
+                    @if (authState.User.IsInRole("ServiceAdvisor"))
+                    {
+                        <a class="portal-admin-link" href="/portal/service-advisor">Service Advisor</a>
+                    }
+
+                    @if (authState.User.IsInRole("Technician"))
+                    {
+                        <a class="portal-admin-link" href="/portal/technician">Technician</a>
+                    }
+
+                    @if (authState.User.IsInRole("Finance"))
+                    {
+                        <a class="portal-admin-link" href="/portal/finance">Finance</a>
+                    }
+
+                    @if (authState.User.IsInRole("Customer"))
+                    {
+                        <a class="portal-admin-link" href="/portal/customer">Customer</a>
+                    }
                 </Authorized>
                 <NotAuthorized>
                     <div class="portal-topbar-welcome">
@@ -92,5 +113,4 @@
 
     private static string GetPortalLabel(ClaimsPrincipal user) => PortalRouteHelper.GetPortalLabel(user);
 
-    private static string GetPortalHomeHref(ClaimsPrincipal user) => PortalRouteHelper.GetPortalHomeRoute(user);
 }
