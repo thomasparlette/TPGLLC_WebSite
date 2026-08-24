@@ -18,55 +18,74 @@
                 </div>
             </div>
 
-            <div class="nav-section">
-                <div class="nav-heading">@GetPortalLabel(authState.User)</div>
-
-                @if (authState.User.IsInRole("Administrator"))
-                {
+            @if (authState.User.IsInRole("Administrator"))
+            {
+                <div class="nav-section">
+                    <div class="nav-heading">Administration</div>
                     <NavLink href="/portal/admin" Match="NavLinkMatch.All" class="nav-link" @onclick="HandleNavigate">Administration Dashboard</NavLink>
                     <NavLink href="/portal/admin/users" class="nav-link" @onclick="HandleNavigate">User Roles</NavLink>
-                    <NavLink href="/portal/account" class="nav-link" @onclick="HandleNavigate">Account Detail</NavLink>
-                }
-                else if (authState.User.IsInRole("ServiceAdvisor"))
-                {
+                </div>
+            }
+
+            @if (authState.User.IsInRole("ServiceAdvisor"))
+            {
+                <div class="nav-section">
+                    <div class="nav-heading">Service Advisor</div>
                     <NavLink href="/portal/service-advisor" Match="NavLinkMatch.All" class="nav-link" @onclick="HandleNavigate">Dashboard</NavLink>
                     <NavLink href="/portal/service-advisor/current-requests" class="nav-link" @onclick="HandleNavigate">Current Customer Request</NavLink>
                     <NavLink href="/portal/service-advisor/appointment-calendar" class="nav-link" @onclick="HandleNavigate">Appointment Calendar</NavLink>
                     <NavLink href="/portal/service-advisor/work-orders" class="nav-link" @onclick="HandleNavigate">Workorders</NavLink>
                     <NavLink href="/portal/service-advisor/customers" class="nav-link" @onclick="HandleNavigate">Customers</NavLink>
-                    <NavLink href="/portal/account" class="nav-link" @onclick="HandleNavigate">Account Detail</NavLink>
-                }
-                else if (authState.User.IsInRole("Technician"))
-                {
+                </div>
+            }
+
+            @if (authState.User.IsInRole("Technician"))
+            {
+                <div class="nav-section">
+                    <div class="nav-heading">Technician</div>
                     <NavLink href="/portal/technician" Match="NavLinkMatch.All" class="nav-link" @onclick="HandleNavigate">Dashboard</NavLink>
                     <NavLink href="/portal/technician/work-orders" class="nav-link" @onclick="HandleNavigate">Current Work Orders Assigned</NavLink>
-                    <NavLink href="/portal/account" class="nav-link" @onclick="HandleNavigate">Account Detail</NavLink>
-                }
-                else if (authState.User.IsInRole("Finance"))
-                {
+                </div>
+            }
+
+            @if (authState.User.IsInRole("Finance"))
+            {
+                <div class="nav-section">
+                    <div class="nav-heading">Finance</div>
                     <NavLink href="/portal/finance" Match="NavLinkMatch.All" class="nav-link" @onclick="HandleNavigate">Dashboard</NavLink>
                     <NavLink href="/portal/finance/completed-work-orders" class="nav-link" @onclick="HandleNavigate">Work orders completed</NavLink>
                     <NavLink href="/portal/finance/work-orders-needing-payment" class="nav-link" @onclick="HandleNavigate">Work Order Needing Payment</NavLink>
                     <NavLink href="/portal/finance/accounts-received" class="nav-link" @onclick="HandleNavigate">Account Received</NavLink>
-                    <NavLink href="/portal/account" class="nav-link" @onclick="HandleNavigate">Account Detail</NavLink>
-                }
-                else if (authState.User.IsInRole("Customer"))
-                {
+                </div>
+            }
+
+            @if (authState.User.IsInRole("Customer"))
+            {
+                <div class="nav-section">
+                    <div class="nav-heading">Customer</div>
                     <NavLink href="/portal/customer" Match="NavLinkMatch.All" class="nav-link" @onclick="HandleNavigate">Dashboard</NavLink>
                     <NavLink href="/portal/customers/vehicles" class="nav-link" @onclick="HandleNavigate">Vehicles</NavLink>
                     <NavLink href="/portal/customers/appointments" class="nav-link" @onclick="HandleNavigate">Appointments</NavLink>
                     <NavLink href="/portal/customers/history" class="nav-link" @onclick="HandleNavigate">Service History</NavLink>
                     <NavLink href="/portal/customers/work-orders" class="nav-link" @onclick="HandleNavigate">Work Orders &amp; Invoices</NavLink>
-                    <NavLink href="/portal/account" class="nav-link" @onclick="HandleNavigate">Account Detail</NavLink>
-                }
-                else
-                {
+                </div>
+            }
+
+            @if (!authState.User.IsInRole("Administrator")
+                && !authState.User.IsInRole("ServiceAdvisor")
+                && !authState.User.IsInRole("Technician")
+                && !authState.User.IsInRole("Finance")
+                && !authState.User.IsInRole("Customer"))
+            {
+                <div class="nav-section">
+                    <div class="nav-heading">Portal</div>
                     <NavLink href="@GetHomeHref(authState.User)" Match="NavLinkMatch.All" class="nav-link" @onclick="HandleNavigate">Dashboard</NavLink>
-                }
-            </div>
+                </div>
+            }
 
             <div class="nav-section">
                 <div class="nav-heading">Account</div>
+                <NavLink href="/portal/account" class="nav-link" @onclick="HandleNavigate">Account Detail</NavLink>
                 <a href="/logout" class="nav-link danger" @onclick="HandleNavigate">Logout</a>
             </div>
         </Authorized>
