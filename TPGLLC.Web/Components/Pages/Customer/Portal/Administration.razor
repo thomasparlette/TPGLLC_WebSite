@@ -105,6 +105,21 @@
                                     <span class="portal-chip">Customer</span>
                                 }
 
+                                @if (user.ServiceAdvisorRole)
+                                {
+                                    <span class="portal-chip">Service Advisor</span>
+                                }
+
+                                @if (user.TechnicianRole)
+                                {
+                                    <span class="portal-chip">Technician</span>
+                                }
+
+                                @if (user.FinanceRole)
+                                {
+                                    <span class="portal-chip">Finance</span>
+                                }
+
                                 @if (user.AdministratorRole)
                                 {
                                     <span class="portal-chip">Administrator</span>
