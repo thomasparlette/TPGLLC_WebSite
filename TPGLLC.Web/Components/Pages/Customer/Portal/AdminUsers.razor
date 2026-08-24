@@ -131,6 +131,11 @@
 
                             <div class="admin-role-options">
                                 <label class="admin-role-option">
+                                    <input type="checkbox" @bind="user.IsAdministrator" />
+                                    Administrator
+                                </label>
+
+                                <label class="admin-role-option">
                                     <input type="checkbox" @bind="user.IsCustomer" />
                                     Customer access
                                 </label>
@@ -234,6 +239,7 @@
 
         try
         {
+            await EnsureRoleAsync("Administrator");
             await EnsureRoleAsync("Customer");
             await EnsureRoleAsync("ServiceAdvisor");
             await EnsureRoleAsync("Technician");
@@ -246,6 +252,7 @@
                 return;
             }
 
+            await SyncRoleAsync(user, "Administrator", row.IsAdministrator);
             await SyncRoleAsync(user, "Customer", row.IsCustomer);
             await SyncRoleAsync(user, "ServiceAdvisor", row.IsServiceAdvisor);
             await SyncRoleAsync(user, "Technician", row.IsTechnician);
