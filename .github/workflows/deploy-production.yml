@@ -10,7 +10,7 @@ on:
         description: Run EF migrations on the target environment
         type: boolean
         required: false
-        default: false
+        default: true
       run_bootstrapper:
         description: Run the development/production bootstrapper
         type: boolean
@@ -116,7 +116,10 @@ jobs:
       - name: Deploy Website
         shell: pwsh
         env:
-          RUN_MIGRATIONS: ${{ github.event_name == 'workflow_dispatch' && inputs.run_migrations || false }}
+          # The website can deploy code that requires a newer schema. Run the
+          # already-supported, idempotent EF migration step for both normal
+          # pushes and manually dispatched deployments.
+          RUN_MIGRATIONS: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.run_migrations) }}
           RUN_BOOTSTRAPPER: ${{ github.event_name == 'workflow_dispatch' && inputs.run_bootstrapper || false }}
           RUN_VEHICLE_IMPORTER: ${{ github.event_name == 'workflow_dispatch' && inputs.run_vehicle_importer || false }}
           FORCE_VEHICLE_IMPORTER: ${{ github.event_name == 'workflow_dispatch' && inputs.force_vehicle_importer || false }}
