@@ -367,7 +367,11 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary full-width">Request Appointment</button>
+                <button type="submit"
+                        class="btn btn-primary full-width"
+                        disabled="@_isSubmitting">
+                    @(_isSubmitting ? "Sending Appointment" : "Request Appointment")
+                </button>
             </EditForm>
         }
     </div>
@@ -382,6 +386,7 @@
     private string? _submitError;
     private string? _requestId;
     private bool _submitted;
+    private bool _isSubmitting;
 
     protected override async Task OnInitializedAsync()
     {
@@ -432,6 +437,11 @@
 
     private async Task SubmitAppointment()
     {
+        if (_isSubmitting)
+        {
+            return;
+        }
+
         _submitError = null;
 
         if (string.IsNullOrWhiteSpace(_appointment.VehicleYear))
@@ -449,6 +459,8 @@
             return;
         }
 
+        _isSubmitting = true;
+
         try
         {
             var result = await AppointmentService.SubmitAsync(_appointment);
@@ -465,6 +477,10 @@
         catch (Exception ex)
         {
             _submitError = ex.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
         }
     }
 
@@ -488,6 +504,7 @@
         _submitError = null;
         _requestId = null;
         _submitted = false;
+        _isSubmitting = false;
     }
 
     private string GetVehicleSummary()

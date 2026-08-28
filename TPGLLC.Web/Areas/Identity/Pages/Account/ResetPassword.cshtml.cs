@@ -20,6 +20,12 @@ public sealed class ResetPasswordModel : PageModel
     [BindProperty]
     public InputModel Input { get; set; } = new();
 
+    public void OnGet(string? code, string? email)
+    {
+        Input.Code = code ?? string.Empty;
+        Input.Email = email ?? string.Empty;
+    }
+
     public async Task<IActionResult> OnPostAsync()
     {
         if (!ModelState.IsValid)
@@ -38,6 +44,14 @@ public sealed class ResetPasswordModel : PageModel
         if (!result.Succeeded)
         {
             ModelState.AddModelError(string.Empty, string.Join(" ", result.Errors.Select(x => x.Description)));
+            return Page();
+        }
+
+        user.EmailConfirmed = true;
+        var updateResult = await _userManager.UpdateAsync(user);
+        if (!updateResult.Succeeded)
+        {
+            ModelState.AddModelError(string.Empty, string.Join(" ", updateResult.Errors.Select(x => x.Description)));
             return Page();
         }
 

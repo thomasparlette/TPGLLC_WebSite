@@ -2,22 +2,326 @@
 @layout CustomerLayout
 @attribute [Authorize(Policy = PortalPolicies.Technician)]
 
+@using System.Globalization
+@using TPGLLC.Data.Entities
+@using TPGLLC.Web.Components.Shared
+@using TPGLLC.Web.Services.WorkOrders
+@using TPGLLC.Web.ViewModels.Portal
+
+@inject IWorkOrderPortalService WorkOrderService
+
 <PageTitle>Technician Work Orders</PageTitle>
 
 <section class="portal-dashboard">
     <div class="portal-header">
         <p class="section-kicker">Technician Portal</p>
         <h1>Current Work Orders Assigned</h1>
-        <p>Track work assigned to the logged-in technician.</p>
+        <p>Review your assigned repair orders, record your findings, and update job progress.</p>
     </div>
 
-    <div class="portal-section">
-        <div class="portal-empty-state">
-            <div class="portal-empty-icon">🛠️</div>
+    @if (_loading)
+    {
+        <div class="portal-loading-card">
+            <div class="portal-loading-icon">⏳</div>
             <div>
-                <div class="portal-empty-title">Work order assignment coming next</div>
-                <div class="portal-empty-text">This page is ready for filtering assigned jobs by technician.</div>
+                <div class="portal-loading-title">Loading assigned work</div>
+                <div class="portal-loading-text">Please wait while we load your work orders.</div>
             </div>
         </div>
-    </div>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
+        {
+            <PortalNotice Type="danger" Title="Work orders unavailable">
+                @_model.ErrorMessage
+            </PortalNotice>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_model.SuccessMessage))
+        {
+            <PortalNotice Type="success" Title="Saved">
+                @_model.SuccessMessage
+            </PortalNotice>
+        }
+
+        <div class="portal-stats">
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_model.WorkOrders.Count</div>
+                <div class="portal-stat-label">Assigned Orders</div>
+            </div>
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_model.WorkOrders.Count(x => !IsClosedStatus(x.Status))</div>
+                <div class="portal-stat-label">Active</div>
+            </div>
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_model.WorkOrders.Count(x => string.Equals(x.Status, "Completed", StringComparison.OrdinalIgnoreCase))</div>
+                <div class="portal-stat-label">Completed</div>
+            </div>
+        </div>
+
+        <div class="portal-section">
+            <div class="portal-section-heading">
+                <div>
+                    <h2>Assigned Work Orders</h2>
+                    <div class="portal-muted">Only work orders assigned to your technician name or account email are shown.</div>
+                </div>
+                <div class="workorder-status-filter">
+                    <label class="portal-field-label" for="technician-status-filter">Show status</label>
+                    <select id="technician-status-filter" class="portal-input" @bind="_statusFilter">
+                        <option value="">All statuses</option>
+                        @foreach (var status in _model.StatusOptions)
+                        {
+                            <option value="@status">@status</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            @if (_model.WorkOrders.Count == 0)
+            {
+                <div class="portal-empty-state">
+                    <div class="portal-empty-icon">🛠️</div>
+                    <div>
+                        <div class="portal-empty-title">No work orders are assigned to you</div>
+                        <div class="portal-empty-text">Ask a service advisor to enter your display name or email in the work order's Technician field.</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="workorder-list">
+                    @foreach (var workOrder in _model.WorkOrders
+                        .Where(ShouldShowWorkOrder)
+                        .OrderByDescending(x => x.ServiceDate)
+                        .ThenByDescending(x => x.CreatedUtc))
+                    {
+                        <article class="workorder-card" @key="workOrder.Id">
+                            <div class="workorder-card-header">
+                                <div>
+                                    <div class="workorder-number">@(string.IsNullOrWhiteSpace(workOrder.WorkOrderNumber) ? "Work Order Number Pending" : workOrder.WorkOrderNumber)</div>
+                                    <h3 class="workorder-title">@workOrder.VehicleName</h3>
+                                    <p class="workorder-subtitle">@workOrder.Service</p>
+                                </div>
+                                <div class="workorder-actions" style="margin-top:0;">
+                                    <button type="button"
+                                            class="portal-action-button"
+                                            @onclick="@(async () => await BeginEditAsync(workOrder.Id))">
+                                        Update Work Order
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="workorder-meta">
+                                <span class="workorder-badge">Service @workOrder.ServiceDate.ToString("MMM d, yyyy")</span>
+                                <span class="workorder-badge">@workOrder.Status</span>
+                                @if (!string.IsNullOrWhiteSpace(workOrder.ApprovalStatus))
+                                {
+                                    <span class="workorder-badge">Appointment: @workOrder.ApprovalStatus</span>
+                                }
+                                @if (workOrder.Mileage.HasValue)
+                                {
+                                    <span class="workorder-badge">Mileage in @workOrder.Mileage.Value.ToString("N0")</span>
+                                }
+                                @if (workOrder.MileageOut.HasValue)
+                                {
+                                    <span class="workorder-badge">Mileage out @workOrder.MileageOut.Value.ToString("N0")</span>
+                                }
+                                @if (workOrder.Parts.Any(x => x.IsApplied))
+                                {
+                                    <span class="workorder-badge">@workOrder.Parts.Count(x => x.IsApplied) part(s) applied</span>
+                                }
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </div>
+
+        @if (_model.EditingWorkOrderId is not null)
+        {
+            <div class="portal-section workorder-editor" id="workorder-editor">
+                <div class="portal-section-heading">
+                    <div>
+                        <h2>Update Work Order</h2>
+                        <div class="portal-muted">Update technician findings and progress. Assignment and customer billing details are managed by staff.</div>
+                    </div>
+                </div>
+
+                <EditForm Model="@_model.Form" OnValidSubmit="SaveAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="workorder-form-grid">
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Work order number</label>
+                            <input class="portal-input" value="@_model.Form.WorkOrderNumber" readonly />
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Service date</label>
+                            <input class="portal-input" value="@_model.Form.ServiceDate.ToString("yyyy-MM-dd")" readonly />
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Status</label>
+                            <InputSelect class="portal-input" @bind-Value="_model.Form.Status">
+                                @foreach (var status in _model.StatusOptions)
+                                {
+                                    <option value="@status">@status</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Technician</label>
+                            <input class="portal-input" value="@_model.Form.Technician" readonly />
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Vehicle</label>
+                            <input class="portal-input" value="@_model.Form.VehicleName" readonly />
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Primary concern</label>
+                            <input class="portal-input" value="@_model.Form.Service" readonly />
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Mileage in</label>
+                            <input class="portal-input" value="@_model.Form.Mileage" readonly />
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Mileage out</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.MileageOut" />
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Appointment status</label>
+                            <input class="portal-input" value="@_model.Form.ApprovalStatus" readonly />
+                        </div>
+                    </div>
+
+                    <div class="workorder-notes-grid">
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Customer complaint</label>
+                            <InputTextArea class="portal-input" @bind-Value="_model.Form.Complaint" readonly />
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Diagnosis / findings</label>
+                            <InputTextArea class="portal-input" @bind-Value="_model.Form.Diagnosis" />
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Technician notes</label>
+                            <InputTextArea class="portal-input" @bind-Value="_model.Form.Notes" />
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Internal notes</label>
+                            <InputTextArea class="portal-input" @bind-Value="_model.Form.InternalNotes" />
+                        </div>
+                    </div>
+
+                    <div class="workorder-parts-section">
+                        <div class="portal-section-heading">
+                            <div>
+                                <h3>Parts applied</h3>
+                                <div class="portal-muted">Mark parts as applied. Service advisors manage part descriptions, pricing, and customer approval.</div>
+                            </div>
+                        </div>
+
+                        @if (_model.Form.Parts.Count == 0)
+                        {
+                            <div class="portal-muted">No parts have been added to this work order.</div>
+                        }
+                        else
+                        {
+                            <div class="workorder-part-header" aria-hidden="true">
+                                <span>Part description</span>
+                                <span>Quantity</span>
+                                <span>Unit price</span>
+                                <span>Applied to estimate</span>
+                                <span>Customer approval</span>
+                            </div>
+                            @foreach (var part in _model.Form.Parts)
+                            {
+                                <div class="workorder-part-row technician-workorder-part-row">
+                                    <div class="workorder-part-description">
+                                        <input class="portal-input" value="@part.Description" readonly />
+                                        @if (part.IsCustomerDeclined)
+                                        {
+                                            <span class="workorder-part-status workorder-part-status-declined">Not approved by customer</span>
+                                        }
+                                    </div>
+                                    <input class="portal-input" value="@part.Quantity" readonly />
+                                    <input class="portal-input" value="@(part.UnitPrice ?? "Not set")" readonly />
+                                    <label><InputCheckbox @bind-Value="part.IsApplied" /> Applied</label>
+                                    <span>@(part.IsApproved ? "Approved" : "Pending")</span>
+                                </div>
+                            }
+                        }
+                    </div>
+
+                    <div class="workorder-editor-actions">
+                        <button type="button" class="portal-action-button" @onclick="ResetEditorAsync">Cancel</button>
+                        <button type="submit" class="portal-action-button">Save Technician Updates</button>
+                    </div>
+                </EditForm>
+            </div>
+        }
+    }
 </section>
+
+@code {
+    private WorkOrderPageViewModel _model = new();
+    private bool _loading = true;
+    private string _statusFilter = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _model = await WorkOrderService.GetTechnicianWorkOrdersAsync();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task BeginEditAsync(Guid workOrderId)
+    {
+        _model = await WorkOrderService.StartTechnicianEditAsync(workOrderId);
+    }
+
+    private async Task SaveAsync()
+    {
+        _model = await WorkOrderService.SaveTechnicianAsync(_model);
+    }
+
+    private async Task ResetEditorAsync()
+    {
+        _model = await WorkOrderService.GetTechnicianWorkOrdersAsync();
+    }
+
+    private bool ShouldShowWorkOrder(ServiceHistoryEntry workOrder) =>
+        string.IsNullOrWhiteSpace(_statusFilter)
+        || string.Equals(workOrder.Status, _statusFilter, StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsClosedStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return false;
+        }
+
+        return status.Equals("Completed", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Declined", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Closed", StringComparison.OrdinalIgnoreCase);
+    }
+}

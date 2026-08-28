@@ -2,22 +2,134 @@
 @layout CustomerLayout
 @attribute [Authorize(Policy = PortalPolicies.Technician)]
 
+@using TPGLLC.Data.Entities
+@using TPGLLC.Web.Components.Shared
+@using TPGLLC.Web.Services.WorkOrders
+@using TPGLLC.Web.ViewModels.Portal
+
+@inject IWorkOrderPortalService WorkOrderService
+
 <PageTitle>Technician Dashboard</PageTitle>
 
 <section class="portal-dashboard">
     <div class="portal-header">
         <p class="section-kicker">Technician Portal</p>
         <h1>Technician Dashboard</h1>
-        <p>Monitor your assigned work and keep your account updated.</p>
+        <p>See your assigned work at a glance and open a work order when you are ready to record updates.</p>
     </div>
 
-    <div class="portal-section">
-        <div class="portal-empty-state">
-            <div class="portal-empty-icon">🛠️</div>
+    @if (_loading)
+    {
+        <div class="portal-loading-card">
+            <div class="portal-loading-icon">⏳</div>
             <div>
-                <div class="portal-empty-title">Assigned work coming next</div>
-                <div class="portal-empty-text">Add technician assignment filters and work order details here.</div>
+                <div class="portal-loading-title">Loading technician dashboard</div>
+                <div class="portal-loading-text">Please wait while we load your assigned work.</div>
             </div>
         </div>
-    </div>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
+        {
+            <PortalNotice Type="danger" Title="Dashboard unavailable">
+                @_model.ErrorMessage
+            </PortalNotice>
+        }
+
+        <div class="portal-stats">
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_model.WorkOrders.Count</div>
+                <div class="portal-stat-label">Assigned Orders</div>
+            </div>
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_model.WorkOrders.Count(x => !IsClosedStatus(x.Status))</div>
+                <div class="portal-stat-label">Active Orders</div>
+            </div>
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_model.WorkOrders.Count(x => string.Equals(x.Status, "Completed", StringComparison.OrdinalIgnoreCase))</div>
+                <div class="portal-stat-label">Completed Orders</div>
+            </div>
+        </div>
+
+        <div class="portal-section">
+            <div class="portal-section-heading">
+                <div>
+                    <h2>Recent Assigned Work</h2>
+                    <div class="portal-muted">The five most recent orders assigned to you.</div>
+                </div>
+                <a class="portal-action-button" href="/portal/technician/work-orders">View All Work Orders</a>
+            </div>
+
+            @if (_model.WorkOrders.Count == 0)
+            {
+                <div class="portal-empty-state">
+                    <div class="portal-empty-icon">🛠️</div>
+                    <div>
+                        <div class="portal-empty-title">No work orders are assigned to you</div>
+                        <div class="portal-empty-text">Ask a service advisor to enter your display name or email in the work order's Technician field.</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="workorder-list">
+                    @foreach (var workOrder in _model.WorkOrders.Take(5))
+                    {
+                        <article class="workorder-card" @key="workOrder.Id">
+                            <div class="workorder-card-header">
+                                <div>
+                                    <div class="workorder-number">@(string.IsNullOrWhiteSpace(workOrder.WorkOrderNumber) ? "Work Order Number Pending" : workOrder.WorkOrderNumber)</div>
+                                    <h3 class="workorder-title">@workOrder.VehicleName</h3>
+                                    <p class="workorder-subtitle">@workOrder.Service</p>
+                                </div>
+                                <span class="workorder-badge">@workOrder.Status</span>
+                            </div>
+                            <div class="workorder-meta">
+                                <span class="workorder-badge">Service @workOrder.ServiceDate.ToString("MMM d, yyyy")</span>
+                                @if (workOrder.Mileage.HasValue)
+                                {
+                                    <span class="workorder-badge">Mileage in @workOrder.Mileage.Value.ToString("N0")</span>
+                                }
+                                @if (workOrder.MileageOut.HasValue)
+                                {
+                                    <span class="workorder-badge">Mileage out @workOrder.MileageOut.Value.ToString("N0")</span>
+                                }
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </div>
+    }
 </section>
+
+@code {
+    private WorkOrderPageViewModel _model = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _model = await WorkOrderService.GetTechnicianWorkOrdersAsync();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static bool IsClosedStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return false;
+        }
+
+        return status.Equals("Completed", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Declined", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Closed", StringComparison.OrdinalIgnoreCase);
+    }
+}

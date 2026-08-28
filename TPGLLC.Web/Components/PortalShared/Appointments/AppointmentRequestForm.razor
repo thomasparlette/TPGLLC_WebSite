@@ -107,7 +107,11 @@
     </div>
 
     <div class="portal-actions" style="margin-top: 1.25rem;">
-        <button type="submit" class="portal-action-button">Submit Request</button>
+        <button type="submit"
+                class="portal-action-button"
+                disabled="@_isSubmitting">
+            @(_isSubmitting ? "Sending Appointment" : "Submit Request")
+        </button>
         <button type="button" class="portal-action-button" @onclick="HandleCancelAsync">Reset</button>
     </div>
 </EditForm>
@@ -124,6 +128,7 @@
     [Parameter] public EventCallback OnMakeChanged { get; set; }
 
     private EditContext _editContext = default!;
+    private bool _isSubmitting;
 
     protected override void OnParametersSet()
     {
@@ -135,9 +140,27 @@
 
     private async Task HandleValidSubmitAsync()
     {
+        if (_isSubmitting)
+        {
+            return;
+        }
+
+        _isSubmitting = true;
+
         if (OnSave.HasDelegate)
         {
-            await OnSave.InvokeAsync();
+            try
+            {
+                await OnSave.InvokeAsync();
+            }
+            finally
+            {
+                _isSubmitting = false;
+            }
+        }
+        else
+        {
+            _isSubmitting = false;
         }
     }
 

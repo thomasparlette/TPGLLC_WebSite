@@ -17,6 +17,13 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         "Closed"
     };
 
+    private static readonly string[] TechnicianStatusOptions =
+    [
+        "Requested",
+        "In Progress",
+        "Completed"
+    ];
+
     private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -111,6 +118,45 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         };
     }
 
+    public async Task<WorkOrderPageViewModel> GetTechnicianWorkOrdersAsync()
+    {
+        var current = _currentCustomerAccessor.GetCurrentCustomer();
+        if (!current.IsAuthenticated)
+        {
+            return new WorkOrderPageViewModel
+            {
+                ErrorMessage = "You must be signed in to view assigned work orders."
+            };
+        }
+
+        if (!current.IsTechnician)
+        {
+            return new WorkOrderPageViewModel
+            {
+                ErrorMessage = "You are not authorized to view technician work orders."
+            };
+        }
+
+        await using var db = await _dbFactory.CreateDbContextAsync();
+
+        await EnsureWorkOrderNumbersAsync(db);
+
+        var workOrders = await GetTechnicianWorkOrderQuery(db, current)
+            .OrderByDescending(x => x.ServiceDate)
+            .ThenByDescending(x => x.CreatedUtc)
+            .ToListAsync();
+
+        await ApplyAppointmentFieldsAsync(db, workOrders);
+        await db.SaveChangesAsync();
+
+        return new WorkOrderPageViewModel
+        {
+            WorkOrders = workOrders,
+            StatusOptions = BuildTechnicianStatusOptions(workOrders),
+            CanEdit = true
+        };
+    }
+
     public async Task<WorkOrderPageViewModel> StartEditAsync(Guid workOrderId)
     {
         var model = await GetStaffWorkOrdersAsync();
@@ -149,6 +195,40 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
                 IsApproved = x.IsApproved,
                 IsCustomerDeclined = x.IsCustomerDeclined
             }).ToListAsync();
+        return model;
+    }
+
+    public async Task<WorkOrderPageViewModel> StartTechnicianEditAsync(Guid workOrderId)
+    {
+        var model = await GetTechnicianWorkOrdersAsync();
+        if (!string.IsNullOrWhiteSpace(model.ErrorMessage))
+        {
+            return model;
+        }
+
+        var selectedOrder = model.WorkOrders.FirstOrDefault(x => x.Id == workOrderId);
+        if (selectedOrder is null)
+        {
+            model.ErrorMessage = "That work order is not assigned to you.";
+            return model;
+        }
+
+        model.EditingWorkOrderId = selectedOrder.Id;
+        model.Form = MapToForm(selectedOrder);
+        model.Form.Parts = selectedOrder.Parts
+            .OrderBy(x => x.Description)
+            .Select(x => new WorkOrderPartEditViewModel
+            {
+                Id = x.Id,
+                Description = x.Description,
+                Quantity = x.Quantity.ToString("0.##"),
+                UnitPrice = x.UnitPrice.HasValue ? x.UnitPrice.Value.ToString("0.00") : null,
+                IsApplied = x.IsApplied,
+                IsApproved = x.IsApproved,
+                IsCustomerDeclined = x.IsCustomerDeclined
+            })
+            .ToList();
+
         return model;
     }
 
@@ -299,6 +379,84 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
 
         var refreshed = await GetStaffWorkOrdersAsync();
         refreshed.SuccessMessage = $"Work order {requestedWorkOrderNumber} updated.";
+        return refreshed;
+    }
+
+    public async Task<WorkOrderPageViewModel> SaveTechnicianAsync(WorkOrderPageViewModel model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+
+        var current = _currentCustomerAccessor.GetCurrentCustomer();
+        if (!current.IsAuthenticated)
+        {
+            model.ErrorMessage = "You must be signed in to update work orders.";
+            return model;
+        }
+
+        if (!current.IsTechnician)
+        {
+            model.ErrorMessage = "You are not authorized to update technician work orders.";
+            return model;
+        }
+
+        if (model.EditingWorkOrderId is null)
+        {
+            model.ErrorMessage = "Select an assigned work order to update.";
+            return model;
+        }
+
+        if (!TryParseMileage(model.Form.MileageOut, out var mileageOut))
+        {
+            model.ErrorMessage = "Mileage out must be a whole number.";
+            return model;
+        }
+
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var workOrder = await GetTechnicianWorkOrderQuery(db, current)
+            .FirstOrDefaultAsync(x => x.Id == model.EditingWorkOrderId.Value);
+
+        if (workOrder is null)
+        {
+            model.ErrorMessage = "That work order is not assigned to you.";
+            return model;
+        }
+
+        var requestedStatus = Normalize(model.Form.Status);
+        if (!string.IsNullOrWhiteSpace(requestedStatus)
+            && !IsAllowedTechnicianStatus(requestedStatus)
+            && !string.Equals(requestedStatus, workOrder.Status, StringComparison.OrdinalIgnoreCase))
+        {
+            model.ErrorMessage = "Technicians may only set a work order to Requested, In Progress, or Completed.";
+            return model;
+        }
+
+        workOrder.Diagnosis = Normalize(model.Form.Diagnosis);
+        workOrder.MileageOut = mileageOut;
+        workOrder.Status = requestedStatus ?? workOrder.Status;
+        workOrder.Notes = Normalize(model.Form.Notes);
+        workOrder.InternalNotes = Normalize(model.Form.InternalNotes);
+        workOrder.UpdatedUtc = DateTimeOffset.UtcNow;
+
+        var existingParts = await db.ServiceHistoryParts
+            .Where(x => x.ServiceHistoryEntryId == workOrder.Id)
+            .ToListAsync();
+        var existingById = existingParts.ToDictionary(x => x.Id);
+
+        foreach (var part in model.Form.Parts)
+        {
+            if (part.Id != Guid.Empty && existingById.TryGetValue(part.Id, out var savedPart))
+            {
+                savedPart.IsApplied = part.IsApplied;
+            }
+        }
+
+        workOrder.EstimateAmount = CalculateAppliedTotal(workOrder)
+            + (workOrder.LaborAmount ?? 0m);
+
+        await db.SaveChangesAsync();
+
+        var refreshed = await GetTechnicianWorkOrdersAsync();
+        refreshed.SuccessMessage = $"Work order {workOrder.WorkOrderNumber ?? "record"} updated.";
         return refreshed;
     }
 
@@ -481,6 +639,46 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         }
     }
 
+    private static IQueryable<ServiceHistoryEntry> GetTechnicianWorkOrderQuery(
+        TPGLLCDbContext db,
+        CurrentCustomer current)
+    {
+        var assignmentNames = new[]
+            {
+                current.DisplayName,
+                current.Email
+            }
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return db.ServiceHistoryEntries
+            .Include(x => x.Parts)
+            .Where(x => x.Technician != null && assignmentNames.Contains(x.Technician.Trim()));
+    }
+
+    private static List<string> BuildTechnicianStatusOptions(IEnumerable<ServiceHistoryEntry> workOrders)
+    {
+        var statuses = TechnicianStatusOptions.ToList();
+
+        foreach (var status in workOrders
+            .Select(x => x.Status)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!statuses.Contains(status, StringComparer.OrdinalIgnoreCase))
+            {
+                statuses.Insert(0, status);
+            }
+        }
+
+        return statuses;
+    }
+
+    private static bool IsAllowedTechnicianStatus(string status) =>
+        TechnicianStatusOptions.Contains(status, StringComparer.OrdinalIgnoreCase);
+
     private async Task<WorkOrderPageViewModel> GetCustomerResultAsync(string message)
     {
         var result = await GetCustomerAsync();
@@ -517,6 +715,10 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         return workOrder.Parts.Where(x => x.IsApproved)
             .Sum(x => x.Quantity * (x.UnitPrice ?? 0m)) + (workOrder.LaborAmount ?? 0m);
     }
+
+    private static decimal CalculateAppliedTotal(ServiceHistoryEntry workOrder) =>
+        workOrder.Parts.Where(x => x.IsApplied)
+            .Sum(x => x.Quantity * (x.UnitPrice ?? 0m));
 
     private static async Task<string> GetNextWorkOrderNumberAsync(TPGLLCDbContext db)
     {

@@ -12,18 +12,18 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
 {
     private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
-    private readonly ICustomerProfileService _customerProfileService;
+    private readonly IAppointmentService _appointmentService;
     private readonly IVehicleCatalogService _vehicleCatalogService;
 
     public AppointmentPortalService(
         IDbContextFactory<TPGLLCDbContext> dbFactory,
         ICurrentCustomerAccessor currentCustomerAccessor,
-        ICustomerProfileService customerProfileService,
+        IAppointmentService appointmentService,
         IVehicleCatalogService vehicleCatalogService)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
-        _customerProfileService = customerProfileService;
+        _appointmentService = appointmentService;
         _vehicleCatalogService = vehicleCatalogService;
     }
 
@@ -162,11 +162,15 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             SubmittedAtUtc = DateTimeOffset.UtcNow
         };
 
-        db.AppointmentRequests.Add(request);
-        await db.SaveChangesAsync();
+        var result = await _appointmentService.SubmitAsync(request);
+        if (!result.Success)
+        {
+            model.ErrorMessage = result.ErrorMessage ?? "Unable to submit the appointment request.";
+            return model;
+        }
 
         var updatedModel = await GetAsync();
-        updatedModel.SuccessMessage = "Appointment request submitted.";
+        updatedModel.SuccessMessage = $"Appointment request submitted. Reference #{result.RequestId:D}";
         return updatedModel;
     }
 
