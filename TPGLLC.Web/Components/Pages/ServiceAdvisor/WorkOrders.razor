@@ -150,7 +150,7 @@
 
         @if (_model.EditingWorkOrderId is not null)
         {
-            <div class="portal-section workorder-editor" id="workorder-editor">
+            <div class="portal-section workorder-editor" id="workorder-editor" tabindex="-1" @ref="_editorElement">
                 <div class="portal-section-heading">
                     <div>
                         <h2>Edit Work Order</h2>
@@ -167,6 +167,11 @@
                             <label class="portal-field-label">Work order number</label>
                             <InputText class="portal-input" @bind-Value="_model.Form.WorkOrderNumber" />
                             <div class="workorder-required-note">Assigned automatically when a work order has no number.</div>
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Invoice number</label>
+                            <InputText class="portal-input" @bind-Value="_model.Form.InvoiceNumber" />
                         </div>
 
                         <div class="workorder-field">
@@ -206,7 +211,13 @@
 
                         <div class="workorder-field">
                             <label class="portal-field-label">Technician</label>
-                            <InputText class="portal-input" @bind-Value="_model.Form.Technician" />
+                            <InputSelect class="portal-input" @bind-Value="_model.Form.Technician">
+                                <option value="">Unassigned</option>
+                                @foreach (var technician in _model.TechnicianOptions)
+                                {
+                                    <option value="@technician.AssignmentValue">@technician.Label</option>
+                                }
+                            </InputSelect>
                         </div>
 
                         <div class="workorder-field">
@@ -223,11 +234,6 @@
                         <div class="workorder-field">
                             <label class="portal-field-label">Labor amount</label>
                             <InputText class="portal-input" @bind-Value="_model.Form.LaborAmount" />
-                        </div>
-
-                        <div class="workorder-field">
-                            <label class="portal-field-label">Invoice number</label>
-                            <InputText class="portal-input" @bind-Value="_model.Form.InvoiceNumber" />
                         </div>
 
                         <div class="workorder-field">
@@ -308,12 +314,32 @@
     private WorkOrderPageViewModel _model = new();
     private bool _loading = true;
     private string _statusFilter = string.Empty;
+    private bool _focusEditorAfterRender;
+    private ElementReference _editorElement;
+
+    [SupplyParameterFromQuery(Name = "appointmentRequestId")]
+    public Guid? AppointmentRequestId { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             _model = await WorkOrderService.GetStaffWorkOrdersAsync();
+
+            if (AppointmentRequestId is Guid appointmentRequestId)
+            {
+                var linkedWorkOrder = _model.WorkOrders
+                    .FirstOrDefault(x => x.AppointmentRequestId == appointmentRequestId);
+
+                if (linkedWorkOrder is null)
+                {
+                    _model.ErrorMessage = "No work order is linked to that appointment.";
+                }
+                else
+                {
+                    await BeginEditAsync(linkedWorkOrder.Id);
+                }
+            }
         }
         finally
         {
@@ -324,6 +350,18 @@
     private async Task BeginEditAsync(Guid workOrderId)
     {
         _model = await WorkOrderService.StartEditAsync(workOrderId);
+        _focusEditorAfterRender = _model.EditingWorkOrderId is not null;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusEditorAfterRender || _model.EditingWorkOrderId is null)
+        {
+            return;
+        }
+
+        _focusEditorAfterRender = false;
+        await _editorElement.FocusAsync();
     }
 
     private async Task SaveAsync()
@@ -333,6 +371,7 @@
 
     private async Task ResetEditorAsync()
     {
+        _focusEditorAfterRender = false;
         _model = await WorkOrderService.ResetAsync();
     }
 

@@ -108,12 +108,16 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             .ThenByDescending(x => x.CreatedUtc)
             .ToListAsync();
 
+        var technicianOptions = await GetTechnicianOptionsAsync(db);
+        AddExistingTechnicianAssignments(technicianOptions, workOrders);
+
         await ApplyAppointmentFieldsAsync(db, workOrders);
         await db.SaveChangesAsync();
 
         return new WorkOrderPageViewModel
         {
             WorkOrders = workOrders,
+            TechnicianOptions = technicianOptions,
             CanEdit = true
         };
     }
@@ -656,6 +660,73 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         return db.ServiceHistoryEntries
             .Include(x => x.Parts)
             .Where(x => x.Technician != null && assignmentNames.Contains(x.Technician.Trim()));
+    }
+
+    private static async Task<List<TechnicianOptionViewModel>> GetTechnicianOptionsAsync(TPGLLCDbContext db)
+    {
+        var users = await db.Users
+            .AsNoTracking()
+            .Where(x => x.IsActive && db.UserRoles.Any(userRole =>
+                userRole.UserId == x.Id &&
+                db.Roles.Any(role => role.Id == userRole.RoleId && role.Name == "Technician")))
+            .OrderBy(x => x.DisplayName)
+            .ThenBy(x => x.Email)
+            .Select(x => new
+            {
+                x.DisplayName,
+                x.FirstName,
+                x.LastName,
+                x.Email,
+                x.UserName
+            })
+            .ToListAsync();
+
+        return users
+            .Select(x =>
+            {
+                var displayName = string.IsNullOrWhiteSpace(x.DisplayName)
+                    ? string.Join(" ", new[] { x.FirstName, x.LastName }.Where(value => !string.IsNullOrWhiteSpace(value))).Trim()
+                    : x.DisplayName.Trim();
+                var email = string.IsNullOrWhiteSpace(x.Email) ? x.UserName?.Trim() : x.Email.Trim();
+                var assignmentValue = string.IsNullOrWhiteSpace(displayName) ? email : displayName;
+
+                return new TechnicianOptionViewModel
+                {
+                    AssignmentValue = assignmentValue ?? string.Empty,
+                    Label = string.IsNullOrWhiteSpace(email) || string.Equals(displayName, email, StringComparison.OrdinalIgnoreCase)
+                        ? (displayName ?? string.Empty)
+                        : $"{displayName} ({email})"
+                };
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.AssignmentValue))
+            .GroupBy(x => x.AssignmentValue, StringComparer.OrdinalIgnoreCase)
+            .Select(x => x.First())
+            .OrderBy(x => x.Label)
+            .ToList();
+    }
+
+    private static void AddExistingTechnicianAssignments(
+        List<TechnicianOptionViewModel> options,
+        IEnumerable<ServiceHistoryEntry> workOrders)
+    {
+        foreach (var assignment in workOrders
+            .Select(x => x.Technician?.Trim())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (options.Any(x => string.Equals(x.AssignmentValue, assignment, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            options.Add(new TechnicianOptionViewModel
+            {
+                AssignmentValue = assignment!,
+                Label = $"{assignment} (current assignment)"
+            });
+        }
+
+        options.Sort((left, right) => string.Compare(left.Label, right.Label, StringComparison.OrdinalIgnoreCase));
     }
 
     private static List<string> BuildTechnicianStatusOptions(IEnumerable<ServiceHistoryEntry> workOrders)
