@@ -4,6 +4,7 @@ public sealed class ServiceHistoryPart
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ServiceHistoryEntryId { get; set; }
+    public Guid? ServiceHistoryJobId { get; set; }
     public string Description { get; set; } = string.Empty;
     public decimal Quantity { get; set; } = 1m;
     public decimal? UnitPrice { get; set; }
@@ -11,4 +12,5 @@ public sealed class ServiceHistoryPart
     public bool IsApproved { get; set; }
     public bool IsCustomerDeclined { get; set; }
     public ServiceHistoryEntry? ServiceHistoryEntry { get; set; }
+    public ServiceHistoryJob? ServiceHistoryJob { get; set; }
 }

@@ -71,12 +71,58 @@ public sealed class WorkOrderEditViewModel
     [Display(Name = "Internal notes")]
     public string? InternalNotes { get; set; }
 
+    public List<WorkOrderJobEditViewModel> Jobs { get; set; } = [];
+    public List<WorkOrderInspectionEditViewModel> Inspections { get; set; } = [];
     public List<WorkOrderPartEditViewModel> Parts { get; set; } = [];
+}
+
+public sealed class WorkOrderJobEditViewModel
+{
+    public Guid Id { get; set; }
+
+    [Required]
+    [StringLength(200)]
+    public string Name { get; set; } = string.Empty;
+
+    [StringLength(4000)]
+    public string? Description { get; set; }
+
+    [Required]
+    [StringLength(30)]
+    public string Status { get; set; } = "Proposed";
+
+    public string? LaborAmount { get; set; }
+    public bool IsApproved { get; set; }
+    public bool IsCustomerDeclined { get; set; }
+    public bool IsDeferred { get; set; }
+}
+
+public sealed class WorkOrderInspectionEditViewModel
+{
+    public Guid Id { get; set; }
+
+    [Required]
+    [StringLength(120)]
+    public string Area { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(30)]
+    public string Condition { get; set; } = "Good";
+
+    [Required]
+    [StringLength(4000)]
+    public string Finding { get; set; } = string.Empty;
+
+    [StringLength(4000)]
+    public string? Recommendation { get; set; }
+
+    public bool IsCustomerVisible { get; set; } = true;
 }
 
 public sealed class WorkOrderPartEditViewModel
 {
     public Guid Id { get; set; }
+    public Guid? ServiceHistoryJobId { get; set; }
     public string Description { get; set; } = string.Empty;
     public string Quantity { get; set; } = "1";
     public string? UnitPrice { get; set; }

@@ -1,7 +1,11 @@
 ﻿using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
+using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.Extensions.Options;
 using TPGLLC.Data;
 using TPGLLC.Data.Entities;
+using TPGLLC.Web.Services.Appointments;
 using TPGLLC.Web.Services.Customers;
 using TPGLLC.Web.ViewModels.Portal;
 
@@ -12,12 +16,24 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
     private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IEmailSender _emailSender;
+    private readonly AppointmentEmailOptions _emailOptions;
+    private readonly ILogger<WorkOrderPortalService> _logger;
 
-    public WorkOrderPortalService(IDbContextFactory<TPGLLCDbContext> dbFactory, ICurrentCustomerAccessor currentCustomerAccessor, IHttpContextAccessor httpContextAccessor)
+    public WorkOrderPortalService(
+        IDbContextFactory<TPGLLCDbContext> dbFactory,
+        ICurrentCustomerAccessor currentCustomerAccessor,
+        IHttpContextAccessor httpContextAccessor,
+        IEmailSender emailSender,
+        IOptions<AppointmentEmailOptions> emailOptions,
+        ILogger<WorkOrderPortalService> logger)
     {
         _dbFactory = dbFactory;
         _currentCustomerAccessor = currentCustomerAccessor;
         _httpContextAccessor = httpContextAccessor;
+        _emailSender = emailSender;
+        _emailOptions = emailOptions.Value;
+        _logger = logger;
     }
 
     public async Task<WorkOrderPageViewModel> GetCustomerAsync()
@@ -49,6 +65,9 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
 
         var workOrders = await db.ServiceHistoryEntries
             .Include(x => x.Parts)
+            .Include(x => x.Jobs)
+            .ThenInclude(x => x.Parts)
+            .Include(x => x.Inspections)
             .Include(x => x.Updates)
             .Where(x => x.CustomerId == customer.Id)
             .OrderByDescending(x => x.ServiceDate)
@@ -90,6 +109,9 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
 
         var workOrders = await db.ServiceHistoryEntries
             .Include(x => x.Parts)
+            .Include(x => x.Jobs)
+            .ThenInclude(x => x.Parts)
+            .Include(x => x.Inspections)
             .Include(x => x.Updates)
             .OrderByDescending(x => x.ServiceDate)
             .ThenByDescending(x => x.CreatedUtc)
@@ -173,12 +195,42 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             : null;
         ApplyAppointmentStatusToWorkOrder(selectedOrder, appointment?.Status);
         model.Form = MapToForm(selectedOrder, appointment);
+        model.Form.Jobs = await db.ServiceHistoryJobs.AsNoTracking()
+            .Where(x => x.ServiceHistoryEntryId == selectedOrder.Id)
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.Name)
+            .Select(x => new WorkOrderJobEditViewModel
+            {
+                Id = x.Id,
+                Name = x.Name,
+                Description = x.Description,
+                Status = x.Status,
+                LaborAmount = x.LaborAmount.HasValue ? x.LaborAmount.Value.ToString("0.00", CultureInfo.InvariantCulture) : null,
+                IsApproved = x.IsApproved,
+                IsCustomerDeclined = x.IsCustomerDeclined,
+                IsDeferred = x.IsDeferred
+            })
+            .ToListAsync();
+        model.Form.Inspections = await db.ServiceHistoryInspections.AsNoTracking()
+            .Where(x => x.ServiceHistoryEntryId == selectedOrder.Id)
+            .OrderByDescending(x => x.CreatedUtc)
+            .Select(x => new WorkOrderInspectionEditViewModel
+            {
+                Id = x.Id,
+                Area = x.Area,
+                Condition = x.Condition,
+                Finding = x.Finding,
+                Recommendation = x.Recommendation,
+                IsCustomerVisible = x.IsCustomerVisible
+            })
+            .ToListAsync();
         model.Form.Parts = await db.ServiceHistoryParts.AsNoTracking()
             .Where(x => x.ServiceHistoryEntryId == selectedOrder.Id)
             .OrderBy(x => x.Description)
             .Select(x => new WorkOrderPartEditViewModel
             {
                 Id = x.Id,
+                ServiceHistoryJobId = x.ServiceHistoryJobId,
                 Description = x.Description,
                 Quantity = x.Quantity.ToString("0.##"),
                 UnitPrice = x.UnitPrice.HasValue ? x.UnitPrice.Value.ToString("0.00") : null,
@@ -211,6 +263,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             .Select(x => new WorkOrderPartEditViewModel
             {
                 Id = x.Id,
+                ServiceHistoryJobId = x.ServiceHistoryJobId,
                 Description = x.Description,
                 Quantity = x.Quantity.ToString("0.##"),
                 UnitPrice = x.UnitPrice.HasValue ? x.UnitPrice.Value.ToString("0.00") : null,
@@ -287,6 +340,14 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         var previousNotes = workOrder.Notes;
         var previousMileageOut = workOrder.MileageOut;
 
+        var existingJobs = await db.ServiceHistoryJobs
+            .Where(x => x.ServiceHistoryEntryId == workOrder.Id)
+            .ToListAsync();
+        var previousJobCount = existingJobs.Count;
+        var existingInspections = await db.ServiceHistoryInspections
+            .Where(x => x.ServiceHistoryEntryId == workOrder.Id)
+            .ToListAsync();
+        var previousInspectionCount = existingInspections.Count;
         var existingParts = await db.ServiceHistoryParts
             .Where(x => x.ServiceHistoryEntryId == workOrder.Id)
             .ToListAsync();
@@ -334,6 +395,114 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         workOrder.InternalNotes = Normalize(model.Form.InternalNotes);
         workOrder.UpdatedUtc = DateTimeOffset.UtcNow;
 
+        var existingJobsById = existingJobs.ToDictionary(x => x.Id);
+        var jobIds = new HashSet<Guid>();
+        var jobLaborTotal = 0m;
+        var approvedJobLaborTotal = 0m;
+        var jobSortOrder = 0;
+        foreach (var job in model.Form.Jobs.Where(x => !string.IsNullOrWhiteSpace(x.Name)))
+        {
+            if (!TryParseDecimal(job.LaborAmount, out var jobLaborAmount))
+            {
+                model.ErrorMessage = $"Labor amount for '{job.Name.Trim()}' must be a valid number.";
+                return model;
+            }
+
+            ServiceHistoryJob? existingJob = null;
+            var isExisting = job.Id != Guid.Empty && existingJobsById.TryGetValue(job.Id, out existingJob);
+            var savedJob = isExisting
+                ? existingJob!
+                : new ServiceHistoryJob { ServiceHistoryEntryId = workOrder.Id };
+
+            savedJob.Name = job.Name.Trim();
+            savedJob.Description = Normalize(job.Description);
+            savedJob.Status = Normalize(job.Status) ?? "Proposed";
+            savedJob.LaborAmount = jobLaborAmount;
+            savedJob.IsApproved = string.Equals(workOrder.Status, "Quoted", StringComparison.OrdinalIgnoreCase)
+                ? job.IsApproved
+                : savedJob.IsApproved;
+            savedJob.IsCustomerDeclined = isExisting ? existingJob!.IsCustomerDeclined : job.IsCustomerDeclined;
+            savedJob.IsDeferred = job.IsDeferred;
+            savedJob.SortOrder = jobSortOrder++;
+            savedJob.UpdatedUtc = DateTimeOffset.UtcNow;
+
+            if (savedJob.IsApproved)
+            {
+                savedJob.IsCustomerDeclined = false;
+                savedJob.Status = "Approved";
+            }
+
+            if (savedJob.IsCustomerDeclined)
+            {
+                savedJob.IsApproved = false;
+                savedJob.Status = "Declined";
+            }
+
+            if (!savedJob.IsDeferred && !savedJob.IsCustomerDeclined && savedJob.LaborAmount.HasValue)
+            {
+                jobLaborTotal += savedJob.LaborAmount.Value;
+            }
+
+            if (savedJob.IsApproved && savedJob.LaborAmount.HasValue)
+            {
+                approvedJobLaborTotal += savedJob.LaborAmount.Value;
+            }
+
+            if (!isExisting)
+            {
+                db.ServiceHistoryJobs.Add(savedJob);
+            }
+
+            jobIds.Add(savedJob.Id);
+        }
+
+        var removedJobIds = existingJobs
+            .Where(x => !jobIds.Contains(x.Id))
+            .Select(x => x.Id)
+            .ToHashSet();
+        foreach (var part in existingParts.Where(x => x.ServiceHistoryJobId.HasValue
+            && removedJobIds.Contains(x.ServiceHistoryJobId.Value)))
+        {
+            part.ServiceHistoryJobId = null;
+        }
+
+        db.ServiceHistoryJobs.RemoveRange(existingJobs.Where(x => removedJobIds.Contains(x.Id)));
+
+        var existingInspectionsById = existingInspections.ToDictionary(x => x.Id);
+        var inspectionIds = new HashSet<Guid>();
+        foreach (var inspection in model.Form.Inspections.Where(x =>
+            !string.IsNullOrWhiteSpace(x.Area) || !string.IsNullOrWhiteSpace(x.Finding)))
+        {
+            if (string.IsNullOrWhiteSpace(inspection.Area) || string.IsNullOrWhiteSpace(inspection.Finding))
+            {
+                model.ErrorMessage = "Each inspection must include an area and finding.";
+                return model;
+            }
+
+            ServiceHistoryInspection? existingInspection = null;
+            var isExisting = inspection.Id != Guid.Empty
+                && existingInspectionsById.TryGetValue(inspection.Id, out existingInspection);
+            var savedInspection = isExisting
+                ? existingInspection!
+                : new ServiceHistoryInspection { ServiceHistoryEntryId = workOrder.Id };
+
+            savedInspection.Area = inspection.Area.Trim();
+            savedInspection.Condition = Normalize(inspection.Condition) ?? "Good";
+            savedInspection.Finding = inspection.Finding.Trim();
+            savedInspection.Recommendation = Normalize(inspection.Recommendation);
+            savedInspection.IsCustomerVisible = inspection.IsCustomerVisible;
+            savedInspection.UpdatedUtc = DateTimeOffset.UtcNow;
+
+            if (!isExisting)
+            {
+                db.ServiceHistoryInspections.Add(savedInspection);
+            }
+
+            inspectionIds.Add(savedInspection.Id);
+        }
+
+        db.ServiceHistoryInspections.RemoveRange(existingInspections.Where(x => !inspectionIds.Contains(x.Id)));
+
         var existingById = existingParts.ToDictionary(x => x.Id);
         var appliedPartsTotal = 0m;
         var approvedPartsTotal = 0m;
@@ -356,6 +525,10 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             savedPart.Description = part.Description.Trim();
             savedPart.Quantity = quantity.Value;
             savedPart.UnitPrice = unitPrice;
+            savedPart.ServiceHistoryJobId = part.ServiceHistoryJobId.HasValue
+                && jobIds.Contains(part.ServiceHistoryJobId.Value)
+                ? part.ServiceHistoryJobId
+                : null;
             savedPart.IsApplied = part.IsApplied;
             savedPart.IsApproved = string.Equals(workOrder.Status, "Quoted", StringComparison.OrdinalIgnoreCase)
                 ? part.IsApproved
@@ -370,10 +543,10 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         db.ServiceHistoryParts.RemoveRange(existingParts.Where(x => !submittedIds.Contains(x.Id)));
 
         var laborTotal = laborAmount ?? 0m;
-        workOrder.EstimateAmount = appliedPartsTotal + laborTotal;
-        workOrder.InvoiceAmount = approvedPartsTotal + laborTotal;
+        workOrder.EstimateAmount = appliedPartsTotal + laborTotal + jobLaborTotal;
+        workOrder.InvoiceAmount = approvedPartsTotal + laborTotal + approvedJobLaborTotal;
 
-        AddProgressUpdateIfChanged(
+        var progressUpdate = AddProgressUpdateIfChanged(
             db,
             workOrder,
             previousStatus,
@@ -383,9 +556,18 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             previousAppliedPartCount,
             model.Form.Parts.Count(x => x.IsApplied),
             current.DisplayName,
-            "Service Advisor");
+            "Service Advisor",
+            previousJobCount,
+            jobIds.Count,
+            previousInspectionCount,
+            inspectionIds.Count);
 
         await db.SaveChangesAsync();
+
+        if (progressUpdate is not null)
+        {
+            await SendCustomerProgressEmailAsync(db, workOrder, progressUpdate);
+        }
 
         var refreshed = await GetStaffWorkOrdersAsync();
         refreshed.SuccessMessage = $"Work order {requestedWorkOrderNumber} updated.";
@@ -469,7 +651,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         workOrder.EstimateAmount = CalculateAppliedTotal(workOrder)
             + (workOrder.LaborAmount ?? 0m);
 
-        AddProgressUpdateIfChanged(
+        var progressUpdate = AddProgressUpdateIfChanged(
             db,
             workOrder,
             previousStatus,
@@ -482,6 +664,11 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             "Technician");
 
         await db.SaveChangesAsync();
+
+        if (progressUpdate is not null)
+        {
+            await SendCustomerProgressEmailAsync(db, workOrder, progressUpdate);
+        }
 
         var refreshed = await GetTechnicianWorkOrdersAsync();
         refreshed.SuccessMessage = $"Work order {workOrder.WorkOrderNumber ?? "record"} updated.";
@@ -552,8 +739,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
 
         part.IsApproved = false;
         part.IsCustomerDeclined = true;
-        if (!workOrder.Parts.Any(x => x.IsApproved)
-            && !workOrder.Parts.Any(x => x.IsApplied && !x.IsCustomerDeclined))
+        if (!HasCustomerWorkRemaining(workOrder))
         {
             workOrder.Status = "Declined";
         }
@@ -563,6 +749,87 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         await db.SaveChangesAsync();
 
         return await GetCustomerResultAsync("Part marked as not approved.");
+    }
+
+    public async Task<WorkOrderPageViewModel> ApproveJobAsync(Guid workOrderId, Guid jobId)
+    {
+        var current = _currentCustomerAccessor.GetCurrentCustomer();
+        if (!current.IsAuthenticated)
+        {
+            return new WorkOrderPageViewModel { ErrorMessage = "You must be signed in to approve work." };
+        }
+
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var workOrder = await GetCustomerWorkOrderAsync(db, workOrderId, current.UserId);
+        if (workOrder is null)
+        {
+            return new WorkOrderPageViewModel { ErrorMessage = "Work order not found." };
+        }
+
+        if (!IsCustomerApprovalOpen(workOrder.Status))
+        {
+            return await GetCustomerErrorAsync("This work order is not waiting for customer approval.");
+        }
+
+        var job = workOrder.Jobs.FirstOrDefault(x => x.Id == jobId);
+        if (job is null)
+        {
+            return new WorkOrderPageViewModel { ErrorMessage = "Repair job not found." };
+        }
+
+        job.IsApproved = true;
+        job.IsCustomerDeclined = false;
+        job.IsDeferred = false;
+        job.Status = "Approved";
+        job.UpdatedUtc = DateTimeOffset.UtcNow;
+        workOrder.Status = "In Progress";
+        workOrder.InvoiceAmount = CalculateApprovedTotal(workOrder);
+        workOrder.UpdatedUtc = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync();
+
+        return await GetCustomerResultAsync("Repair job approved and work is now in progress.");
+    }
+
+    public async Task<WorkOrderPageViewModel> DeclineJobAsync(Guid workOrderId, Guid jobId)
+    {
+        var current = _currentCustomerAccessor.GetCurrentCustomer();
+        if (!current.IsAuthenticated)
+        {
+            return new WorkOrderPageViewModel { ErrorMessage = "You must be signed in to decline work." };
+        }
+
+        await using var db = await _dbFactory.CreateDbContextAsync();
+        var workOrder = await GetCustomerWorkOrderAsync(db, workOrderId, current.UserId);
+        if (workOrder is null)
+        {
+            return new WorkOrderPageViewModel { ErrorMessage = "Work order not found." };
+        }
+
+        if (!IsCustomerApprovalOpen(workOrder.Status))
+        {
+            return await GetCustomerErrorAsync("This work order is not open for customer decisions.");
+        }
+
+        var job = workOrder.Jobs.FirstOrDefault(x => x.Id == jobId);
+        if (job is null)
+        {
+            return new WorkOrderPageViewModel { ErrorMessage = "Repair job not found." };
+        }
+
+        job.IsApproved = false;
+        job.IsCustomerDeclined = true;
+        job.Status = "Declined";
+        job.UpdatedUtc = DateTimeOffset.UtcNow;
+        if (!HasCustomerWorkRemaining(workOrder))
+        {
+            workOrder.Status = "Declined";
+        }
+
+        workOrder.InvoiceAmount = CalculateApprovedTotal(workOrder);
+        workOrder.UpdatedUtc = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync();
+
+        return await GetCustomerResultAsync("Repair job marked as not approved.");
     }
 
     public async Task<WorkOrderPageViewModel> ApproveWorkOrderAsync(Guid workOrderId)
@@ -589,6 +856,14 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         {
             part.IsApproved = true;
             part.IsCustomerDeclined = false;
+        }
+
+        foreach (var job in workOrder.Jobs.Where(x => !x.IsDeferred))
+        {
+            job.IsApproved = true;
+            job.IsCustomerDeclined = false;
+            job.Status = "Approved";
+            job.UpdatedUtc = DateTimeOffset.UtcNow;
         }
 
         workOrder.Status = "In Progress";
@@ -623,6 +898,14 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         {
             part.IsApproved = false;
             part.IsCustomerDeclined = true;
+        }
+
+        foreach (var job in workOrder.Jobs.Where(x => !x.IsDeferred))
+        {
+            job.IsApproved = false;
+            job.IsCustomerDeclined = true;
+            job.Status = "Declined";
+            job.UpdatedUtc = DateTimeOffset.UtcNow;
         }
 
         workOrder.Status = "Declined";
@@ -683,6 +966,9 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
 
         return db.ServiceHistoryEntries
             .Include(x => x.Parts)
+            .Include(x => x.Jobs)
+            .ThenInclude(x => x.Parts)
+            .Include(x => x.Inspections)
             .Include(x => x.Updates)
             .Where(x => x.Technician != null && assignmentNames.Contains(x.Technician.Trim()));
     }
@@ -793,6 +1079,9 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
     {
         return await db.ServiceHistoryEntries
             .Include(x => x.Parts)
+            .Include(x => x.Jobs)
+            .ThenInclude(x => x.Parts)
+            .Include(x => x.Inspections)
             .Include(x => x.Updates)
             .Where(x => x.Id == workOrderId && x.Customer != null && x.Customer.ApplicationUserId == userId)
             .FirstOrDefaultAsync();
@@ -802,6 +1091,10 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         string.Equals(status, "Waiting on Customer Approval", StringComparison.OrdinalIgnoreCase)
         || string.Equals(status, "In Progress", StringComparison.OrdinalIgnoreCase);
 
+    private static bool HasCustomerWorkRemaining(ServiceHistoryEntry workOrder) =>
+        workOrder.Parts.Any(x => x.IsApplied && !x.IsCustomerDeclined)
+        || workOrder.Jobs.Any(x => !x.IsCustomerDeclined && !x.IsDeferred);
+
     private static decimal CalculateApprovedTotal(ServiceHistoryEntry workOrder)
     {
         if (string.Equals(workOrder.Status, "Declined", StringComparison.OrdinalIgnoreCase))
@@ -809,8 +1102,11 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             return 0m;
         }
 
-        return workOrder.Parts.Where(x => x.IsApproved)
-            .Sum(x => x.Quantity * (x.UnitPrice ?? 0m)) + (workOrder.LaborAmount ?? 0m);
+        var approvedParts = workOrder.Parts.Where(x => x.IsApproved)
+            .Sum(x => x.Quantity * (x.UnitPrice ?? 0m));
+        var approvedJobs = workOrder.Jobs.Where(x => x.IsApproved)
+            .Sum(x => x.LaborAmount ?? 0m);
+        return approvedParts + approvedJobs + (workOrder.LaborAmount ?? 0m);
     }
 
     private static decimal CalculateAppliedTotal(ServiceHistoryEntry workOrder) =>
@@ -984,7 +1280,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
-    private static void AddProgressUpdateIfChanged(
+    private static ServiceHistoryUpdate? AddProgressUpdateIfChanged(
         TPGLLCDbContext db,
         ServiceHistoryEntry workOrder,
         string? previousStatus,
@@ -994,7 +1290,11 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         int previousAppliedPartCount,
         int currentAppliedPartCount,
         string? authorName,
-        string fallbackAuthor)
+        string fallbackAuthor,
+        int? previousJobCount = null,
+        int? currentJobCount = null,
+        int? previousInspectionCount = null,
+        int? currentInspectionCount = null)
     {
         var messages = new List<string>();
 
@@ -1029,12 +1329,24 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             messages.Add($"Parts applied: {currentAppliedPartCount}.");
         }
 
-        if (messages.Count == 0)
+        if (previousJobCount.HasValue && currentJobCount.HasValue && previousJobCount != currentJobCount)
         {
-            return;
+            messages.Add($"Repair jobs listed: {currentJobCount}.");
         }
 
-        db.ServiceHistoryUpdates.Add(new ServiceHistoryUpdate
+        if (previousInspectionCount.HasValue
+            && currentInspectionCount.HasValue
+            && previousInspectionCount != currentInspectionCount)
+        {
+            messages.Add($"Inspection findings recorded: {currentInspectionCount}.");
+        }
+
+        if (messages.Count == 0)
+        {
+            return null;
+        }
+
+        var progressUpdate = new ServiceHistoryUpdate
         {
             ServiceHistoryEntryId = workOrder.Id,
             Status = string.IsNullOrWhiteSpace(workOrder.Status) ? "Update" : workOrder.Status,
@@ -1042,6 +1354,64 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             AuthorName = string.IsNullOrWhiteSpace(authorName) ? fallbackAuthor : authorName.Trim(),
             IsCustomerVisible = true,
             CreatedUtc = DateTimeOffset.UtcNow
-        });
+        };
+
+        db.ServiceHistoryUpdates.Add(progressUpdate);
+        return progressUpdate;
+    }
+
+    private async Task SendCustomerProgressEmailAsync(
+        TPGLLCDbContext db,
+        ServiceHistoryEntry workOrder,
+        ServiceHistoryUpdate update)
+    {
+        var customer = await db.Customers
+            .AsNoTracking()
+            .Where(x => x.Id == workOrder.CustomerId)
+            .Select(x => new { x.Email, x.FirstName })
+            .FirstOrDefaultAsync();
+
+        if (customer is null || string.IsNullOrWhiteSpace(customer.Email))
+        {
+            return;
+        }
+
+        var workOrderNumber = WebUtility.HtmlEncode(workOrder.WorkOrderNumber ?? "Work order");
+        var vehicle = WebUtility.HtmlEncode(workOrder.VehicleName);
+        var status = WebUtility.HtmlEncode(WorkOrderStatusCatalog.GetDefinition(workOrder.Status).Label);
+        var message = WebUtility.HtmlEncode(update.Message);
+        var firstName = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(customer.FirstName) ? "Customer" : customer.FirstName);
+        var shopName = WebUtility.HtmlEncode(_emailOptions.ShopName);
+
+        var body = $"""
+            <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;color:#17233c">
+              <h2>{shopName}</h2>
+              <h3>Repair update for {workOrderNumber}</h3>
+              <p>Hello {firstName},</p>
+              <p>Your repair status is now <strong>{status}</strong>.</p>
+              <p><strong>Vehicle:</strong> {vehicle}</p>
+              <div style="margin:20px 0;padding:14px 16px;background:#fffaf0;border:1px solid #f0d38d;border-radius:8px">
+                <strong>Latest update</strong><br />
+                {message}
+              </div>
+              <p>Sign in to your customer portal to view the complete repair timeline.</p>
+              <p>{WebUtility.HtmlEncode(_emailOptions.ShopPhone)} · {WebUtility.HtmlEncode(_emailOptions.ShopEmail)}</p>
+            </div>
+            """;
+
+        try
+        {
+            await _emailSender.SendEmailAsync(
+                customer.Email,
+                $"{_emailOptions.ShopName} - Repair Update {workOrder.WorkOrderNumber}",
+                body);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Work order {WorkOrderId} was updated, but a customer progress email could not be sent.",
+                workOrder.Id);
+        }
     }
 }

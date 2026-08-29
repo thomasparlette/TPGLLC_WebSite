@@ -295,6 +295,99 @@
                         </div>
                     </div>
 
+                    <div class="workorder-structured-section">
+                        <div class="portal-section-heading">
+                            <div>
+                                <h3>Repair jobs and estimate</h3>
+                                <div class="portal-muted">Break the estimate into customer-approvable jobs with separate labor amounts.</div>
+                            </div>
+                            <button type="button" class="portal-action-button" @onclick="AddJob">Add repair job</button>
+                        </div>
+
+                        @if (_model.Form.Jobs.Count == 0)
+                        {
+                            <div class="workorder-structured-empty">No repair jobs have been added yet.</div>
+                        }
+                        else
+                        {
+                            @foreach (var job in _model.Form.Jobs)
+                            {
+                                <div class="workorder-job-row">
+                                    <div class="workorder-field">
+                                        <label class="portal-field-label">Job name</label>
+                                        <InputText class="portal-input" placeholder="Brake service, diagnosis, etc." @bind-Value="job.Name" />
+                                    </div>
+                                    <div class="workorder-field">
+                                        <label class="portal-field-label">Status</label>
+                                        <InputSelect class="portal-input" @bind-Value="job.Status">
+                                            @foreach (var status in JobStatuses)
+                                            {
+                                                <option value="@status">@status</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                    <div class="workorder-field">
+                                        <label class="portal-field-label">Labor</label>
+                                        <InputText class="portal-input" placeholder="0.00" @bind-Value="job.LaborAmount" />
+                                    </div>
+                                    <label class="workorder-checkbox-field"><InputCheckbox @bind-Value="job.IsDeferred" /> Deferred</label>
+                                    <label class="workorder-checkbox-field"><InputCheckbox @bind-Value="job.IsApproved" disabled="@(!IsQuoted)" /> Approved</label>
+                                    <button type="button" class="portal-action-button" @onclick="() => RemoveJob(job)">Remove</button>
+                                    <div class="workorder-field workorder-field-full">
+                                        <label class="portal-field-label">Job description</label>
+                                        <InputTextArea class="portal-input" placeholder="Describe the recommended repair and scope of work." @bind-Value="job.Description" />
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+
+                    <div class="workorder-structured-section">
+                        <div class="portal-section-heading">
+                            <div>
+                                <h3>Digital inspection</h3>
+                                <div class="portal-muted">Record inspection findings and recommendations customers can review in the portal.</div>
+                            </div>
+                            <button type="button" class="portal-action-button" @onclick="AddInspection">Add inspection finding</button>
+                        </div>
+
+                        @if (_model.Form.Inspections.Count == 0)
+                        {
+                            <div class="workorder-structured-empty">No inspection findings have been added yet.</div>
+                        }
+                        else
+                        {
+                            @foreach (var inspection in _model.Form.Inspections)
+                            {
+                                <div class="workorder-inspection-row">
+                                    <div class="workorder-field">
+                                        <label class="portal-field-label">Inspection area</label>
+                                        <InputText class="portal-input" placeholder="Brakes, tires, fluids..." @bind-Value="inspection.Area" />
+                                    </div>
+                                    <div class="workorder-field">
+                                        <label class="portal-field-label">Condition</label>
+                                        <InputSelect class="portal-input" @bind-Value="inspection.Condition">
+                                            @foreach (var condition in InspectionConditions)
+                                            {
+                                                <option value="@condition">@condition</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                    <div class="workorder-field">
+                                        <label class="portal-field-label">Finding</label>
+                                        <InputTextArea class="portal-input" placeholder="What was found?" @bind-Value="inspection.Finding" />
+                                    </div>
+                                    <div class="workorder-field">
+                                        <label class="portal-field-label">Recommendation</label>
+                                        <InputTextArea class="portal-input" placeholder="Recommended next step" @bind-Value="inspection.Recommendation" />
+                                    </div>
+                                    <label class="workorder-checkbox-field"><InputCheckbox @bind-Value="inspection.IsCustomerVisible" /> Customer visible</label>
+                                    <button type="button" class="portal-action-button" @onclick="() => RemoveInspection(inspection)">Remove</button>
+                                </div>
+                            }
+                        }
+                    </div>
+
                     <div class="workorder-parts-section">
                         <div class="portal-section-heading">
                             <div>
@@ -316,6 +409,16 @@
                             <div class="workorder-part-row">
                                 <div class="workorder-part-description">
                                     <InputText class="portal-input" placeholder="Part description" @bind-Value="part.Description" />
+                                    <label class="workorder-part-job-label">
+                                        Repair job
+                                        <InputSelect TValue="Guid?" class="portal-input" @bind-Value="part.ServiceHistoryJobId">
+                                            <option value="">Unassigned</option>
+                                            @foreach (var job in _model.Form.Jobs.Where(x => !string.IsNullOrWhiteSpace(x.Name)))
+                                            {
+                                                <option value="@job.Id">@job.Name</option>
+                                            }
+                                        </InputSelect>
+                                    </label>
                                     @if (part.IsCustomerDeclined)
                                     {
                                         <span class="workorder-part-status workorder-part-status-declined">Not approved by customer</span>
@@ -407,13 +510,40 @@
 
     private bool IsQuoted => string.Equals(_model.Form.Status, "Quoted", StringComparison.OrdinalIgnoreCase);
 
+    private static readonly IReadOnlyList<string> JobStatuses =
+        ["Proposed", "Approved", "In Progress", "Completed", "Deferred", "Declined"];
+
+    private static readonly IReadOnlyList<string> InspectionConditions =
+        ["Good", "Monitor", "Needs Attention", "Urgent"];
+
+    private void AddJob() => _model.Form.Jobs.Add(new WorkOrderJobEditViewModel());
+
+    private void RemoveJob(WorkOrderJobEditViewModel job) => _model.Form.Jobs.Remove(job);
+
+    private void AddInspection() => _model.Form.Inspections.Add(new WorkOrderInspectionEditViewModel());
+
+    private void RemoveInspection(WorkOrderInspectionEditViewModel inspection) => _model.Form.Inspections.Remove(inspection);
+
     private void AddPart() => _model.Form.Parts.Add(new WorkOrderPartEditViewModel());
 
     private void RemovePart(WorkOrderPartEditViewModel part) => _model.Form.Parts.Remove(part);
 
-    private string EstimatedAmountText => FormatCurrency(PartsTotal(onlyApplied: true) + ParseAmount(_model.Form.LaborAmount));
+    private string EstimatedAmountText => FormatCurrency(
+        PartsTotal(onlyApplied: true)
+        + JobLaborTotal(onlyApproved: false)
+        + ParseAmount(_model.Form.LaborAmount));
 
-    private string InvoiceAmountText => FormatCurrency(PartsTotal(onlyApplied: false) + ParseAmount(_model.Form.LaborAmount));
+    private string InvoiceAmountText => FormatCurrency(
+        PartsTotal(onlyApplied: false)
+        + JobLaborTotal(onlyApproved: true)
+        + ParseAmount(_model.Form.LaborAmount));
+
+    private decimal JobLaborTotal(bool onlyApproved)
+    {
+        return _model.Form.Jobs
+            .Where(x => !x.IsDeferred && !x.IsCustomerDeclined && (!onlyApproved || x.IsApproved))
+            .Sum(x => ParseAmount(x.LaborAmount));
+    }
 
     private decimal PartsTotal(bool onlyApplied)
     {

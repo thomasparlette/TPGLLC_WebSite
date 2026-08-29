@@ -422,6 +422,63 @@
     color: #697a91;
 }
 
+.workorder-structured-section {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5eaf2;
+}
+
+.workorder-structured-empty {
+    padding: 1rem;
+    border: 1px dashed #cbd7e6;
+    border-radius: 0.7rem;
+    color: #6c7c92;
+    font-size: 0.86rem;
+}
+
+.workorder-job-row,
+.workorder-inspection-row {
+    display: grid;
+    gap: 0.75rem;
+    align-items: start;
+    margin-top: 0.85rem;
+    padding: 0.9rem;
+    border: 1px solid #dbe4f0;
+    border-radius: 0.75rem;
+    background: #f8fafc;
+}
+
+.workorder-job-row {
+    grid-template-columns: minmax(180px, 2fr) minmax(135px, 1fr) 115px auto auto auto;
+}
+
+.workorder-inspection-row {
+    grid-template-columns: minmax(145px, 1fr) minmax(135px, 0.8fr) minmax(180px, 1.5fr) minmax(180px, 1.5fr) auto auto;
+}
+
+.workorder-job-row .workorder-field-full {
+    grid-column: 1 / -1;
+}
+
+.workorder-checkbox-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 2.55rem;
+    color: #345276;
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.workorder-part-job-label {
+    display: grid;
+    gap: 0.25rem;
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
 .workorder-editor-actions {
     display: flex;
     justify-content: flex-end;
@@ -507,6 +564,11 @@
 }
 
 @media (max-width: 900px) {
+    .workorder-job-row,
+    .workorder-inspection-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .workorder-part-row {
         grid-template-columns: 1fr 1fr;
     }
@@ -534,7 +596,9 @@
 
 @media (max-width: 700px) {
     .workorder-form-grid,
-    .workorder-notes-grid {
+    .workorder-notes-grid,
+    .workorder-job-row,
+    .workorder-inspection-row {
         grid-template-columns: 1fr;
     }
 

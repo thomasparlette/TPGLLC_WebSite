@@ -89,6 +89,8 @@
                                             CanApprove="@CanCustomerApprove(workOrder)"
                                             OnApprovePart="@(partId => ApprovePartAsync(partId, workOrder.Id))"
                                             OnDeclinePart="@(partId => DeclinePartAsync(partId, workOrder.Id))"
+                                            OnApproveJob="@(jobId => ApproveJobAsync(jobId, workOrder.Id))"
+                                            OnDeclineJob="@(jobId => DeclineJobAsync(jobId, workOrder.Id))"
                                             OnApproveWorkOrder="ApproveWorkOrderAsync"
                                             OnDeclineWorkOrder="DeclineWorkOrderAsync"
                                             @key="workOrder.Id" />
@@ -180,6 +182,7 @@
             || string.Equals(workOrder.Status, "In Progress", StringComparison.OrdinalIgnoreCase);
 
         return statusIsOpen && (workOrder.Parts.Any(x => x.IsApplied && !x.IsApproved && !x.IsCustomerDeclined)
+            || workOrder.Jobs.Any(x => !x.IsApproved && !x.IsCustomerDeclined && !x.IsDeferred)
             || string.Equals(workOrder.Status, "Waiting on Customer Approval", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -198,6 +201,18 @@
     private async Task DeclinePartAsync(Guid partId, Guid workOrderId)
     {
         _model = await WorkOrderService.DeclinePartAsync(workOrderId, partId);
+        _errorMessage = _model.ErrorMessage;
+    }
+
+    private async Task ApproveJobAsync(Guid jobId, Guid workOrderId)
+    {
+        _model = await WorkOrderService.ApproveJobAsync(workOrderId, jobId);
+        _errorMessage = _model.ErrorMessage;
+    }
+
+    private async Task DeclineJobAsync(Guid jobId, Guid workOrderId)
+    {
+        _model = await WorkOrderService.DeclineJobAsync(workOrderId, jobId);
         _errorMessage = _model.ErrorMessage;
     }
 

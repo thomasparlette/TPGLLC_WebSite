@@ -106,6 +106,56 @@
         </div>
     }
 
+    @if (Entry.Inspections.Any(x => x.IsCustomerVisible))
+    {
+        <div class="history-inspection-panel">
+            <div class="history-inspection-heading">
+                <div>
+                    <strong>Digital inspection</strong>
+                    <span>Findings from the shop inspection</span>
+                </div>
+                <span class="history-inspection-count">@Entry.Inspections.Count(x => x.IsCustomerVisible) findings</span>
+            </div>
+            @foreach (var inspection in Entry.Inspections.Where(x => x.IsCustomerVisible).OrderBy(x => x.Area))
+            {
+                <div class="history-inspection-row">
+                    <div class="history-inspection-row-header">
+                        <strong>@inspection.Area</strong>
+                        <span class="history-inspection-condition @GetInspectionCssClass(inspection.Condition)">@inspection.Condition</span>
+                    </div>
+                    <div>@inspection.Finding</div>
+                    @if (!string.IsNullOrWhiteSpace(inspection.Recommendation))
+                    {
+                        <div class="history-inspection-recommendation"><strong>Recommendation:</strong> @inspection.Recommendation</div>
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    @if (Entry.Jobs.Count > 0)
+    {
+        <div class="service-record-details history-job-summary">
+            <div class="service-record-details-title">Repair estimate</div>
+            <div class="history-job-list">
+                @foreach (var job in Entry.Jobs.OrderBy(x => x.SortOrder).ThenBy(x => x.Name))
+                {
+                    <div class="history-job-row">
+                        <div>
+                            <strong>@job.Name</strong>
+                            @if (!string.IsNullOrWhiteSpace(job.Description))
+                            {
+                                <div class="history-job-description">@job.Description</div>
+                            }
+                        </div>
+                        <div class="history-job-amount">@(job.LaborAmount?.ToString("C") ?? "Labor pending")</div>
+                        <span class="history-job-status @GetStatusCssClass(job.Status)">@GetJobStatusLabel(job)</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
     @if (Entry.Parts.Count > 0 || Entry.LaborAmount.HasValue)
     {
         <div class="service-record-details">
@@ -143,53 +193,70 @@
     {
         <div class="customer-approval-panel">
             <strong>Customer approval required</strong>
-            <p>Approve or decline each proposed part, or choose an action for all work proposed.</p>
-            @foreach (var part in Entry.Parts.Where(x => x.IsApplied && !x.IsApproved && !x.IsCustomerDeclined))
+            <p>Approve or decline each proposed repair job or part, or choose an action for all work proposed.</p>
+            @foreach (var job in Entry.Jobs.Where(IsJobApprovalOpen))
             {
                 <div class="customer-approval-item">
-                    <span>@part.Description</span>
-                    <button type="button" class="portal-action-button portal-action-button-secondary"
-                            @onclick="() => OnApprovePart.InvokeAsync(part.Id)">
-                        Approve
-                    </button>
-                    <button type="button" class="portal-danger-button"
-                            @onclick="() => OnDeclinePart.InvokeAsync(part.Id)">
-                        Do not approve
-                    </button>
-                </div>
-            }
-            <div class="customer-approval-item customer-approval-item-complete">
-                <span>All work proposed</span>
-                <button type="button" class="portal-action-button" @onclick="() => OnApproveWorkOrder.InvokeAsync(Entry.Id)">
-                    Approve all work proposed
+                    <span>@job.Name @if (job.LaborAmount.HasValue) {
+                        <text>(@job.LaborAmount.Value.ToString("C"))</text>
+                    }
+                </span>
+                <button type="button" class="portal-action-button portal-action-button-secondary"
+                        @onclick="() => OnApproveJob.InvokeAsync(job.Id)">
+                    Approve job
                 </button>
-                <button type="button" class="portal-danger-button" @onclick="() => OnDeclineWorkOrder.InvokeAsync(Entry.Id)">
-                    Do not approve all work proposed
+                <button type="button" class="portal-danger-button"
+                        @onclick="() => OnDeclineJob.InvokeAsync(job.Id)">
+                    Do not approve
                 </button>
             </div>
+        }
+        @foreach (var part in Entry.Parts.Where(x => x.IsApplied && !x.IsApproved && !x.IsCustomerDeclined))
+        {
+            <div class="customer-approval-item">
+                <span>@part.Description</span>
+                <button type="button" class="portal-action-button portal-action-button-secondary"
+                        @onclick="() => OnApprovePart.InvokeAsync(part.Id)">
+                    Approve
+                </button>
+                <button type="button" class="portal-danger-button"
+                        @onclick="() => OnDeclinePart.InvokeAsync(part.Id)">
+                    Do not approve
+                </button>
+            </div>
+        }
+        <div class="customer-approval-item customer-approval-item-complete">
+            <span>All work proposed</span>
+            <button type="button" class="portal-action-button" @onclick="() => OnApproveWorkOrder.InvokeAsync(Entry.Id)">
+                Approve all work proposed
+            </button>
+            <button type="button" class="portal-danger-button" @onclick="() => OnDeclineWorkOrder.InvokeAsync(Entry.Id)">
+                Do not approve all work proposed
+            </button>
         </div>
-    }
+    </div>
+}
 
-    @if (!string.IsNullOrWhiteSpace(Entry.Technician))
-    {
-        <div style="margin-top:0.75rem; color:#6b7280;">
-            Technician: @Entry.Technician
-        </div>
-    }
+@if (!string.IsNullOrWhiteSpace(Entry.Technician))
+{
+    <div style="margin-top:0.75rem; color:#6b7280;">
+        Technician: @Entry.Technician
+    </div>
+}
 
-    @if (!IsActiveWorkOrder(Entry) && (!string.IsNullOrWhiteSpace(Entry.Diagnosis) || !string.IsNullOrWhiteSpace(Entry.Notes)))
-    {
-        <div class="history-completed-summary">
-            @if (!string.IsNullOrWhiteSpace(Entry.Diagnosis))
-            {
-                <div><strong>Diagnosis:</strong> @Entry.Diagnosis</div>
-            }
-            @if (!string.IsNullOrWhiteSpace(Entry.Notes))
-            {
-                <div><strong>Notes:</strong> @Entry.Notes</div>
-            }
-        </div>
-    }
+@if (!IsActiveWorkOrder(Entry) && (!string.IsNullOrWhiteSpace(Entry.Diagnosis) || !string.IsNullOrWhiteSpace(Entry.Notes)))
+{
+    <div class="history-completed-summary">
+        @if (!string.IsNullOrWhiteSpace(Entry.Diagnosis))
+        {
+            <div><strong>Diagnosis:</strong> @Entry.Diagnosis</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Entry.Notes))
+        {
+            <div><strong>Notes:</strong> @Entry.Notes</div>
+        }
+    </div>
+}
 </article>
 
 @code {
@@ -197,6 +264,8 @@
     [Parameter] public bool CanApprove { get; set; }
     [Parameter] public EventCallback<Guid> OnApprovePart { get; set; }
     [Parameter] public EventCallback<Guid> OnDeclinePart { get; set; }
+    [Parameter] public EventCallback<Guid> OnApproveJob { get; set; }
+    [Parameter] public EventCallback<Guid> OnDeclineJob { get; set; }
     [Parameter] public EventCallback<Guid> OnApproveWorkOrder { get; set; }
     [Parameter] public EventCallback<Guid> OnDeclineWorkOrder { get; set; }
 
@@ -211,7 +280,36 @@
         || !string.IsNullOrWhiteSpace(entry.Diagnosis)
         || !string.IsNullOrWhiteSpace(entry.Notes)
         || entry.MileageOut.HasValue
-        || entry.Parts.Any(x => x.IsApplied);
+        || entry.Parts.Any(x => x.IsApplied)
+        || entry.Jobs.Count > 0
+        || entry.Inspections.Any(x => x.IsCustomerVisible);
+
+    private static bool IsJobApprovalOpen(ServiceHistoryJob job) =>
+        !job.IsApproved && !job.IsCustomerDeclined && !job.IsDeferred;
+
+    private static string GetJobStatusLabel(ServiceHistoryJob job)
+    {
+        if (job.IsCustomerDeclined)
+        {
+            return "Not approved";
+        }
+
+        if (job.IsDeferred)
+        {
+            return "Deferred";
+        }
+
+        return job.IsApproved ? "Approved" : GetStatusLabel(job.Status);
+    }
+
+    private static string GetInspectionCssClass(string? condition) =>
+        condition?.Trim().ToLowerInvariant() switch
+        {
+            "urgent" => "history-inspection-urgent",
+            "needs attention" => "history-inspection-needs-attention",
+            "monitor" => "history-inspection-monitor",
+            _ => "history-inspection-good"
+        };
 
     private static bool IsActiveWorkOrder(ServiceHistoryEntry entry) =>
         !string.Equals(entry.Status, "Completed", StringComparison.OrdinalIgnoreCase)

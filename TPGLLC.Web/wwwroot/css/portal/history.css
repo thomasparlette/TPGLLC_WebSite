@@ -371,6 +371,167 @@
     margin-top: 0.2rem;
 }
 
+.history-inspection-panel,
+.history-job-summary {
+    margin-top: 1rem;
+    padding: 0.9rem;
+    border: 1px solid #dbe4f0;
+    border-radius: 0.8rem;
+    background: #f8fafc;
+}
+
+.history-inspection-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    color: #234d87;
+}
+
+    .history-inspection-heading strong,
+    .history-inspection-heading span {
+        display: block;
+    }
+
+    .history-inspection-heading span {
+        margin-top: 0.2rem;
+        color: #718198;
+        font-size: 0.76rem;
+    }
+
+    .history-inspection-heading .history-inspection-count {
+        margin-top: 0;
+        color: #506985;
+        white-space: nowrap;
+    }
+
+.history-inspection-row {
+    display: grid;
+    gap: 0.35rem;
+    margin-top: 0.7rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid #e3eaf3;
+    color: #42546d;
+    font-size: 0.84rem;
+    line-height: 1.45;
+}
+
+.history-inspection-row-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.history-inspection-condition,
+.history-job-status {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.history-inspection-good {
+    background: #edfbf3;
+    color: #1d754f;
+}
+
+.history-inspection-monitor {
+    background: #edf5ff;
+    color: #245f9f;
+}
+
+.history-inspection-needs-attention {
+    background: #fff7df;
+    color: #966600;
+}
+
+.history-inspection-urgent {
+    background: #fff0f2;
+    color: #a93340;
+}
+
+.history-inspection-recommendation,
+.history-job-description {
+    color: #68778e;
+}
+
+.history-job-list {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.history-job-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 0.75rem;
+    align-items: start;
+    padding: 0.7rem 0;
+    border-top: 1px solid #e3eaf3;
+    color: #42546d;
+    font-size: 0.84rem;
+}
+
+    .history-job-row:first-child {
+        border-top: 0;
+        padding-top: 0;
+    }
+
+.history-job-description {
+    margin-top: 0.25rem;
+    line-height: 1.4;
+}
+
+.history-job-amount {
+    color: #234d87;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.history-job-status.history-status-approved {
+    background: #f4effd;
+    color: #6948a4;
+}
+
+.history-job-status.history-status-requested {
+    background: #edf5ff;
+    color: #245f9f;
+}
+
+.history-job-status.history-status-in-progress {
+    background: #fff7df;
+    color: #966600;
+}
+
+.history-job-status.history-status-completed {
+    background: #edfbf3;
+    color: #1d754f;
+}
+
+.history-job-status.history-status-cancelled {
+    background: #fff0f2;
+    color: #a93340;
+}
+
+@media (max-width: 600px) {
+    .history-job-row {
+        grid-template-columns: 1fr auto;
+    }
+
+    .history-job-status {
+        grid-column: 1 / -1;
+        justify-self: start;
+    }
+
+    .history-inspection-row-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
 @media (max-width: 900px) {
     .history-status-columns {
         grid-template-columns: 1fr;

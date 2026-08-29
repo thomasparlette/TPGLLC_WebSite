@@ -2,6 +2,7 @@
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.Customer)]
 
+@using TPGLLC.Web.Components.PortalShared.History
 @using TPGLLC.Web.Authorization
 @using TPGLLC.Web.Components.PortalShared.Vehicles
 @using TPGLLC.Web.Services.Portal
@@ -115,32 +116,10 @@
             }
             else
             {
-                <div class="portal-activity">
+                <div class="portal-dashboard-grid">
                     @foreach (var item in _model.ServiceHistory)
                     {
-                        <div class="portal-activity-item">
-                            <div class="portal-activity-icon">🛠️</div>
-                            <div>
-                                <div><strong>@item.ServiceDate.ToString("MMM d, yyyy")</strong></div>
-                                <div>@item.Service</div>
-                                <div>@item.Status</div>
-
-                                @if (item.Mileage.HasValue)
-                                {
-                                    <div>@item.Mileage.Value.ToString("N0") mi</div>
-                                }
-
-                                @if (!string.IsNullOrWhiteSpace(item.Technician))
-                                {
-                                    <div>Technician: @item.Technician</div>
-                                }
-
-                                @if (!string.IsNullOrWhiteSpace(item.Notes))
-                                {
-                                    <div style="margin-top:0.35rem;">@item.Notes</div>
-                                }
-                            </div>
-                        </div>
+                        <ServiceHistoryCard Entry="@item" @key="item.Id" />
                     }
                 </div>
             }

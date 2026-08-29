@@ -60,6 +60,11 @@ public sealed class VehicleDetailsService : IVehicleDetailsService
 
         var history = await db.ServiceHistoryEntries
             .AsNoTracking()
+            .Include(x => x.Parts)
+            .Include(x => x.Jobs)
+            .ThenInclude(x => x.Parts)
+            .Include(x => x.Inspections)
+            .Include(x => x.Updates)
             .Where(x => x.CustomerId == customer.Id && x.CustomerVehicleId == vehicle.Id)
             .OrderByDescending(x => x.ServiceDate)
             .ThenByDescending(x => x.CreatedUtc)
