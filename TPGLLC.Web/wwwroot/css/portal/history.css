@@ -294,6 +294,83 @@
     line-height: 1.45;
 }
 
+.history-update-timeline {
+    display: grid;
+    gap: 0.7rem;
+    margin-top: 1rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid #e6ebf2;
+}
+
+.history-update-timeline-heading {
+    color: #345276;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.history-update-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.65rem;
+    align-items: start;
+    color: #42546d;
+    font-size: 0.84rem;
+    line-height: 1.45;
+}
+
+.history-update-item-dot {
+    width: 0.6rem;
+    height: 0.6rem;
+    margin-top: 0.3rem;
+    border-radius: 999px;
+    background: #7890af;
+}
+
+    .history-update-item-dot.history-status-requested {
+        background: #2d73c5;
+    }
+
+    .history-update-item-dot.history-status-approved,
+    .history-update-item-dot.history-status-waiting {
+        background: #7854bd;
+    }
+
+    .history-update-item-dot.history-status-in-progress {
+        background: #d18b00;
+    }
+
+    .history-update-item-dot.history-status-completed {
+        background: #23835b;
+    }
+
+    .history-update-item-dot.history-status-cancelled {
+        background: #c63e4b;
+    }
+
+.history-update-item-content {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.history-update-item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: baseline;
+}
+
+    .history-update-item-meta span,
+    .history-update-item-author {
+        color: #8090a5;
+        font-size: 0.75rem;
+    }
+
+.history-update-item-author {
+    margin-top: 0.2rem;
+}
+
 @media (max-width: 900px) {
     .history-status-columns {
         grid-template-columns: 1fr;

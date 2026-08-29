@@ -82,6 +82,30 @@
         </div>
     }
 
+    @if (CustomerVisibleUpdates.Count > 0)
+    {
+        <div class="history-update-timeline">
+            <div class="history-update-timeline-heading">Repair update history</div>
+            @foreach (var update in CustomerVisibleUpdates)
+            {
+                <div class="history-update-item" @key="update.Id">
+                    <span class="history-update-item-dot @GetStatusCssClass(update.Status)"></span>
+                    <div class="history-update-item-content">
+                        <div class="history-update-item-meta">
+                            <strong>@GetStatusLabel(update.Status)</strong>
+                            <span>@update.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</span>
+                        </div>
+                        <div>@update.Message</div>
+                        @if (!string.IsNullOrWhiteSpace(update.AuthorName))
+                        {
+                            <div class="history-update-item-author">Updated by @update.AuthorName</div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
     @if (Entry.Parts.Count > 0 || Entry.LaborAmount.HasValue)
     {
         <div class="service-record-details">
@@ -175,6 +199,12 @@
     [Parameter] public EventCallback<Guid> OnDeclinePart { get; set; }
     [Parameter] public EventCallback<Guid> OnApproveWorkOrder { get; set; }
     [Parameter] public EventCallback<Guid> OnDeclineWorkOrder { get; set; }
+
+    private IReadOnlyList<ServiceHistoryUpdate> CustomerVisibleUpdates =>
+        Entry.Updates
+            .Where(x => x.IsCustomerVisible)
+            .OrderByDescending(x => x.CreatedUtc)
+            .ToList();
 
     private static bool HasCustomerVisibleUpdate(ServiceHistoryEntry entry) =>
         entry.UpdatedUtc.HasValue

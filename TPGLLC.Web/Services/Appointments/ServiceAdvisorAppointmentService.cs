@@ -236,13 +236,28 @@ public sealed class ServiceAdvisorAppointmentService : IServiceAdvisorAppointmen
 
         if (existing is not null)
         {
-            if (IsInitialWorkOrderStatus(existing.Status))
+            var wasInitial = IsInitialWorkOrderStatus(existing.Status);
+            if (wasInitial)
             {
                 existing.Status = "Requested";
             }
 
             existing.ApprovalStatus = request.Status;
             existing.UpdatedUtc = DateTimeOffset.UtcNow;
+
+            if (wasInitial)
+            {
+                db.ServiceHistoryUpdates.Add(new ServiceHistoryUpdate
+                {
+                    ServiceHistoryEntryId = existing.Id,
+                    Status = existing.Status,
+                    Message = "Appointment approved. Work order is ready for service.",
+                    AuthorName = "Service Advisor",
+                    IsCustomerVisible = true,
+                    CreatedUtc = DateTimeOffset.UtcNow
+                });
+            }
+
             return AppointmentActionResult.Ok("Appointment approved and its work order is ready.");
         }
 
@@ -312,6 +327,15 @@ public sealed class ServiceAdvisorAppointmentService : IServiceAdvisorAppointmen
         };
 
         db.ServiceHistoryEntries.Add(workOrder);
+        db.ServiceHistoryUpdates.Add(new ServiceHistoryUpdate
+        {
+            ServiceHistoryEntryId = workOrder.Id,
+            Status = workOrder.Status,
+            Message = "Appointment approved. Work order is ready for service.",
+            AuthorName = "Service Advisor",
+            IsCustomerVisible = true,
+            CreatedUtc = DateTimeOffset.UtcNow
+        });
         return AppointmentActionResult.Ok("Appointment approved and a blank work order was created.");
     }
 

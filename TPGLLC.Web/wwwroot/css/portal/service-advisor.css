@@ -28,6 +28,194 @@
     gap: 1rem;
 }
 
+.workorder-board {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(250px, 1fr));
+    gap: 1rem;
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+}
+
+.workorder-board-column {
+    min-width: 250px;
+    border: 1px solid #dbe4f0;
+    border-top: 0.3rem solid #2d73c5;
+    border-radius: 0.9rem;
+    background: #f7f9fc;
+}
+
+    .workorder-board-column.workorder-status-requested {
+        border-top-color: #2d73c5;
+    }
+
+    .workorder-board-column.workorder-status-quoted,
+    .workorder-board-column.workorder-status-waiting {
+        border-top-color: #7854bd;
+    }
+
+    .workorder-board-column.workorder-status-approved {
+        border-top-color: #4775b8;
+    }
+
+    .workorder-board-column.workorder-status-in-progress {
+        border-top-color: #d18b00;
+    }
+
+    .workorder-board-column.workorder-status-completed,
+    .workorder-board-column.workorder-status-invoiced,
+    .workorder-board-column.workorder-status-closed {
+        border-top-color: #23835b;
+    }
+
+.workorder-board-column-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 4.6rem;
+    padding: 0.85rem;
+    border-bottom: 1px solid #e2e9f2;
+}
+
+    .workorder-board-column-header h3 {
+        margin: 0;
+        color: #173d70;
+        font-size: 0.95rem;
+    }
+
+    .workorder-board-column-header span {
+        display: block;
+        margin-top: 0.25rem;
+        color: #6b7d95;
+        font-size: 0.75rem;
+    }
+
+    .workorder-board-column-header strong {
+        display: inline-flex;
+        min-width: 1.7rem;
+        height: 1.7rem;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background: #fff;
+        color: #244c7e;
+        font-size: 0.78rem;
+    }
+
+.workorder-board-items {
+    display: grid;
+    align-content: start;
+    gap: 0.75rem;
+    min-height: 8rem;
+    padding: 0.75rem;
+}
+
+.workorder-board-card {
+    padding: 0.9rem;
+    border-left: 0.3rem solid #2d73c5;
+}
+
+    .workorder-board-card.workorder-status-requested {
+        border-left-color: #2d73c5;
+    }
+
+    .workorder-board-card.workorder-status-quoted,
+    .workorder-board-card.workorder-status-waiting {
+        border-left-color: #7854bd;
+    }
+
+    .workorder-board-card.workorder-status-approved {
+        border-left-color: #4775b8;
+    }
+
+    .workorder-board-card.workorder-status-in-progress {
+        border-left-color: #d18b00;
+    }
+
+    .workorder-board-card.workorder-status-completed,
+    .workorder-board-card.workorder-status-invoiced,
+    .workorder-board-card.workorder-status-closed {
+        border-left-color: #23835b;
+    }
+
+    .workorder-board-card.workorder-status-declined,
+    .workorder-board-card.workorder-status-cancelled {
+        border-left-color: #c63e4b;
+    }
+
+    .workorder-board-card .workorder-title {
+        font-size: 0.96rem;
+    }
+
+    .workorder-board-card .workorder-subtitle {
+        font-size: 0.82rem;
+    }
+
+    .workorder-board-card .workorder-actions .portal-action-button {
+        padding: 0.55rem 0.75rem;
+        font-size: 0.78rem;
+    }
+
+.workorder-status-badge.workorder-status-requested {
+    background: #edf5ff;
+    color: #245f9f;
+}
+
+.workorder-status-badge.workorder-status-quoted,
+.workorder-status-badge.workorder-status-waiting {
+    background: #f4effd;
+    color: #6948a4;
+}
+
+.workorder-status-badge.workorder-status-approved {
+    background: #edf3ff;
+    color: #315f9d;
+}
+
+.workorder-status-badge.workorder-status-in-progress {
+    background: #fff7df;
+    color: #966600;
+}
+
+.workorder-status-badge.workorder-status-completed,
+.workorder-status-badge.workorder-status-invoiced,
+.workorder-status-badge.workorder-status-closed {
+    background: #edfbf3;
+    color: #1d754f;
+}
+
+.workorder-status-badge.workorder-status-declined,
+.workorder-status-badge.workorder-status-cancelled {
+    background: #fff0f2;
+    color: #a93340;
+}
+
+.workorder-board-empty {
+    padding: 1rem 0.75rem;
+    color: #7a8aa0;
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+.workorder-latest-update {
+    display: grid;
+    gap: 0.25rem;
+    margin-top: 0.75rem;
+    padding: 0.65rem 0.7rem;
+    border-radius: 0.6rem;
+    background: #fffaf0;
+    color: #5b4b28;
+    font-size: 0.78rem;
+}
+
+    .workorder-latest-update strong {
+        color: #795500;
+    }
+
+    .workorder-latest-update small {
+        color: #806d43;
+    }
+
 .workorder-card {
     background: #fff;
     border: 1px solid rgba(9, 43, 91, 0.12);

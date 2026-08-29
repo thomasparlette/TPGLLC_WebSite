@@ -9,21 +9,6 @@ namespace TPGLLC.Web.Services.WorkOrders;
 
 public sealed class WorkOrderPortalService : IWorkOrderPortalService
 {
-    private static readonly HashSet<string> ClosedStatuses = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "Completed",
-        "Cancelled",
-        "Declined",
-        "Closed"
-    };
-
-    private static readonly string[] TechnicianStatusOptions =
-    [
-        "Requested",
-        "In Progress",
-        "Completed"
-    ];
-
     private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
     private readonly ICurrentCustomerAccessor _currentCustomerAccessor;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -64,6 +49,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
 
         var workOrders = await db.ServiceHistoryEntries
             .Include(x => x.Parts)
+            .Include(x => x.Updates)
             .Where(x => x.CustomerId == customer.Id)
             .OrderByDescending(x => x.ServiceDate)
             .ThenByDescending(x => x.CreatedUtc)
@@ -104,6 +90,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
 
         var workOrders = await db.ServiceHistoryEntries
             .Include(x => x.Parts)
+            .Include(x => x.Updates)
             .OrderByDescending(x => x.ServiceDate)
             .ThenByDescending(x => x.CreatedUtc)
             .ToListAsync();
@@ -295,6 +282,16 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             return model;
         }
 
+        var previousStatus = workOrder.Status;
+        var previousDiagnosis = workOrder.Diagnosis;
+        var previousNotes = workOrder.Notes;
+        var previousMileageOut = workOrder.MileageOut;
+
+        var existingParts = await db.ServiceHistoryParts
+            .Where(x => x.ServiceHistoryEntryId == workOrder.Id)
+            .ToListAsync();
+        var previousAppliedPartCount = existingParts.Count(x => x.IsApplied);
+
         var requestedWorkOrderNumber = Normalize(model.Form.WorkOrderNumber);
         if (string.IsNullOrWhiteSpace(requestedWorkOrderNumber))
         {
@@ -332,14 +329,11 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         workOrder.Mileage = mileage;
         workOrder.MileageOut = mileageOut;
         workOrder.LaborAmount = laborAmount;
-        workOrder.InvoiceNumber = Normalize(model.Form.InvoiceNumber);
+        workOrder.InvoiceNumber = workOrder.WorkOrderNumber;
         workOrder.Notes = Normalize(model.Form.Notes);
         workOrder.InternalNotes = Normalize(model.Form.InternalNotes);
         workOrder.UpdatedUtc = DateTimeOffset.UtcNow;
 
-        var existingParts = await db.ServiceHistoryParts
-            .Where(x => x.ServiceHistoryEntryId == workOrder.Id)
-            .ToListAsync();
         var existingById = existingParts.ToDictionary(x => x.Id);
         var appliedPartsTotal = 0m;
         var approvedPartsTotal = 0m;
@@ -378,6 +372,18 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         var laborTotal = laborAmount ?? 0m;
         workOrder.EstimateAmount = appliedPartsTotal + laborTotal;
         workOrder.InvoiceAmount = approvedPartsTotal + laborTotal;
+
+        AddProgressUpdateIfChanged(
+            db,
+            workOrder,
+            previousStatus,
+            previousDiagnosis,
+            previousNotes,
+            previousMileageOut,
+            previousAppliedPartCount,
+            model.Form.Parts.Count(x => x.IsApplied),
+            current.DisplayName,
+            "Service Advisor");
 
         await db.SaveChangesAsync();
 
@@ -425,6 +431,12 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             return model;
         }
 
+        var previousStatus = workOrder.Status;
+        var previousDiagnosis = workOrder.Diagnosis;
+        var previousNotes = workOrder.Notes;
+        var previousMileageOut = workOrder.MileageOut;
+        var previousAppliedPartCount = workOrder.Parts.Count(x => x.IsApplied);
+
         var requestedStatus = Normalize(model.Form.Status);
         if (!string.IsNullOrWhiteSpace(requestedStatus)
             && !IsAllowedTechnicianStatus(requestedStatus)
@@ -456,6 +468,18 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
 
         workOrder.EstimateAmount = CalculateAppliedTotal(workOrder)
             + (workOrder.LaborAmount ?? 0m);
+
+        AddProgressUpdateIfChanged(
+            db,
+            workOrder,
+            previousStatus,
+            previousDiagnosis,
+            previousNotes,
+            previousMileageOut,
+            previousAppliedPartCount,
+            workOrder.Parts.Count(x => x.IsApplied),
+            current.DisplayName,
+            "Technician");
 
         await db.SaveChangesAsync();
 
@@ -659,6 +683,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
 
         return db.ServiceHistoryEntries
             .Include(x => x.Parts)
+            .Include(x => x.Updates)
             .Where(x => x.Technician != null && assignmentNames.Contains(x.Technician.Trim()));
     }
 
@@ -731,7 +756,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
 
     private static List<string> BuildTechnicianStatusOptions(IEnumerable<ServiceHistoryEntry> workOrders)
     {
-        var statuses = TechnicianStatusOptions.ToList();
+        var statuses = WorkOrderStatusCatalog.TechnicianStatuses.ToList();
 
         foreach (var status in workOrders
             .Select(x => x.Status)
@@ -748,7 +773,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
     }
 
     private static bool IsAllowedTechnicianStatus(string status) =>
-        TechnicianStatusOptions.Contains(status, StringComparer.OrdinalIgnoreCase);
+        WorkOrderStatusCatalog.TechnicianStatuses.Contains(status, StringComparer.OrdinalIgnoreCase);
 
     private async Task<WorkOrderPageViewModel> GetCustomerResultAsync(string message)
     {
@@ -768,6 +793,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
     {
         return await db.ServiceHistoryEntries
             .Include(x => x.Parts)
+            .Include(x => x.Updates)
             .Where(x => x.Id == workOrderId && x.Customer != null && x.Customer.ApplicationUserId == userId)
             .FirstOrDefaultAsync();
     }
@@ -851,7 +877,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             MileageOut = entry.MileageOut?.ToString(CultureInfo.InvariantCulture),
             EstimateAmount = entry.EstimateAmount?.ToString("0.00", CultureInfo.InvariantCulture),
             LaborAmount = entry.LaborAmount?.ToString("0.00", CultureInfo.InvariantCulture),
-            InvoiceNumber = entry.InvoiceNumber,
+            InvoiceNumber = entry.WorkOrderNumber ?? entry.InvoiceNumber,
             InvoiceAmount = entry.InvoiceAmount?.ToString("0.00", CultureInfo.InvariantCulture),
             Notes = entry.Notes,
             InternalNotes = entry.InternalNotes
@@ -956,5 +982,66 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
     private static string? Normalize(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static void AddProgressUpdateIfChanged(
+        TPGLLCDbContext db,
+        ServiceHistoryEntry workOrder,
+        string? previousStatus,
+        string? previousDiagnosis,
+        string? previousNotes,
+        int? previousMileageOut,
+        int previousAppliedPartCount,
+        int currentAppliedPartCount,
+        string? authorName,
+        string fallbackAuthor)
+    {
+        var messages = new List<string>();
+
+        if (!string.Equals(previousStatus, workOrder.Status, StringComparison.OrdinalIgnoreCase))
+        {
+            messages.Add($"Status changed to {workOrder.Status}.");
+        }
+
+        if (!string.Equals(previousDiagnosis, workOrder.Diagnosis, StringComparison.Ordinal))
+        {
+            if (!string.IsNullOrWhiteSpace(workOrder.Diagnosis))
+            {
+                messages.Add($"Findings: {workOrder.Diagnosis}");
+            }
+        }
+
+        if (!string.Equals(previousNotes, workOrder.Notes, StringComparison.Ordinal))
+        {
+            if (!string.IsNullOrWhiteSpace(workOrder.Notes))
+            {
+                messages.Add($"Technician note: {workOrder.Notes}");
+            }
+        }
+
+        if (previousMileageOut != workOrder.MileageOut && workOrder.MileageOut.HasValue)
+        {
+            messages.Add($"Mileage out recorded at {workOrder.MileageOut.Value:N0}.");
+        }
+
+        if (previousAppliedPartCount != currentAppliedPartCount)
+        {
+            messages.Add($"Parts applied: {currentAppliedPartCount}.");
+        }
+
+        if (messages.Count == 0)
+        {
+            return;
+        }
+
+        db.ServiceHistoryUpdates.Add(new ServiceHistoryUpdate
+        {
+            ServiceHistoryEntryId = workOrder.Id,
+            Status = string.IsNullOrWhiteSpace(workOrder.Status) ? "Update" : workOrder.Status,
+            Message = string.Join(" ", messages),
+            AuthorName = string.IsNullOrWhiteSpace(authorName) ? fallbackAuthor : authorName.Trim(),
+            IsCustomerVisible = true,
+            CreatedUtc = DateTimeOffset.UtcNow
+        });
     }
 }

@@ -36,4 +36,5 @@ public sealed class ServiceHistoryEntry
     public Customer? Customer { get; set; }
     public CustomerVehicle? Vehicle { get; set; }
     public ICollection<ServiceHistoryPart> Parts { get; set; } = [];
+    public ICollection<ServiceHistoryUpdate> Updates { get; set; } = [];
 }

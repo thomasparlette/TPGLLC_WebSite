@@ -64,6 +64,7 @@ public sealed class PortalContextService : IPortalContextService
             serviceHistory = await db.ServiceHistoryEntries
                 .AsNoTracking()
                 .Include(x => x.Parts)
+                .Include(x => x.Updates)
                 .Where(x => x.CustomerId == customer.Id)
                 .OrderByDescending(x => x.ServiceDate)
                 .ToListAsync(cancellationToken);
