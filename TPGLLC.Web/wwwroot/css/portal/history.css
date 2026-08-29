@@ -1,1 +1,312 @@
-﻿/* Reserved for history-specific portal styles. */
+﻿/* Customer service-history status board */
+.history-status-legend-section {
+    margin-top: 1.5rem;
+}
+
+.history-status-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem 1.25rem;
+    margin-top: 1rem;
+    color: #42526b;
+    font-size: 0.86rem;
+}
+
+.history-status-legend-item,
+.history-status-column-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.history-status-dot {
+    display: inline-block;
+    width: 0.65rem;
+    height: 0.65rem;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: #7890af;
+}
+
+.history-status-dot-requested {
+    background: #2d73c5;
+}
+
+.history-status-dot-in-progress {
+    background: #d18b00;
+}
+
+.history-status-dot-waiting {
+    background: #7854bd;
+}
+
+.history-status-dot-completed {
+    background: #23835b;
+}
+
+.history-vehicle-groups {
+    display: grid;
+    gap: 1.25rem;
+}
+
+.history-vehicle-group {
+    overflow: hidden;
+    border: 1px solid #d8e0eb;
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 0.45rem 1.25rem rgba(21, 49, 86, 0.07);
+}
+
+.history-vehicle-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.1rem 1.25rem;
+    border-bottom: 1px solid #e5eaf1;
+    background: #f7f9fc;
+}
+
+    .history-vehicle-header > div:first-child {
+        min-width: 0;
+    }
+
+    .history-vehicle-header .portal-card-icon {
+        display: inline-flex;
+        width: 2.45rem;
+        height: 2.45rem;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.6rem;
+        border-radius: 0.75rem;
+        background: #e7eef9;
+    }
+
+    .history-vehicle-header h3 {
+        margin: 0;
+        color: #12356b;
+        font-size: 1.1rem;
+    }
+
+    .history-vehicle-header p {
+        margin: 0.35rem 0 0;
+        color: #68778e;
+        font-size: 0.87rem;
+        overflow-wrap: anywhere;
+    }
+
+.history-vehicle-count {
+    display: grid;
+    min-width: 6.25rem;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid #d7e3f3;
+    border-radius: 0.75rem;
+    background: #edf4ff;
+    color: #234d87;
+    text-align: center;
+}
+
+    .history-vehicle-count strong {
+        font-size: 1.25rem;
+        line-height: 1.1;
+    }
+
+    .history-vehicle-count span {
+        margin-top: 0.2rem;
+        font-size: 0.72rem;
+    }
+
+.history-status-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.history-status-column {
+    min-width: 0;
+}
+
+.history-status-column-heading {
+    width: 100%;
+    min-height: 2.3rem;
+    margin-bottom: 0.65rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 0.65rem;
+    background: #f4f7fb;
+    color: #345276;
+}
+
+    .history-status-column-heading h4 {
+        flex: 1 1 auto;
+        margin: 0;
+        font-size: 0.86rem;
+    }
+
+    .history-status-column-heading > span:last-child {
+        display: inline-flex;
+        min-width: 1.5rem;
+        height: 1.5rem;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background: #fff;
+        color: #506985;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+.history-status-column > .history-workorder-card {
+    margin-top: 0.7rem;
+}
+
+.history-column-empty,
+.history-vehicle-empty {
+    padding: 1.25rem;
+    border: 1px dashed #cbd7e6;
+    border-radius: 0.75rem;
+    color: #6c7c92;
+    font-size: 0.88rem;
+    text-align: center;
+}
+
+.history-vehicle-empty {
+    margin: 1rem;
+}
+
+.history-workorder-card {
+    position: relative;
+    overflow: hidden;
+    border-left: 0.3rem solid #2d73c5;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+    .history-workorder-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 0.5rem 1.15rem rgba(21, 49, 86, 0.1);
+    }
+
+    .history-workorder-card.history-status-requested {
+        border-left-color: #2d73c5;
+    }
+
+    .history-workorder-card.history-status-approved,
+    .history-workorder-card.history-status-waiting {
+        border-left-color: #7854bd;
+    }
+
+    .history-workorder-card.history-status-in-progress {
+        border-left-color: #d18b00;
+    }
+
+    .history-workorder-card.history-status-completed {
+        border-left-color: #23835b;
+    }
+
+    .history-workorder-card.history-status-cancelled {
+        border-left-color: #c63e4b;
+    }
+
+.history-workorder-status-pill {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+    .history-workorder-status-pill.history-status-requested {
+        border-color: #c7dcf5;
+        background: #edf5ff;
+        color: #245f9f;
+    }
+
+    .history-workorder-status-pill.history-status-approved,
+    .history-workorder-status-pill.history-status-waiting {
+        border-color: #ddcff5;
+        background: #f4effd;
+        color: #6948a4;
+    }
+
+    .history-workorder-status-pill.history-status-in-progress {
+        border-color: #f1d48e;
+        background: #fff7df;
+        color: #966600;
+    }
+
+    .history-workorder-status-pill.history-status-completed {
+        border-color: #bde4d1;
+        background: #edfbf3;
+        color: #1d754f;
+    }
+
+    .history-workorder-status-pill.history-status-cancelled {
+        border-color: #f2c5cb;
+        background: #fff0f2;
+        color: #a93340;
+    }
+
+.history-live-update {
+    margin-top: 0.9rem;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid #f0d38d;
+    border-radius: 0.7rem;
+    background: #fffaf0;
+    color: #5b4b28;
+    font-size: 0.86rem;
+    line-height: 1.45;
+}
+
+    .history-live-update > div + div {
+        margin-top: 0.3rem;
+    }
+
+.history-live-update-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: #795500;
+}
+
+.history-live-update-indicator {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 999px;
+    background: #d18b00;
+    box-shadow: 0 0 0 0.25rem rgba(209, 139, 0, 0.12);
+}
+
+.history-live-update-time {
+    color: #806d43;
+    font-size: 0.76rem;
+}
+
+.history-completed-summary {
+    display: grid;
+    gap: 0.3rem;
+    margin-top: 0.9rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e6ebf2;
+    color: #52657e;
+    font-size: 0.87rem;
+    line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+    .history-status-columns {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .history-vehicle-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .history-vehicle-count {
+        width: 100%;
+    }
+}

@@ -1,6 +1,6 @@
 ﻿@using TPGLLC.Data.Entities
 
-<article class="portal-card-link" style="cursor:default;">
+<article class="portal-card-link history-workorder-card @GetStatusCssClass(Entry.Status)" style="cursor:default;">
     <div class="portal-card-icon">🛠️</div>
 
     <h3>@Entry.VehicleName</h3>
@@ -8,7 +8,7 @@
 
     <div class="portal-primary-meta" style="margin-top:0.75rem;">
         <span>@Entry.ServiceDate.ToString("MMM d, yyyy")</span>
-        <span>@Entry.Status</span>
+        <span class="history-workorder-status-pill @GetStatusCssClass(Entry.Status)">@GetStatusLabel(Entry.Status)</span>
         @if (!string.IsNullOrWhiteSpace(Entry.ApprovalStatus))
         {
             <span>Appointment: @Entry.ApprovalStatus</span>
@@ -44,6 +44,41 @@
     {
         <div style="margin-top:0.75rem; color:#6b7280;">
             Customer concern: @Entry.Complaint
+        </div>
+    }
+
+    @if (IsActiveWorkOrder(Entry) && HasCustomerVisibleUpdate(Entry))
+    {
+        <div class="history-live-update">
+            <div class="history-live-update-heading">
+                <span class="history-live-update-indicator"></span>
+                <strong>Latest repair update</strong>
+            </div>
+
+            @if (Entry.UpdatedUtc.HasValue)
+            {
+                <div class="history-live-update-time">Updated @Entry.UpdatedUtc.Value.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Entry.Diagnosis))
+            {
+                <div><strong>Findings:</strong> @Entry.Diagnosis</div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Entry.Notes))
+            {
+                <div><strong>Technician note:</strong> @Entry.Notes</div>
+            }
+
+            @if (Entry.MileageOut.HasValue)
+            {
+                <div><strong>Mileage out:</strong> @Entry.MileageOut.Value.ToString("N0")</div>
+            }
+
+            @if (Entry.Parts.Any(x => x.IsApplied))
+            {
+                <div><strong>Parts applied:</strong> @Entry.Parts.Count(x => x.IsApplied)</div>
+            }
         </div>
     }
 
@@ -111,13 +146,6 @@
         </div>
     }
 
-    @if (!string.IsNullOrWhiteSpace(Entry.Diagnosis))
-    {
-        <div style="margin-top:0.6rem; color:#6b7280;">
-            Diagnosis: @Entry.Diagnosis
-        </div>
-    }
-
     @if (!string.IsNullOrWhiteSpace(Entry.Technician))
     {
         <div style="margin-top:0.75rem; color:#6b7280;">
@@ -125,9 +153,18 @@
         </div>
     }
 
-    @if (!string.IsNullOrWhiteSpace(Entry.Notes))
+    @if (!IsActiveWorkOrder(Entry) && (!string.IsNullOrWhiteSpace(Entry.Diagnosis) || !string.IsNullOrWhiteSpace(Entry.Notes)))
     {
-        <p style="margin-top:0.9rem;">@Entry.Notes</p>
+        <div class="history-completed-summary">
+            @if (!string.IsNullOrWhiteSpace(Entry.Diagnosis))
+            {
+                <div><strong>Diagnosis:</strong> @Entry.Diagnosis</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Entry.Notes))
+            {
+                <div><strong>Notes:</strong> @Entry.Notes</div>
+            }
+        </div>
     }
 </article>
 
@@ -138,4 +175,55 @@
     [Parameter] public EventCallback<Guid> OnDeclinePart { get; set; }
     [Parameter] public EventCallback<Guid> OnApproveWorkOrder { get; set; }
     [Parameter] public EventCallback<Guid> OnDeclineWorkOrder { get; set; }
+
+    private static bool HasCustomerVisibleUpdate(ServiceHistoryEntry entry) =>
+        entry.UpdatedUtc.HasValue
+        || !string.IsNullOrWhiteSpace(entry.Diagnosis)
+        || !string.IsNullOrWhiteSpace(entry.Notes)
+        || entry.MileageOut.HasValue
+        || entry.Parts.Any(x => x.IsApplied);
+
+    private static bool IsActiveWorkOrder(ServiceHistoryEntry entry) =>
+        !string.Equals(entry.Status, "Completed", StringComparison.OrdinalIgnoreCase)
+        && !string.Equals(entry.Status, "Invoiced", StringComparison.OrdinalIgnoreCase)
+        && !string.Equals(entry.Status, "Closed", StringComparison.OrdinalIgnoreCase)
+        && !string.Equals(entry.Status, "Cancelled", StringComparison.OrdinalIgnoreCase)
+        && !string.Equals(entry.Status, "Declined", StringComparison.OrdinalIgnoreCase);
+
+    private static string GetStatusLabel(string? status) =>
+        string.IsNullOrWhiteSpace(status) ? "Requested" : status;
+
+    private static string GetStatusCssClass(string? status)
+    {
+        if (string.Equals(status, "In Progress", StringComparison.OrdinalIgnoreCase))
+        {
+            return "history-status-in-progress";
+        }
+
+        if (string.Equals(status, "Waiting on Customer Approval", StringComparison.OrdinalIgnoreCase))
+        {
+            return "history-status-waiting";
+        }
+
+        if (string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(status, "Invoiced", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(status, "Closed", StringComparison.OrdinalIgnoreCase))
+        {
+            return "history-status-completed";
+        }
+
+        if (string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(status, "Declined", StringComparison.OrdinalIgnoreCase))
+        {
+            return "history-status-cancelled";
+        }
+
+        if (string.Equals(status, "Quoted", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(status, "Approved", StringComparison.OrdinalIgnoreCase))
+        {
+            return "history-status-approved";
+        }
+
+        return "history-status-requested";
+    }
 }

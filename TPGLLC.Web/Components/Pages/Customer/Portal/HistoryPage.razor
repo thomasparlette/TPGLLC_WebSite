@@ -1,6 +1,7 @@
 ﻿@page "/portal/customers/history"
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.Customer)]
+@implements IAsyncDisposable
 
 @using System.Globalization
 @using TPGLLC.Data.Entities
@@ -12,11 +13,11 @@
 
 <PageTitle>Service History</PageTitle>
 
-<section class="portal-dashboard">
+<section class="portal-dashboard" id="top">
     <div class="portal-header">
         <p class="section-kicker">Customer Portal</p>
         <h1>Service History</h1>
-        <p>Review completed work and past visits for your vehicles.</p>
+        <p>View every vehicle, follow active repairs, and review completed work in one place.</p>
     </div>
 
     @if (_loading)
@@ -24,8 +25,8 @@
         <div class="portal-loading-card">
             <div class="portal-loading-icon">⏳</div>
             <div>
-                <div class="portal-loading-title">Loading history</div>
-                <div class="portal-loading-text">Please wait while we load your service records.</div>
+                <div class="portal-loading-title">Loading service history</div>
+                <div class="portal-loading-text">Please wait while we load your vehicles and work updates.</div>
             </div>
         </div>
     }
@@ -40,155 +41,203 @@
 
         <div class="portal-stats">
             <div class="portal-stat">
-                <div class="portal-stat-value">@(_portal?.ServiceHistoryEntries.Count ?? 0)</div>
-                <div class="portal-stat-label">Entries</div>
-            </div>
-
-            <div class="portal-stat">
                 <div class="portal-stat-value">@(_portal?.Vehicles.Count ?? 0)</div>
                 <div class="portal-stat-label">Vehicles</div>
             </div>
 
             <div class="portal-stat">
-                <div class="portal-stat-value">@(_portal?.PrimaryVehicle is null ? "None" : "Yes")</div>
-                <div class="portal-stat-label">Primary</div>
+                <div class="portal-stat-value">@ActiveWorkOrders.Count</div>
+                <div class="portal-stat-label">Active Repairs</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@CompletedWorkOrders.Count</div>
+                <div class="portal-stat-label">Completed</div>
+            </div>
+
+            <div class="portal-stat">
+                <div class="portal-stat-value">@FormatLatestUpdate()</div>
+                <div class="portal-stat-label">Latest Update</div>
+            </div>
+        </div>
+
+        <div class="portal-section history-status-legend-section">
+            <div class="portal-section-heading">
+                <div>
+                    <h2>Repair Status</h2>
+                    <div class="portal-muted">Active repair information refreshes automatically while this page is open.</div>
+                </div>
+                <a href="/portal/customers/appointments">Request Service</a>
+            </div>
+
+            <div class="history-status-legend" aria-label="Repair status legend">
+                <span class="history-status-legend-item"><span class="history-status-dot history-status-dot-requested"></span>Requested</span>
+                <span class="history-status-legend-item"><span class="history-status-dot history-status-dot-in-progress"></span>In progress</span>
+                <span class="history-status-legend-item"><span class="history-status-dot history-status-dot-waiting"></span>Waiting for approval</span>
+                <span class="history-status-legend-item"><span class="history-status-dot history-status-dot-completed"></span>Completed</span>
             </div>
         </div>
 
         <div class="portal-section">
             <div class="portal-section-heading">
-                <h2>Recent Service</h2>
-                <a href="/portal/appointments">Request Service</a>
+                <div>
+                    <h2>Your Vehicles</h2>
+                    <div class="portal-muted">Each vehicle includes its active and completed work-order history.</div>
+                </div>
+                <a href="/portal/customers/vehicles">Manage Vehicles</a>
             </div>
 
-            @if (_portal is null)
-            {
-                <div class="portal-empty-state">
-                    <div class="portal-empty-icon">🛠️</div>
-                    <div>
-                        <div class="portal-empty-title">No history loaded</div>
-                        <div class="portal-empty-text">Your service history will appear here once loaded.</div>
-                    </div>
-                </div>
-            }
-            else if (_portal.ServiceHistoryEntries.Count == 0)
-            {
-                <div class="portal-empty-state">
-                    <div class="portal-empty-icon">🛠️</div>
-                    <div>
-                        <div class="portal-empty-title">No service history yet</div>
-                        <div class="portal-empty-text">Completed work orders will appear here.</div>
-                    </div>
-                </div>
-            }
-            else
-            {
-                <div class="portal-activity">
-                    @foreach (var entry in _portal.ServiceHistoryEntries
-                        .OrderByDescending(x => x.ServiceDate)
-                        .ThenByDescending(x => x.CreatedUtc))
-                    {
-                        <div class="portal-activity-item" @key="entry.Id">
-                            <div class="portal-activity-icon">🛠️</div>
-
-                            <div style="min-width:0;">
-                                <strong>@entry.Service</strong><br />
-                                @entry.VehicleName<br />
-                                <span class="portal-muted">
-                                    @entry.ServiceDate.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture)
-                                </span>
-
-                                <div style="margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:0.5rem;">
-                                    @if (entry.Mileage.HasValue)
-                                    {
-                                        <span class="portal-chip">@entry.Mileage.Value:N0 mi</span>
-                                    }
-
-                                    @if (!string.IsNullOrWhiteSpace(entry.Technician))
-                                    {
-                                        <span class="portal-chip">@entry.Technician</span>
-                                    }
-
-                                    @if (!string.IsNullOrWhiteSpace(entry.Status))
-                                    {
-                                        <span class="portal-chip">@entry.Status</span>
-                                    }
-                                </div>
-
-                                @if (!string.IsNullOrWhiteSpace(entry.Notes))
-                                {
-                                    <div class="portal-muted" style="margin-top:0.75rem;">
-                                        @entry.Notes
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
-        </div>
-
-        <div class="portal-section">
-            <div class="portal-section-heading">
-                <h2>Vehicles With History</h2>
-                <a href="/portal/vehicles">Manage Vehicles</a>
-            </div>
-
-            @if (_portal is not null && _portal.Vehicles.Count == 0)
+            @if (_portal is null || _portal.Vehicles.Count == 0)
             {
                 <div class="portal-empty-state">
                     <div class="portal-empty-icon">🚗</div>
                     <div>
                         <div class="portal-empty-title">No vehicles on file</div>
-                        <div class="portal-empty-text">Add a vehicle to start tracking history.</div>
+                        <div class="portal-empty-text">Add a vehicle to begin tracking service history.</div>
                     </div>
                 </div>
             }
-            else if (_portal is not null)
+            else
             {
-                <div class="portal-dashboard-grid">
+                <div class="history-vehicle-groups">
                     @foreach (var vehicle in _portal.Vehicles)
                     {
-                        <article class="portal-card-link" @key="vehicle.Id">
-                            <div class="portal-card-icon">🚙</div>
+                        var vehicleWorkOrders = GetVehicleWorkOrders(vehicle.Id);
 
-                            <h3>@GetVehicleTitle(vehicle)</h3>
-                            <p>@GetVehicleDetails(vehicle)</p>
+                        <section class="history-vehicle-group" @key="vehicle.Id">
+                            <div class="history-vehicle-header">
+                                <div>
+                                    <div class="portal-card-icon">🚙</div>
+                                    <h3>@GetVehicleTitle(vehicle)</h3>
+                                    <p>@GetVehicleDetails(vehicle)</p>
+                                </div>
+                                <div class="history-vehicle-count">
+                                    <strong>@vehicleWorkOrders.Count</strong>
+                                    <span>work order(s)</span>
+                                </div>
+                            </div>
 
-                            @if (vehicle.IsPrimary)
+                            @if (vehicleWorkOrders.Count == 0)
                             {
-                                <div style="margin-top:0.75rem;">
-                                    <span class="portal-chip">Primary vehicle</span>
+                                <div class="history-vehicle-empty">No service records for this vehicle yet.</div>
+                            }
+                            else
+                            {
+                                <div class="history-status-columns">
+                                    <div class="history-status-column">
+                                        <div class="history-status-column-heading">
+                                            <span class="history-status-dot history-status-dot-in-progress"></span>
+                                            <h4>Active &amp; In Progress</h4>
+                                            <span>@vehicleWorkOrders.Count(IsActiveWorkOrder)</span>
+                                        </div>
+
+                                        @if (!vehicleWorkOrders.Any(IsActiveWorkOrder))
+                                        {
+                                            <div class="history-column-empty">No active repairs.</div>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var workOrder in vehicleWorkOrders.Where(IsActiveWorkOrder))
+                                            {
+                                                <ServiceHistoryCard Entry="@workOrder" @key="workOrder.Id" />
+                                            }
+                                        }
+                                    </div>
+
+                                    <div class="history-status-column">
+                                        <div class="history-status-column-heading">
+                                            <span class="history-status-dot history-status-dot-completed"></span>
+                                            <h4>Completed Work</h4>
+                                            <span>@vehicleWorkOrders.Count(IsCompletedWorkOrder)</span>
+                                        </div>
+
+                                        @if (!vehicleWorkOrders.Any(IsCompletedWorkOrder))
+                                        {
+                                            <div class="history-column-empty">No completed work yet.</div>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var workOrder in vehicleWorkOrders.Where(IsCompletedWorkOrder))
+                                            {
+                                                <ServiceHistoryCard Entry="@workOrder" @key="workOrder.Id" />
+                                            }
+                                        }
+                                    </div>
                                 </div>
                             }
-                        </article>
+                        </section>
                     }
                 </div>
             }
         </div>
+
+        @if (UnlinkedWorkOrders.Count > 0)
+        {
+            <div class="portal-section">
+                <div class="portal-section-heading">
+                    <div>
+                        <h2>Other Service Records</h2>
+                        <div class="portal-muted">These work orders belong to your account but are not linked to a vehicle yet.</div>
+                    </div>
+                </div>
+
+                <div class="history-status-columns">
+                    <div class="history-status-column">
+                        @foreach (var workOrder in UnlinkedWorkOrders)
+                        {
+                            <ServiceHistoryCard Entry="@workOrder" @key="workOrder.Id" />
+                        }
+                    </div>
+                </div>
+            </div>
+        }
     }
 </section>
 
 @code {
+    private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(30);
+
     private PortalContextViewModel? _portal;
     private bool _loading = true;
     private string? _errorMessage;
+    private readonly CancellationTokenSource _refreshCancellation = new();
+    private Task? _refreshTask;
+
+    private IReadOnlyList<ServiceHistoryEntry> AllWorkOrders =>
+        _portal?.ServiceHistoryEntries ?? Array.Empty<ServiceHistoryEntry>();
+
+    private IReadOnlyList<ServiceHistoryEntry> ActiveWorkOrders =>
+        AllWorkOrders.Where(IsActiveWorkOrder).ToList();
+
+    private IReadOnlyList<ServiceHistoryEntry> CompletedWorkOrders =>
+        AllWorkOrders.Where(IsCompletedWorkOrder).ToList();
+
+    private IReadOnlyList<ServiceHistoryEntry> UnlinkedWorkOrders =>
+        AllWorkOrders
+            .Where(x => x.CustomerVehicleId is null)
+            .OrderByDescending(GetSortDate)
+            .ToList();
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadAsync();
+        _refreshTask = RefreshLoopAsync(_refreshCancellation.Token);
+    }
+
+    private async Task LoadAsync()
+    {
         try
         {
-            _portal = await PortalContextService.GetAsync();
-
-            if (_portal is null)
-            {
-                _errorMessage = "No portal data was returned.";
-            }
+            _portal = await PortalContextService.GetAsync(_refreshCancellation.Token);
+            _errorMessage = _portal is null ? "No portal data was returned." : _portal.CurrentCustomer.IsAuthenticated ? null : "You must be signed in to view service history.";
+        }
+        catch (OperationCanceledException) when (_refreshCancellation.IsCancellationRequested)
+        {
         }
         catch (Exception ex)
         {
             _errorMessage = ex.Message;
-            _portal = new PortalContextViewModel();
+            _portal ??= new PortalContextViewModel();
         }
         finally
         {
@@ -196,10 +245,81 @@
         }
     }
 
+    private async Task RefreshLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(RefreshInterval);
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await InvokeAsync(async () =>
+                {
+                    await LoadAsync();
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _refreshCancellation.Cancel();
+
+        if (_refreshTask is not null)
+        {
+            try
+            {
+                await _refreshTask;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        _refreshCancellation.Dispose();
+    }
+
+    private IReadOnlyList<ServiceHistoryEntry> GetVehicleWorkOrders(Guid vehicleId) =>
+        AllWorkOrders
+            .Where(x => x.CustomerVehicleId == vehicleId)
+            .OrderByDescending(GetSortDate)
+            .ThenByDescending(x => x.CreatedUtc)
+            .ToList();
+
+    private string FormatLatestUpdate()
+    {
+        var latest = AllWorkOrders
+            .Select(x => x.UpdatedUtc ?? x.CreatedUtc)
+            .OrderByDescending(x => x)
+            .FirstOrDefault();
+
+        return latest == default ? "None" : latest.ToLocalTime().ToString("MMM d", CultureInfo.InvariantCulture);
+    }
+
+    private static DateTimeOffset GetSortDate(ServiceHistoryEntry entry) =>
+        entry.UpdatedUtc ?? entry.CreatedUtc;
+
+    private static bool IsCompletedWorkOrder(ServiceHistoryEntry entry) =>
+        string.Equals(entry.Status, "Completed", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(entry.Status, "Invoiced", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(entry.Status, "Closed", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsActiveWorkOrder(ServiceHistoryEntry entry) =>
+        !IsCompletedWorkOrder(entry)
+        && !string.Equals(entry.Status, "Cancelled", StringComparison.OrdinalIgnoreCase)
+        && !string.Equals(entry.Status, "Declined", StringComparison.OrdinalIgnoreCase);
+
     private static string GetVehicleTitle(CustomerVehicle vehicle)
     {
         var year = vehicle.ModelYear?.ToString(CultureInfo.InvariantCulture);
-        return string.Join(" ", new[] { year, vehicle.Make, vehicle.Model }.Where(x => !string.IsNullOrWhiteSpace(x)));
+        var title = string.Join(" ", new[] { year, vehicle.Make, vehicle.Model }
+            .Where(x => !string.IsNullOrWhiteSpace(x)));
+
+        return string.IsNullOrWhiteSpace(title) ? "Unnamed vehicle" : title;
     }
 
     private static string GetVehicleDetails(CustomerVehicle vehicle)
