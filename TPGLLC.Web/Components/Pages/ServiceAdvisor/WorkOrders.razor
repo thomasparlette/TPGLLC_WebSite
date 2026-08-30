@@ -318,6 +318,20 @@
                                         <InputText class="portal-input" placeholder="Brake service, diagnosis, etc." @bind-Value="job.Name" />
                                     </div>
                                     <div class="workorder-field">
+                                        <label class="portal-field-label">Labor operation</label>
+                                        <select class="portal-input" value="@job.LaborCatalogItemId" @onchange="args => SelectLaborCatalog(job, args)">
+                                            <option value="">Custom labor</option>
+                                            @foreach (var labor in _model.LaborCatalogOptions)
+                                            {
+                                                <option value="@labor.Id">@labor.Label</option>
+                                            }
+                                        </select>
+                                        @if (!string.IsNullOrWhiteSpace(job.LaborHours) && !string.IsNullOrWhiteSpace(job.LaborRate))
+                                        {
+                                            <div class="workorder-required-note">@job.LaborHours hours × @job.LaborRate/hr</div>
+                                        }
+                                    </div>
+                                    <div class="workorder-field">
                                         <label class="portal-field-label">Status</label>
                                         <InputSelect class="portal-input" @bind-Value="job.Status">
                                             @foreach (var status in JobStatuses)
@@ -408,6 +422,16 @@
                         {
                             <div class="workorder-part-row">
                                 <div class="workorder-part-description">
+                                    <label class="workorder-part-job-label">
+                                        Catalog part
+                                        <select class="portal-input" value="@part.PartsCatalogItemId" @onchange="args => SelectPartsCatalog(part, args)">
+                                            <option value="">Custom part</option>
+                                            @foreach (var catalogPart in _model.PartsCatalogOptions)
+                                            {
+                                                <option value="@catalogPart.Id">@catalogPart.Label</option>
+                                            }
+                                        </select>
+                                    </label>
                                     <InputText class="portal-input" placeholder="Part description" @bind-Value="part.Description" />
                                     <label class="workorder-part-job-label">
                                         Repair job
@@ -523,6 +547,47 @@
     private void AddInspection() => _model.Form.Inspections.Add(new WorkOrderInspectionEditViewModel());
 
     private void RemoveInspection(WorkOrderInspectionEditViewModel inspection) => _model.Form.Inspections.Remove(inspection);
+
+    private void SelectLaborCatalog(WorkOrderJobEditViewModel job, ChangeEventArgs args)
+    {
+        if (!Guid.TryParse(args.Value?.ToString(), out var catalogId))
+        {
+            job.LaborCatalogItemId = null;
+            return;
+        }
+
+        var catalogItem = _model.LaborCatalogOptions.FirstOrDefault(x => x.Id == catalogId);
+        if (catalogItem is null)
+        {
+            return;
+        }
+
+        job.LaborCatalogItemId = catalogItem.Id;
+        job.Name = catalogItem.Name;
+        job.LaborHours = catalogItem.DefaultHours.ToString("0.00", CultureInfo.InvariantCulture);
+        job.LaborRate = catalogItem.HourlyRate.ToString("0.00", CultureInfo.InvariantCulture);
+        job.LaborAmount = (catalogItem.DefaultHours * catalogItem.HourlyRate)
+            .ToString("0.00", CultureInfo.InvariantCulture);
+    }
+
+    private void SelectPartsCatalog(WorkOrderPartEditViewModel part, ChangeEventArgs args)
+    {
+        if (!Guid.TryParse(args.Value?.ToString(), out var catalogId))
+        {
+            part.PartsCatalogItemId = null;
+            return;
+        }
+
+        var catalogItem = _model.PartsCatalogOptions.FirstOrDefault(x => x.Id == catalogId);
+        if (catalogItem is null)
+        {
+            return;
+        }
+
+        part.PartsCatalogItemId = catalogItem.Id;
+        part.Description = catalogItem.Name;
+        part.UnitPrice = catalogItem.UnitPrice.ToString("0.00", CultureInfo.InvariantCulture);
+    }
 
     private void AddPart() => _model.Form.Parts.Add(new WorkOrderPartEditViewModel());
 

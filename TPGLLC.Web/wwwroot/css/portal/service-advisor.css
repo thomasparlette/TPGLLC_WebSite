@@ -530,6 +530,81 @@
     color: #b91c1c;
 }
 
+.catalog-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.catalog-manager-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+.catalog-editor-card {
+    min-width: 0;
+}
+
+.catalog-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem 1rem;
+}
+
+.catalog-active-toggle {
+    margin-top: 1rem;
+}
+
+.catalog-list {
+    display: grid;
+    gap: 0.65rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5eaf2;
+}
+
+.catalog-list-heading {
+    color: #0b2e59;
+    font-size: 0.92rem;
+    font-weight: 800;
+}
+
+.catalog-list-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.75rem;
+    border: 1px solid #dbe4f0;
+    border-radius: 0.7rem;
+    background: #f8fafc;
+    color: #42546d;
+    font-size: 0.82rem;
+}
+
+.catalog-list-item-inactive {
+    opacity: 0.65;
+}
+
+.catalog-list-item-price {
+    color: #234d87;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.catalog-status {
+    color: #1d754f;
+    font-size: 0.74rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.catalog-list-item-inactive .catalog-status {
+    color: #7a5360;
+}
+
 .service-record-details {
     margin-top: 1rem;
     border-top: 1px solid rgba(9, 43, 91, .12);
@@ -592,17 +667,32 @@
     .workorder-form-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+
+    .catalog-manager-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 700px) {
     .workorder-form-grid,
     .workorder-notes-grid,
     .workorder-job-row,
-    .workorder-inspection-row {
+    .workorder-inspection-row,
+    .catalog-summary-grid,
+    .catalog-form-grid {
         grid-template-columns: 1fr;
     }
 
     .workorder-field-full {
         grid-column: auto;
+    }
+
+    .catalog-list-item {
+        grid-template-columns: 1fr auto;
+    }
+
+    .catalog-list-item-price,
+    .catalog-status {
+        justify-self: start;
     }
 }

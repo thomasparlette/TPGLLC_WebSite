@@ -119,6 +119,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
 
         var technicianOptions = await GetTechnicianOptionsAsync(db);
         AddExistingTechnicianAssignments(technicianOptions, workOrders);
+        var catalogOptions = await GetEstimateCatalogOptionsAsync(db);
 
         await ApplyAppointmentFieldsAsync(db, workOrders);
         await db.SaveChangesAsync();
@@ -127,6 +128,8 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         {
             WorkOrders = workOrders,
             TechnicianOptions = technicianOptions,
+            PartsCatalogOptions = catalogOptions.Parts,
+            LaborCatalogOptions = catalogOptions.Labor,
             CanEdit = true
         };
     }
@@ -202,9 +205,12 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             .Select(x => new WorkOrderJobEditViewModel
             {
                 Id = x.Id,
+                LaborCatalogItemId = x.LaborCatalogItemId,
                 Name = x.Name,
                 Description = x.Description,
                 Status = x.Status,
+                LaborHours = x.LaborHours.HasValue ? x.LaborHours.Value.ToString("0.00", CultureInfo.InvariantCulture) : null,
+                LaborRate = x.LaborRate.HasValue ? x.LaborRate.Value.ToString("0.00", CultureInfo.InvariantCulture) : null,
                 LaborAmount = x.LaborAmount.HasValue ? x.LaborAmount.Value.ToString("0.00", CultureInfo.InvariantCulture) : null,
                 IsApproved = x.IsApproved,
                 IsCustomerDeclined = x.IsCustomerDeclined,
@@ -231,6 +237,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             {
                 Id = x.Id,
                 ServiceHistoryJobId = x.ServiceHistoryJobId,
+                PartsCatalogItemId = x.PartsCatalogItemId,
                 Description = x.Description,
                 Quantity = x.Quantity.ToString("0.##"),
                 UnitPrice = x.UnitPrice.HasValue ? x.UnitPrice.Value.ToString("0.00") : null,
@@ -264,6 +271,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             {
                 Id = x.Id,
                 ServiceHistoryJobId = x.ServiceHistoryJobId,
+                PartsCatalogItemId = x.PartsCatalogItemId,
                 Description = x.Description,
                 Quantity = x.Quantity.ToString("0.##"),
                 UnitPrice = x.UnitPrice.HasValue ? x.UnitPrice.Value.ToString("0.00") : null,
@@ -353,6 +361,26 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             .ToListAsync();
         var previousAppliedPartCount = existingParts.Count(x => x.IsApplied);
 
+        var laborCatalogIds = model.Form.Jobs
+            .Where(x => x.LaborCatalogItemId.HasValue)
+            .Select(x => x.LaborCatalogItemId!.Value)
+            .Distinct()
+            .ToList();
+        var laborCatalogItems = await db.LaborCatalogItems
+            .AsNoTracking()
+            .Where(x => laborCatalogIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id);
+
+        var partsCatalogIds = model.Form.Parts
+            .Where(x => x.PartsCatalogItemId.HasValue)
+            .Select(x => x.PartsCatalogItemId!.Value)
+            .Distinct()
+            .ToList();
+        var partsCatalogItems = await db.PartsCatalogItems
+            .AsNoTracking()
+            .Where(x => partsCatalogIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id);
+
         var requestedWorkOrderNumber = Normalize(model.Form.WorkOrderNumber);
         if (string.IsNullOrWhiteSpace(requestedWorkOrderNumber))
         {
@@ -402,10 +430,26 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
         var jobSortOrder = 0;
         foreach (var job in model.Form.Jobs.Where(x => !string.IsNullOrWhiteSpace(x.Name)))
         {
-            if (!TryParseDecimal(job.LaborAmount, out var jobLaborAmount))
+            if (!TryParseDecimal(job.LaborAmount, out var jobLaborAmount)
+                || !TryParseDecimal(job.LaborHours, out var laborHours)
+                || !TryParseDecimal(job.LaborRate, out var laborRate))
             {
-                model.ErrorMessage = $"Labor amount for '{job.Name.Trim()}' must be a valid number.";
+                model.ErrorMessage = $"Labor values for '{job.Name.Trim()}' must be valid non-negative numbers.";
                 return model;
+            }
+
+            LaborCatalogItem? laborCatalogItem = null;
+            if (job.LaborCatalogItemId is Guid laborCatalogItemId)
+            {
+                if (!laborCatalogItems.TryGetValue(laborCatalogItemId, out laborCatalogItem))
+                {
+                    model.ErrorMessage = $"The labor catalog operation for '{job.Name.Trim()}' was not found.";
+                    return model;
+                }
+
+                laborHours ??= laborCatalogItem.DefaultHours;
+                laborRate ??= laborCatalogItem.HourlyRate;
+                jobLaborAmount ??= laborHours.Value * laborRate.Value;
             }
 
             ServiceHistoryJob? existingJob = null;
@@ -417,6 +461,9 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             savedJob.Name = job.Name.Trim();
             savedJob.Description = Normalize(job.Description);
             savedJob.Status = Normalize(job.Status) ?? "Proposed";
+            savedJob.LaborCatalogItemId = laborCatalogItem?.Id;
+            savedJob.LaborHours = laborHours;
+            savedJob.LaborRate = laborRate;
             savedJob.LaborAmount = jobLaborAmount;
             savedJob.IsApproved = string.Equals(workOrder.Status, "Quoted", StringComparison.OrdinalIgnoreCase)
                 ? job.IsApproved
@@ -519,12 +566,25 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
                 return model;
             }
 
+            PartsCatalogItem? partsCatalogItem = null;
+            if (part.PartsCatalogItemId is Guid partsCatalogItemId)
+            {
+                if (!partsCatalogItems.TryGetValue(partsCatalogItemId, out partsCatalogItem))
+                {
+                    model.ErrorMessage = $"The selected part catalog item for '{part.Description.Trim()}' was not found.";
+                    return model;
+                }
+
+                unitPrice ??= partsCatalogItem.UnitPrice;
+            }
+
             var savedPart = existingById.TryGetValue(part.Id, out var existing)
                 ? existing
                 : new ServiceHistoryPart { ServiceHistoryEntryId = workOrder.Id };
             savedPart.Description = part.Description.Trim();
             savedPart.Quantity = quantity.Value;
             savedPart.UnitPrice = unitPrice;
+            savedPart.PartsCatalogItemId = partsCatalogItem?.Id;
             savedPart.ServiceHistoryJobId = part.ServiceHistoryJobId.HasValue
                 && jobIds.Contains(part.ServiceHistoryJobId.Value)
                 ? part.ServiceHistoryJobId
@@ -1014,6 +1074,58 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             .Select(x => x.First())
             .OrderBy(x => x.Label)
             .ToList();
+    }
+
+    private static async Task<(List<PartsCatalogOptionViewModel> Parts, List<LaborCatalogOptionViewModel> Labor)>
+        GetEstimateCatalogOptionsAsync(TPGLLCDbContext db)
+    {
+        var parts = await db.PartsCatalogItems
+            .AsNoTracking()
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.Name)
+            .ThenBy(x => x.PartNumber)
+            .Select(x => new
+            {
+                x.Id,
+                x.PartNumber,
+                x.Name,
+                x.UnitPrice
+            })
+            .ToListAsync();
+
+        var labor = await db.LaborCatalogItems
+            .AsNoTracking()
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.Name)
+            .ThenBy(x => x.Code)
+            .Select(x => new
+            {
+                x.Id,
+                x.Code,
+                x.Name,
+                x.DefaultHours,
+                x.HourlyRate
+            })
+            .ToListAsync();
+
+        return (
+            parts.Select(x => new PartsCatalogOptionViewModel
+            {
+                Id = x.Id,
+                PartNumber = x.PartNumber,
+                Name = x.Name,
+                Label = $"{x.PartNumber} — {x.Name}",
+                UnitPrice = x.UnitPrice
+            }).ToList(),
+            labor.Select(x => new LaborCatalogOptionViewModel
+            {
+                Id = x.Id,
+                Label = $"{x.Code} — {x.Name}",
+                Code = x.Code,
+                Name = x.Name,
+                DefaultHours = x.DefaultHours,
+                HourlyRate = x.HourlyRate
+            }).ToList());
     }
 
     private static void AddExistingTechnicianAssignments(

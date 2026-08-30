@@ -1,0 +1,276 @@
+﻿@page "/portal/service-advisor/catalog"
+@layout CustomerLayout
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = PortalPolicies.ServiceAdvisor)]
+
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.Forms
+@using TPGLLC.Data.Entities
+@using TPGLLC.Web.Authorization
+@using TPGLLC.Web.Components.Shared
+@using TPGLLC.Web.Services.WorkOrders
+@using TPGLLC.Web.ViewModels.Portal
+
+@inject IEstimateCatalogService CatalogService
+
+<PageTitle>Parts &amp; Labor Catalog</PageTitle>
+
+<section class="portal-dashboard">
+    <div class="portal-header">
+        <p class="section-kicker">Service Advisor</p>
+        <h1>Parts &amp; Labor Catalog</h1>
+        <p>Maintain reusable pricing for estimate building. Catalog changes apply to new estimates and do not change saved work-order history.</p>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="portal-loading-card">
+            <div class="portal-loading-icon">⏳</div>
+            <div>
+                <div class="portal-loading-title">Loading estimate catalog</div>
+                <div class="portal-loading-text">Please wait while we load parts and labor operations.</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
+        {
+            <PortalNotice Type="danger" Title="Catalog unavailable">
+                @_model.ErrorMessage
+            </PortalNotice>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_model.SuccessMessage))
+        {
+            <PortalNotice Type="success" Title="Catalog saved">
+                @_model.SuccessMessage
+            </PortalNotice>
+        }
+
+        <div class="catalog-summary-grid">
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_model.Parts.Count(x => x.IsActive)</div>
+                <div class="portal-stat-label">Active Parts</div>
+            </div>
+            <div class="portal-stat">
+                <div class="portal-stat-value">@_model.Labor.Count(x => x.IsActive)</div>
+                <div class="portal-stat-label">Active Labor Operations</div>
+            </div>
+        </div>
+
+        <div class="catalog-manager-grid">
+            <section class="portal-section catalog-editor-card">
+                <div class="portal-section-heading">
+                    <div>
+                        <h2>@(_model.EditingPartId.HasValue ? "Edit Part" : "Add Part")</h2>
+                        <div class="portal-muted">Use the retail price in customer estimates.</div>
+                    </div>
+                    @if (_model.EditingPartId.HasValue)
+                    {
+                        <button type="button" class="portal-action-button" @onclick="NewPart">New part</button>
+                    }
+                </div>
+
+                <EditForm Model="@_model.PartForm" OnValidSubmit="SavePartAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    <div class="catalog-form-grid">
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Part number</label>
+                            <InputText class="portal-input" @bind-Value="_model.PartForm.PartNumber" />
+                        </div>
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Part name</label>
+                            <InputText class="portal-input" @bind-Value="_model.PartForm.Name" />
+                        </div>
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Unit cost</label>
+                            <InputText class="portal-input" placeholder="Optional" @bind-Value="_model.PartForm.UnitCost" />
+                        </div>
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Retail price</label>
+                            <InputText class="portal-input" @bind-Value="_model.PartForm.UnitPrice" />
+                        </div>
+                        <div class="workorder-field workorder-field-full">
+                            <label class="portal-field-label">Description</label>
+                            <InputTextArea class="portal-input" @bind-Value="_model.PartForm.Description" />
+                        </div>
+                    </div>
+                    <label class="workorder-checkbox-field catalog-active-toggle">
+                        <InputCheckbox @bind-Value="_model.PartForm.IsActive" /> Active and available for new estimates
+                    </label>
+                    <div class="workorder-editor-actions">
+                        <button type="submit" class="portal-action-button">Save part</button>
+                    </div>
+                </EditForm>
+
+                <div class="catalog-list">
+                    <div class="catalog-list-heading">Parts catalog</div>
+                    @if (_model.Parts.Count == 0)
+                    {
+                        <div class="workorder-structured-empty">No catalog parts have been added.</div>
+                    }
+                    else
+                    {
+                        @foreach (var part in _model.Parts)
+                        {
+                            <div class="catalog-list-item @(!part.IsActive ? "catalog-list-item-inactive" : string.Empty)">
+                                <div>
+                                    <strong>@part.PartNumber — @part.Name</strong>
+                                    @if (!string.IsNullOrWhiteSpace(part.Description))
+                                    {
+                                        <div class="portal-muted">@part.Description</div>
+                                    }
+                                </div>
+                                <div class="catalog-list-item-price">@part.UnitPrice.ToString("C", CultureInfo.CurrentCulture)</div>
+                                <span class="catalog-status">@(part.IsActive ? "Active" : "Inactive")</span>
+                                <button type="button" class="portal-action-button" @onclick="() => EditPart(part)">Edit</button>
+                            </div>
+                        }
+                    }
+                </div>
+            </section>
+
+            <section class="portal-section catalog-editor-card">
+                <div class="portal-section-heading">
+                    <div>
+                        <h2>@(_model.EditingLaborId.HasValue ? "Edit Labor Operation" : "Add Labor Operation")</h2>
+                        <div class="portal-muted">Standard hours × hourly rate becomes the job estimate.</div>
+                    </div>
+                    @if (_model.EditingLaborId.HasValue)
+                    {
+                        <button type="button" class="portal-action-button" @onclick="NewLabor">New labor</button>
+                    }
+                </div>
+
+                <EditForm Model="@_model.LaborForm" OnValidSubmit="SaveLaborAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    <div class="catalog-form-grid">
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Labor code</label>
+                            <InputText class="portal-input" placeholder="BRK-FRONT" @bind-Value="_model.LaborForm.Code" />
+                        </div>
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Operation name</label>
+                            <InputText class="portal-input" @bind-Value="_model.LaborForm.Name" />
+                        </div>
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Standard hours</label>
+                            <InputText class="portal-input" @bind-Value="_model.LaborForm.DefaultHours" />
+                        </div>
+                        <div class="workorder-field">
+                            <label class="portal-field-label">Hourly rate</label>
+                            <InputText class="portal-input" @bind-Value="_model.LaborForm.HourlyRate" />
+                        </div>
+                        <div class="workorder-field workorder-field-full">
+                            <label class="portal-field-label">Description</label>
+                            <InputTextArea class="portal-input" @bind-Value="_model.LaborForm.Description" />
+                        </div>
+                    </div>
+                    <label class="workorder-checkbox-field catalog-active-toggle">
+                        <InputCheckbox @bind-Value="_model.LaborForm.IsActive" /> Active and available for new estimates
+                    </label>
+                    <div class="workorder-editor-actions">
+                        <button type="submit" class="portal-action-button">Save labor operation</button>
+                    </div>
+                </EditForm>
+
+                <div class="catalog-list">
+                    <div class="catalog-list-heading">Labor catalog</div>
+                    @if (_model.Labor.Count == 0)
+                    {
+                        <div class="workorder-structured-empty">No labor operations have been added.</div>
+                    }
+                    else
+                    {
+                        @foreach (var labor in _model.Labor)
+                        {
+                            <div class="catalog-list-item @(!labor.IsActive ? "catalog-list-item-inactive" : string.Empty)">
+                                <div>
+                                    <strong>@labor.Code — @labor.Name</strong>
+                                    @if (!string.IsNullOrWhiteSpace(labor.Description))
+                                    {
+                                        <div class="portal-muted">@labor.Description</div>
+                                    }
+                                </div>
+                                <div class="catalog-list-item-price">@labor.DefaultHours.ToString("0.##") h × @labor.HourlyRate.ToString("C", CultureInfo.CurrentCulture)</div>
+                                <span class="catalog-status">@(labor.IsActive ? "Active" : "Inactive")</span>
+                                <button type="button" class="portal-action-button" @onclick="() => EditLabor(labor)">Edit</button>
+                            </div>
+                        }
+                    }
+                </div>
+            </section>
+        </div>
+    }
+</section>
+
+@code {
+    private EstimateCatalogPageViewModel _model = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _model = await CatalogService.GetAsync();
+        _loading = false;
+    }
+
+    private void NewPart()
+    {
+        _model.PartForm = new PartsCatalogEditViewModel();
+        _model.EditingPartId = null;
+        _model.ErrorMessage = null;
+    }
+
+    private void NewLabor()
+    {
+        _model.LaborForm = new LaborCatalogEditViewModel();
+        _model.EditingLaborId = null;
+        _model.ErrorMessage = null;
+    }
+
+    private void EditPart(PartsCatalogItem part)
+    {
+        _model.PartForm = new PartsCatalogEditViewModel
+        {
+            Id = part.Id,
+            PartNumber = part.PartNumber,
+            Name = part.Name,
+            Description = part.Description,
+            UnitCost = part.UnitCost?.ToString("0.00", CultureInfo.InvariantCulture),
+            UnitPrice = part.UnitPrice.ToString("0.00", CultureInfo.InvariantCulture),
+            IsActive = part.IsActive
+        };
+        _model.EditingPartId = part.Id;
+        _model.ErrorMessage = null;
+        _model.SuccessMessage = null;
+    }
+
+    private void EditLabor(LaborCatalogItem labor)
+    {
+        _model.LaborForm = new LaborCatalogEditViewModel
+        {
+            Id = labor.Id,
+            Code = labor.Code,
+            Name = labor.Name,
+            Description = labor.Description,
+            DefaultHours = labor.DefaultHours.ToString("0.00", CultureInfo.InvariantCulture),
+            HourlyRate = labor.HourlyRate.ToString("0.00", CultureInfo.InvariantCulture),
+            IsActive = labor.IsActive
+        };
+        _model.EditingLaborId = labor.Id;
+        _model.ErrorMessage = null;
+        _model.SuccessMessage = null;
+    }
+
+    private async Task SavePartAsync()
+    {
+        _model = await CatalogService.SavePartAsync(_model);
+    }
+
+    private async Task SaveLaborAsync()
+    {
+        _model = await CatalogService.SaveLaborAsync(_model);
+    }
+}

@@ -1,5 +1,4 @@
-﻿
-@page "/portal/service-advisor"
+﻿@page "/portal/service-advisor"
 @layout CustomerLayout
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "ServiceAdvisor,Administrator")]
 
@@ -67,6 +66,12 @@
                 <div class="portal-card-icon">🛠️</div>
                 <h3>Work Orders</h3>
                 <p>Assign technicians, update approvals, and manage invoices.</p>
+            </a>
+
+            <a class="portal-card-link" href="/portal/service-advisor/catalog">
+                <div class="portal-card-icon">🧾</div>
+                <h3>Parts &amp; Labor Catalog</h3>
+                <p>Maintain reusable parts, labor operations, and estimate pricing.</p>
             </a>
 
             <a class="portal-card-link" href="/portal/service-advisor/customers">

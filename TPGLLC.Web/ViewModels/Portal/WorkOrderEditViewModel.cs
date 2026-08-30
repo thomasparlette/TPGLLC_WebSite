@@ -79,6 +79,7 @@ public sealed class WorkOrderEditViewModel
 public sealed class WorkOrderJobEditViewModel
 {
     public Guid Id { get; set; }
+    public Guid? LaborCatalogItemId { get; set; }
 
     [Required]
     [StringLength(200)]
@@ -91,6 +92,8 @@ public sealed class WorkOrderJobEditViewModel
     [StringLength(30)]
     public string Status { get; set; } = "Proposed";
 
+    public string? LaborHours { get; set; }
+    public string? LaborRate { get; set; }
     public string? LaborAmount { get; set; }
     public bool IsApproved { get; set; }
     public bool IsCustomerDeclined { get; set; }
@@ -123,6 +126,7 @@ public sealed class WorkOrderPartEditViewModel
 {
     public Guid Id { get; set; }
     public Guid? ServiceHistoryJobId { get; set; }
+    public Guid? PartsCatalogItemId { get; set; }
     public string Description { get; set; } = string.Empty;
     public string Quantity { get; set; } = "1";
     public string? UnitPrice { get; set; }

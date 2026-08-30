@@ -114,6 +114,7 @@ public static class TpgllcServiceCollectionExtensions
         services.AddScoped<IVehicleDetailsService, VehicleDetailsService>();
         services.AddScoped<IPortalContextService, PortalContextService>();
         services.AddScoped<IWorkOrderPortalService, WorkOrderPortalService>();
+        services.AddScoped<IEstimateCatalogService, EstimateCatalogService>();
 
         services.AddAuthorizationBuilder()
             .AddPolicy(PortalPolicies.Customer, policy =>
