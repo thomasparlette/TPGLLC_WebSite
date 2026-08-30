@@ -97,6 +97,60 @@
                     </div>
                 </div>
             </div>
+
+            <div class="vehicle-specifications" style="margin-top:1.5rem;">
+                <div>
+                    <strong>Submodel</strong>
+                    <span>@(_model.Vehicle.Submodel ?? "Not specified")</span>
+                </div>
+                <div>
+                    <strong>Body Style</strong>
+                    <span>@(_model.Vehicle.BodyStyle ?? "Not specified")</span>
+                </div>
+                <div>
+                    <strong>Engine / Fuel</strong>
+                    <span>@(_model.Vehicle.EngineFuel ?? "Not specified")</span>
+                </div>
+                <div>
+                    <strong>Transmission</strong>
+                    <span>@(_model.Vehicle.Transmission ?? "Not specified")</span>
+                </div>
+                <div>
+                    <strong>Drive Type</strong>
+                    <span>@(_model.Vehicle.DriveType ?? "Not specified")</span>
+                </div>
+                <div>
+                    <strong>Brake</strong>
+                    <span>@(_model.Vehicle.Brake ?? "Not specified")</span>
+                </div>
+                <div>
+                    <strong>GVW</strong>
+                    <span>@(_model.Vehicle.Gvw ?? "Not specified")</span>
+                </div>
+                <div>
+                    <strong>State / Province</strong>
+                    <span>@(_model.Vehicle.StateProvince ?? "Not specified")</span>
+                </div>
+                <div>
+                    <strong>Unit #</strong>
+                    <span>@(_model.Vehicle.UnitNumber ?? "Not specified")</span>
+                </div>
+                <div>
+                    <strong>Fleet #</strong>
+                    <span>@(_model.Vehicle.FleetNumber ?? "Not specified")</span>
+                </div>
+                <div>
+                    <strong>Color</strong>
+                    <span>@(_model.Vehicle.Color ?? "Not specified")</span>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(_model.Vehicle.Memo))
+                {
+                    <div class="vehicle-specification-wide">
+                        <strong>Memo</strong>
+                        <span>@_model.Vehicle.Memo</span>
+                    </div>
+                }
+            </div>
         </div>
 
         <div class="portal-section">

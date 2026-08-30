@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using TPGLLC.Data;
 using TPGLLC.Data.Entities;

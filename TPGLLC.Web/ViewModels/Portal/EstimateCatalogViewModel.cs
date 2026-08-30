@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using TPGLLC.Data.Entities;
 
 namespace TPGLLC.Web.ViewModels.Portal;

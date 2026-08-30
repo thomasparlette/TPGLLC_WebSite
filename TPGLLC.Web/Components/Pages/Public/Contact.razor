@@ -110,7 +110,7 @@
                             <label>Body Style (optional)</label>
                             <InputSelect class="input" @bind-Value="_appointment.BodyStyle">
                                 <option value="">Not specified</option>
-                                @foreach (var option in GetOptions(VehicleAttributeOptions.BodyStyles.Concat(_catalogOptions.BodyStyles), _vpicResult?.BodyStyleOptions))
+                                @foreach (var option in GetOptions(_bodyStyleOptions, _vpicResult?.BodyStyleOptions))
                                 {
                                     <option value="@option">@option</option>
                                 }
@@ -131,7 +131,7 @@
                             <label>Drive Type (optional)</label>
                             <InputSelect class="input" @bind-Value="_appointment.DriveType">
                                 <option value="">Not specified</option>
-                                @foreach (var option in GetOptions(VehicleAttributeOptions.DriveTypes.Concat(_catalogOptions.DriveTypes), _vpicResult?.DriveTypeOptions))
+                                @foreach (var option in GetOptions(_driveTypeOptions, _vpicResult?.DriveTypeOptions))
                                 {
                                     <option value="@option">@option</option>
                                 }
@@ -142,7 +142,7 @@
                             <label>Brake (optional)</label>
                             <InputSelect class="input" @bind-Value="_appointment.Brake">
                                 <option value="">Not specified</option>
-                                @foreach (var option in GetOptions(VehicleAttributeOptions.BrakeTypes.Concat(_catalogOptions.Brakes), _vpicResult?.BrakeOptions))
+                                @foreach (var option in GetOptions(_brakeOptions, _vpicResult?.BrakeOptions))
                                 {
                                     <option value="@option">@option</option>
                                 }
@@ -199,21 +199,21 @@
                     </div>
 
                     <datalist id="contact-vehicle-submodel-options">
-                        @foreach (var option in GetOptions(VehicleAttributeOptions.CommonSubmodels.Concat(_catalogOptions.Submodels), _vpicResult?.SubmodelOptions))
+                        @foreach (var option in GetOptions(_submodelOptions, _vpicResult?.SubmodelOptions))
                         {
                             <option value="@option"></option>
                         }
                     </datalist>
 
                     <datalist id="contact-vehicle-engine-options">
-                        @foreach (var option in GetOptions(VehicleAttributeOptions.CommonEngineFuelTypes.Concat(_catalogOptions.EngineFuelTypes), _vpicResult?.EngineFuelOptions))
+                        @foreach (var option in GetOptions(_engineFuelOptions, _vpicResult?.EngineFuelOptions))
                         {
                             <option value="@option"></option>
                         }
                     </datalist>
 
                     <datalist id="contact-vehicle-transmission-options">
-                        @foreach (var option in GetOptions(VehicleAttributeOptions.CommonTransmissions.Concat(_catalogOptions.Transmissions), _vpicResult?.TransmissionOptions))
+                        @foreach (var option in GetOptions(_transmissionOptions, _vpicResult?.TransmissionOptions))
                         {
                             <option value="@option"></option>
                         }
@@ -263,18 +263,22 @@
     private IReadOnlyList<int> _years = [];
     private IReadOnlyList<string> _makes = [];
     private IReadOnlyList<string> _models = [];
-    private VehicleCatalogOptions _catalogOptions = new();
 
     private string? _submitError;
     private string? _requestId;
     private bool _submitted;
     private bool _isSubmitting;
     private VpicVehicleDecodeResult? _vpicResult;
+    private IReadOnlyList<string> _submodelOptions = VehicleAttributeOptions.CommonSubmodels;
+    private IReadOnlyList<string> _bodyStyleOptions = VehicleAttributeOptions.BodyStyles;
+    private IReadOnlyList<string> _engineFuelOptions = VehicleAttributeOptions.CommonEngineFuelTypes;
+    private IReadOnlyList<string> _transmissionOptions = VehicleAttributeOptions.CommonTransmissions;
+    private IReadOnlyList<string> _driveTypeOptions = VehicleAttributeOptions.DriveTypes;
+    private IReadOnlyList<string> _brakeOptions = VehicleAttributeOptions.BrakeTypes;
 
     protected override async Task OnInitializedAsync()
     {
         _years = await VehicleCatalog.GetYearsAsync();
-        _catalogOptions = await VehicleCatalog.GetOptionsAsync();
 
         if (_years.Count == 0)
         {
@@ -282,6 +286,30 @@
                 .Reverse()
                 .ToList();
         }
+
+        await LoadVehicleOptionsAsync();
+    }
+
+    private async Task LoadVehicleOptionsAsync()
+    {
+        _submodelOptions = await LoadOptionsAsync(
+            VehicleCatalogOptionCategories.Submodel,
+            VehicleAttributeOptions.CommonSubmodels);
+        _bodyStyleOptions = await LoadOptionsAsync(
+            VehicleCatalogOptionCategories.BodyStyle,
+            VehicleAttributeOptions.BodyStyles);
+        _engineFuelOptions = await LoadOptionsAsync(
+            VehicleCatalogOptionCategories.EngineFuel,
+            VehicleAttributeOptions.CommonEngineFuelTypes);
+        _transmissionOptions = await LoadOptionsAsync(
+            VehicleCatalogOptionCategories.Transmission,
+            VehicleAttributeOptions.CommonTransmissions);
+        _driveTypeOptions = await LoadOptionsAsync(
+            VehicleCatalogOptionCategories.DriveType,
+            VehicleAttributeOptions.DriveTypes);
+        _brakeOptions = await LoadOptionsAsync(
+            VehicleCatalogOptionCategories.Brake,
+            VehicleAttributeOptions.BrakeTypes);
     }
 
     private async Task OnVehicleYearChanged()
@@ -377,6 +405,14 @@
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private async Task<IReadOnlyList<string>> LoadOptionsAsync(
+        string category,
+        IReadOnlyList<string> fallback)
+    {
+        var values = await VehicleCatalog.GetOptionsAsync(category);
+        return values.Count > 0 ? values : fallback;
     }
 
     private async Task SubmitAppointment()

@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using TPGLLC.Data;
-using TPGLLC.Data.Entities;
 
 namespace TPGLLC.Services.Vehicles;
 
@@ -22,7 +21,7 @@ public sealed class VehicleCatalogService : IVehicleCatalogService
     public async Task<IReadOnlyList<int>> GetYearsAsync(
         CancellationToken cancellationToken = default)
     {
-        var key = $"vehicle-years";
+       var key = $"vehicle-years";
 
         if (_cache.TryGetValue(key, out IReadOnlyList<int>? cached) && cached is not null)
         {
@@ -58,7 +57,7 @@ public sealed class VehicleCatalogService : IVehicleCatalogService
 
         var result = await _db.VehicleCatalogEntries
             .AsNoTracking()
-            .Where(x => x.ModelYear == year)
+            .Where(x =>  x.ModelYear == year)
             .Select(x => x.Make)
             .Distinct()
             .OrderBy(x => x)
@@ -77,7 +76,7 @@ public sealed class VehicleCatalogService : IVehicleCatalogService
         string make,
         CancellationToken cancellationToken = default)
     {
-
+       
 
         var key = $"vehicle-models:{year}:{make}";
 
@@ -104,45 +103,36 @@ public sealed class VehicleCatalogService : IVehicleCatalogService
         return result;
     }
 
-    public async Task<VehicleCatalogOptions> GetOptionsAsync(
+    public async Task<IReadOnlyList<string>> GetOptionsAsync(
+        string category,
         CancellationToken cancellationToken = default)
     {
-        const string cacheKey = "vehicle-catalog-options";
+        var normalizedCategory = category?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedCategory))
+        {
+            return [];
+        }
 
-        if (_cache.TryGetValue(cacheKey, out VehicleCatalogOptions? cached) && cached is not null)
+        var key = $"vehicle-options:{normalizedCategory}";
+
+        if (_cache.TryGetValue(key, out IReadOnlyList<string>? cached) && cached is not null)
         {
             return cached;
         }
 
-        var rows = await _db.VehicleCatalogOptions
+        var result = await _db.VehicleCatalogOptions
             .AsNoTracking()
-            .Where(x => x.IsActive)
-            .OrderBy(x => x.Category)
-            .ThenBy(x => x.Value)
+            .Where(x => x.Category == normalizedCategory)
+            .Select(x => x.Value)
+            .Distinct()
+            .OrderBy(x => x)
             .ToListAsync(cancellationToken);
 
-        var options = new VehicleCatalogOptions
+        if (result.Count > 0)
         {
-            Submodels = GetValues(rows, VehicleCatalogOptionCategories.Submodel),
-            BodyStyles = GetValues(rows, VehicleCatalogOptionCategories.BodyStyle),
-            EngineFuelTypes = GetValues(rows, VehicleCatalogOptionCategories.EngineFuel),
-            Transmissions = GetValues(rows, VehicleCatalogOptionCategories.Transmission),
-            DriveTypes = GetValues(rows, VehicleCatalogOptionCategories.DriveType),
-            Brakes = GetValues(rows, VehicleCatalogOptionCategories.Brake)
-        };
+            _cache.Set(key, result, CacheDuration);
+        }
 
-        _cache.Set(cacheKey, options, CacheDuration);
-        return options;
-    }
-
-    private static IReadOnlyList<string> GetValues(
-        IEnumerable<VehicleCatalogOption> rows,
-        string category)
-    {
-        return rows
-            .Where(x => x.Category.Equals(category, StringComparison.OrdinalIgnoreCase))
-            .Select(x => x.Value)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        return result;
     }
 }

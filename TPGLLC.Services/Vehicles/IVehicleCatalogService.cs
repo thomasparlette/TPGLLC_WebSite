@@ -2,6 +2,16 @@
 
 namespace TPGLLC.Services.Vehicles;
 
+public static class VehicleCatalogOptionCategories
+{
+    public const string Submodel = "Submodel";
+    public const string BodyStyle = "BodyStyle";
+    public const string EngineFuel = "EngineFuel";
+    public const string Transmission = "Transmission";
+    public const string DriveType = "DriveType";
+    public const string Brake = "Brake";
+}
+
 public interface IVehicleCatalogService
 {
     Task<IReadOnlyList<int>> GetYearsAsync(
@@ -16,6 +26,7 @@ public interface IVehicleCatalogService
         string make,
         CancellationToken cancellationToken = default);
 
-    Task<VehicleCatalogOptions> GetOptionsAsync(
+    Task<IReadOnlyList<string>> GetOptionsAsync(
+        string category,
         CancellationToken cancellationToken = default);
 }

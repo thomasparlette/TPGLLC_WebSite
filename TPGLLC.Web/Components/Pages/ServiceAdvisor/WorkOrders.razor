@@ -118,56 +118,56 @@
                                     var status = WorkOrderStatusCatalog.GetDefinition(workOrder.Status);
 
                                     <article class="workorder-card workorder-board-card @status.CssClass" @key="workOrder.Id">
-                                        <div class="workorder-card-header">
-                                            <div>
-                                                <div class="workorder-number">@(string.IsNullOrWhiteSpace(workOrder.WorkOrderNumber) ? "Work Order Number Pending" : workOrder.WorkOrderNumber)</div>
-                                                <h3 class="workorder-title">@workOrder.VehicleName</h3>
-                                                <p class="workorder-subtitle">@workOrder.Service</p>
+                                            <div class="workorder-card-header">
+                                                <div>
+                                                    <div class="workorder-number">@(string.IsNullOrWhiteSpace(workOrder.WorkOrderNumber) ? "Work Order Number Pending" : workOrder.WorkOrderNumber)</div>
+                                                    <h3 class="workorder-title">@workOrder.VehicleName</h3>
+                                                    <p class="workorder-subtitle">@workOrder.Service</p>
+                                                </div>
+                                                <div class="workorder-actions" style="margin-top:0;">
+                                                    <button type="button"
+                                                            class="portal-action-button"
+                                                            @onclick="@(async () => await BeginEditAsync(workOrder.Id))">
+                                                        Edit
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div class="workorder-actions" style="margin-top:0;">
-                                                <button type="button"
-                                                        class="portal-action-button"
-                                                        @onclick="@(async () => await BeginEditAsync(workOrder.Id))">
-                                                    Edit
-                                                </button>
-                                            </div>
-                                        </div>
 
-                                        <div class="workorder-meta">
-                                            <span class="workorder-badge">Service @workOrder.ServiceDate.ToString("MMM d, yyyy")</span>
-                                            <span class="workorder-badge workorder-status-badge @status.CssClass">@status.Label</span>
-                                            @if (!string.IsNullOrWhiteSpace(workOrder.ApprovalStatus))
-                                            {
-                                                <span class="workorder-badge">Appointment: @workOrder.ApprovalStatus</span>
-                                            }
-                                            @if (workOrder.EstimateAmount.HasValue)
-                                            {
-                                                <span class="workorder-badge">Estimate @workOrder.EstimateAmount.Value.ToString("C")</span>
-                                            }
-                                            @if (workOrder.InvoiceAmount.HasValue)
-                                            {
-                                                <span class="workorder-badge">Invoice @workOrder.InvoiceAmount.Value.ToString("C")</span>
-                                            }
-                                            @if (workOrder.Mileage.HasValue)
-                                            {
-                                                <span class="workorder-badge">Mileage @workOrder.Mileage.Value.ToString("N0")</span>
-                                            }
-                                            @if (workOrder.Parts.Any(x => x.IsCustomerDeclined))
-                                            {
-                                                <span class="workorder-badge workorder-badge-declined">
-                                                    Customer declined @workOrder.Parts.Count(x => x.IsCustomerDeclined) part(s)
-                                                </span>
-                                            }
-                                        </div>
-
-                                        @if (GetLatestVisibleUpdate(workOrder) is not null)
-                                        {
-                                            <div class="workorder-latest-update">
-                                                <strong>Latest update</strong>
-                                                <span>@GetLatestVisibleUpdate(workOrder)!.Message</span>
-                                                <small>@GetLatestVisibleUpdate(workOrder)!.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</small>
+                                            <div class="workorder-meta">
+                                                <span class="workorder-badge">Service @workOrder.ServiceDate.ToString("MMM d, yyyy")</span>
+                                                <span class="workorder-badge workorder-status-badge @status.CssClass">@status.Label</span>
+                                                @if (!string.IsNullOrWhiteSpace(workOrder.ApprovalStatus))
+                                                {
+                                                    <span class="workorder-badge">Appointment: @workOrder.ApprovalStatus</span>
+                                                }
+                                                @if (workOrder.EstimateAmount.HasValue)
+                                                {
+                                                    <span class="workorder-badge">Estimate @workOrder.EstimateAmount.Value.ToString("C")</span>
+                                                }
+                                                @if (workOrder.InvoiceAmount.HasValue)
+                                                {
+                                                    <span class="workorder-badge">Invoice @workOrder.InvoiceAmount.Value.ToString("C")</span>
+                                                }
+                                                @if (workOrder.Mileage.HasValue)
+                                                {
+                                                    <span class="workorder-badge">Mileage @workOrder.Mileage.Value.ToString("N0")</span>
+                                                }
+                                                @if (workOrder.Parts.Any(x => x.IsCustomerDeclined))
+                                                {
+                                                    <span class="workorder-badge workorder-badge-declined">
+                                                        Customer declined @workOrder.Parts.Count(x => x.IsCustomerDeclined) part(s)
+                                                    </span>
+                                                }
                                             </div>
-                                        }
+
+                                            @if (GetLatestVisibleUpdate(workOrder) is not null)
+                                            {
+                                                <div class="workorder-latest-update">
+                                                    <strong>Latest update</strong>
+                                                    <span>@GetLatestVisibleUpdate(workOrder)!.Message</span>
+                                                    <small>@GetLatestVisibleUpdate(workOrder)!.CreatedUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</small>
+                                                </div>
+                                            }
                                     </article>
                                 }
                             </div>
@@ -422,8 +422,7 @@
                         {
                             <div class="workorder-part-row">
                                 <div class="workorder-part-description">
-                                    <label class="workorder-part-job-label">
-                                        Catalog part
+                                    <label class="workorder-part-job-label">Catalog part
                                         <select class="portal-input" value="@part.PartsCatalogItemId" @onchange="args => SelectPartsCatalog(part, args)">
                                             <option value="">Custom part</option>
                                             @foreach (var catalogPart in _model.PartsCatalogOptions)
@@ -433,8 +432,7 @@
                                         </select>
                                     </label>
                                     <InputText class="portal-input" placeholder="Part description" @bind-Value="part.Description" />
-                                    <label class="workorder-part-job-label">
-                                        Repair job
+                                    <label class="workorder-part-job-label">Repair job
                                         <InputSelect TValue="Guid?" class="portal-input" @bind-Value="part.ServiceHistoryJobId">
                                             <option value="">Unassigned</option>
                                             @foreach (var job in _model.Form.Jobs.Where(x => !string.IsNullOrWhiteSpace(x.Name)))

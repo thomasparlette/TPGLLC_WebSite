@@ -15,9 +15,12 @@ public sealed class ServiceHistoryPartConfiguration : IEntityTypeConfiguration<S
         builder.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
         builder.HasIndex(x => x.ServiceHistoryEntryId);
         builder.HasIndex(x => x.ServiceHistoryJobId);
+        builder.HasIndex(x => x.PartsCatalogItemId);
         builder.HasOne(x => x.ServiceHistoryEntry).WithMany(x => x.Parts)
             .HasForeignKey(x => x.ServiceHistoryEntryId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(x => x.ServiceHistoryJob).WithMany(x => x.Parts)
             .HasForeignKey(x => x.ServiceHistoryJobId).OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne(x => x.PartsCatalogItem).WithMany(x => x.ServiceHistoryParts)
+            .HasForeignKey(x => x.PartsCatalogItemId).OnDelete(DeleteBehavior.NoAction);
     }
 }

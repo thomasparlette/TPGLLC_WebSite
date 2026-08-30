@@ -1,4 +1,4 @@
-﻿namespace TPGLLC.Data.Entities;
+namespace TPGLLC.Data.Entities;
 
 public sealed class LaborCatalogItem
 {

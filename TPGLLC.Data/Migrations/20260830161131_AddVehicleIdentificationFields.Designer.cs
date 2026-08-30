@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TPGLLC.Data;
 
@@ -11,9 +12,11 @@ using TPGLLC.Data;
 namespace TPGLLC.Data.Migrations
 {
     [DbContext(typeof(TPGLLCDbContext))]
-    partial class TPGLLCDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260830161131_AddVehicleIdentificationFields")]
+    partial class AddVehicleIdentificationFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1030,42 +1033,6 @@ namespace TPGLLC.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("VehicleCatalogEntries", (string)null);
-                });
-
-            modelBuilder.Entity("TPGLLC.Data.Entities.VehicleCatalogOption", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
-
-                    b.Property<DateTimeOffset>("SyncedAtUtc")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("Value")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Category");
-
-                    b.HasIndex("Category", "Value")
-                        .IsUnique();
-
-                    b.ToTable("VehicleCatalogOptions", (string)null);
                 });
 
             modelBuilder.Entity("TPGLLC.Shared.Identity.ApplicationRole", b =>

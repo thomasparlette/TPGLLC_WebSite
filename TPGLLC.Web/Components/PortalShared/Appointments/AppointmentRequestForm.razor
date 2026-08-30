@@ -1,4 +1,4 @@
-﻿@using System.Linq.Expressions
+@using System.Linq.Expressions
 @using Microsoft.AspNetCore.Components.Forms
 @using TPGLLC.Services.Vehicles
 @using TPGLLC.Web.Components.PortalShared.Vehicles
@@ -68,7 +68,7 @@
             <label>Body Style <span class="portal-field-optional">(optional)</span></label>
             <InputSelect class="@GetFieldCss(() => Form.BodyStyle)" @bind-Value="Form.BodyStyle">
                 <option value="">Not specified</option>
-                @foreach (var option in GetOptions(VehicleAttributeOptions.BodyStyles.Concat(_catalogOptions.BodyStyles), _vpicResult?.BodyStyleOptions))
+                @foreach (var option in GetOptions(_bodyStyleOptions, _vpicResult?.BodyStyleOptions))
                 {
                     <option value="@option">@option</option>
                 }
@@ -98,7 +98,7 @@
             <label>Drive Type <span class="portal-field-optional">(optional)</span></label>
             <InputSelect class="@GetFieldCss(() => Form.DriveType)" @bind-Value="Form.DriveType">
                 <option value="">Not specified</option>
-                @foreach (var option in GetOptions(VehicleAttributeOptions.DriveTypes.Concat(_catalogOptions.DriveTypes), _vpicResult?.DriveTypeOptions))
+                @foreach (var option in GetOptions(_driveTypeOptions, _vpicResult?.DriveTypeOptions))
                 {
                     <option value="@option">@option</option>
                 }
@@ -110,7 +110,7 @@
             <label>Brake <span class="portal-field-optional">(optional)</span></label>
             <InputSelect class="@GetFieldCss(() => Form.Brake)" @bind-Value="Form.Brake">
                 <option value="">Not specified</option>
-                @foreach (var option in GetOptions(VehicleAttributeOptions.BrakeTypes.Concat(_catalogOptions.Brakes), _vpicResult?.BrakeOptions))
+                @foreach (var option in GetOptions(_brakeOptions, _vpicResult?.BrakeOptions))
                 {
                     <option value="@option">@option</option>
                 }
@@ -180,21 +180,21 @@
     </div>
 
     <datalist id="appointment-vehicle-submodel-options">
-        @foreach (var option in GetOptions(VehicleAttributeOptions.CommonSubmodels.Concat(_catalogOptions.Submodels), _vpicResult?.SubmodelOptions))
+        @foreach (var option in GetOptions(_submodelOptions, _vpicResult?.SubmodelOptions))
         {
             <option value="@option"></option>
         }
     </datalist>
 
     <datalist id="appointment-vehicle-engine-options">
-        @foreach (var option in GetOptions(VehicleAttributeOptions.CommonEngineFuelTypes.Concat(_catalogOptions.EngineFuelTypes), _vpicResult?.EngineFuelOptions))
+        @foreach (var option in GetOptions(_engineFuelOptions, _vpicResult?.EngineFuelOptions))
         {
             <option value="@option"></option>
         }
     </datalist>
 
     <datalist id="appointment-vehicle-transmission-options">
-        @foreach (var option in GetOptions(VehicleAttributeOptions.CommonTransmissions.Concat(_catalogOptions.Transmissions), _vpicResult?.TransmissionOptions))
+        @foreach (var option in GetOptions(_transmissionOptions, _vpicResult?.TransmissionOptions))
         {
             <option value="@option"></option>
         }
@@ -225,11 +225,33 @@
     private EditContext _editContext = default!;
     private bool _isSubmitting;
     private VpicVehicleDecodeResult? _vpicResult;
-    private VehicleCatalogOptions _catalogOptions = new();
+    private IReadOnlyList<string> _submodelOptions = VehicleAttributeOptions.CommonSubmodels;
+    private IReadOnlyList<string> _bodyStyleOptions = VehicleAttributeOptions.BodyStyles;
+    private IReadOnlyList<string> _engineFuelOptions = VehicleAttributeOptions.CommonEngineFuelTypes;
+    private IReadOnlyList<string> _transmissionOptions = VehicleAttributeOptions.CommonTransmissions;
+    private IReadOnlyList<string> _driveTypeOptions = VehicleAttributeOptions.DriveTypes;
+    private IReadOnlyList<string> _brakeOptions = VehicleAttributeOptions.BrakeTypes;
 
     protected override async Task OnInitializedAsync()
     {
-        _catalogOptions = await VehicleCatalog.GetOptionsAsync();
+        _submodelOptions = await LoadOptionsAsync(
+            VehicleCatalogOptionCategories.Submodel,
+            VehicleAttributeOptions.CommonSubmodels);
+        _bodyStyleOptions = await LoadOptionsAsync(
+            VehicleCatalogOptionCategories.BodyStyle,
+            VehicleAttributeOptions.BodyStyles);
+        _engineFuelOptions = await LoadOptionsAsync(
+            VehicleCatalogOptionCategories.EngineFuel,
+            VehicleAttributeOptions.CommonEngineFuelTypes);
+        _transmissionOptions = await LoadOptionsAsync(
+            VehicleCatalogOptionCategories.Transmission,
+            VehicleAttributeOptions.CommonTransmissions);
+        _driveTypeOptions = await LoadOptionsAsync(
+            VehicleCatalogOptionCategories.DriveType,
+            VehicleAttributeOptions.DriveTypes);
+        _brakeOptions = await LoadOptionsAsync(
+            VehicleCatalogOptionCategories.Brake,
+            VehicleAttributeOptions.BrakeTypes);
     }
 
     protected override void OnParametersSet()
@@ -347,6 +369,14 @@
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private async Task<IReadOnlyList<string>> LoadOptionsAsync(
+        string category,
+        IReadOnlyList<string> fallback)
+    {
+        var values = await VehicleCatalog.GetOptionsAsync(category);
+        return values.Count > 0 ? values : fallback;
     }
 
     private string GetFieldCss<TValue>(Expression<Func<TValue>> accessor)

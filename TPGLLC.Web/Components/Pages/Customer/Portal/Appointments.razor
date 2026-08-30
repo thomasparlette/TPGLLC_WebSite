@@ -172,11 +172,11 @@
                                     Years="@_years"
                                     Makes="@_makes"
                                     Models="@_models"
-                                    OnSave="@EventCallback.Factory.Create(this, SaveRequestAsync)"
-                                    OnCancel="@EventCallback.Factory.Create(this, ResetFormAsync)"
-                                    OnYearChanged="@EventCallback.Factory.Create(this, OnVehicleYearChangedAsync)"
-                                    OnMakeChanged="@EventCallback.Factory.Create(this, OnVehicleMakeChangedAsync)"
-                                    OnVinDecoded="@(EventCallback.Factory.Create<VpicVehicleDecodeResult>(this, OnVinDecodedAsync))" />
+                                     OnSave="@EventCallback.Factory.Create(this, SaveRequestAsync)"
+                                     OnCancel="@EventCallback.Factory.Create(this, ResetFormAsync)"
+                                     OnYearChanged="@EventCallback.Factory.Create(this, OnVehicleYearChangedAsync)"
+                                     OnMakeChanged="@EventCallback.Factory.Create(this, OnVehicleMakeChangedAsync)"
+                                     OnVinDecoded="@(EventCallback.Factory.Create<VpicVehicleDecodeResult>(this, OnVinDecodedAsync))" />
         </div>
     }
 </section>

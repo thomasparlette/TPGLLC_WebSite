@@ -1,4 +1,4 @@
-﻿/* Customer service-history status board */
+/* Customer service-history status board */
 .history-status-legend-section {
     margin-top: 1.5rem;
 }
@@ -28,21 +28,10 @@
     background: #7890af;
 }
 
-.history-status-dot-requested {
-    background: #2d73c5;
-}
-
-.history-status-dot-in-progress {
-    background: #d18b00;
-}
-
-.history-status-dot-waiting {
-    background: #7854bd;
-}
-
-.history-status-dot-completed {
-    background: #23835b;
-}
+.history-status-dot-requested { background: #2d73c5; }
+.history-status-dot-in-progress { background: #d18b00; }
+.history-status-dot-waiting { background: #7854bd; }
+.history-status-dot-completed { background: #23835b; }
 
 .history-vehicle-groups {
     display: grid;
@@ -67,33 +56,31 @@
     background: #f7f9fc;
 }
 
-    .history-vehicle-header > div:first-child {
-        min-width: 0;
-    }
+.history-vehicle-header > div:first-child { min-width: 0; }
 
-    .history-vehicle-header .portal-card-icon {
-        display: inline-flex;
-        width: 2.45rem;
-        height: 2.45rem;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 0.6rem;
-        border-radius: 0.75rem;
-        background: #e7eef9;
-    }
+.history-vehicle-header .portal-card-icon {
+    display: inline-flex;
+    width: 2.45rem;
+    height: 2.45rem;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.6rem;
+    border-radius: 0.75rem;
+    background: #e7eef9;
+}
 
-    .history-vehicle-header h3 {
-        margin: 0;
-        color: #12356b;
-        font-size: 1.1rem;
-    }
+.history-vehicle-header h3 {
+    margin: 0;
+    color: #12356b;
+    font-size: 1.1rem;
+}
 
-    .history-vehicle-header p {
-        margin: 0.35rem 0 0;
-        color: #68778e;
-        font-size: 0.87rem;
-        overflow-wrap: anywhere;
-    }
+.history-vehicle-header p {
+    margin: 0.35rem 0 0;
+    color: #68778e;
+    font-size: 0.87rem;
+    overflow-wrap: anywhere;
+}
 
 .history-vehicle-count {
     display: grid;
@@ -106,15 +93,15 @@
     text-align: center;
 }
 
-    .history-vehicle-count strong {
-        font-size: 1.25rem;
-        line-height: 1.1;
-    }
+.history-vehicle-count strong {
+    font-size: 1.25rem;
+    line-height: 1.1;
+}
 
-    .history-vehicle-count span {
-        margin-top: 0.2rem;
-        font-size: 0.72rem;
-    }
+.history-vehicle-count span {
+    margin-top: 0.2rem;
+    font-size: 0.72rem;
+}
 
 .history-status-columns {
     display: grid;
@@ -123,9 +110,7 @@
     padding: 1rem;
 }
 
-.history-status-column {
-    min-width: 0;
-}
+.history-status-column { min-width: 0; }
 
 .history-status-column-heading {
     width: 100%;
@@ -137,28 +122,26 @@
     color: #345276;
 }
 
-    .history-status-column-heading h4 {
-        flex: 1 1 auto;
-        margin: 0;
-        font-size: 0.86rem;
-    }
-
-    .history-status-column-heading > span:last-child {
-        display: inline-flex;
-        min-width: 1.5rem;
-        height: 1.5rem;
-        align-items: center;
-        justify-content: center;
-        border-radius: 999px;
-        background: #fff;
-        color: #506985;
-        font-size: 0.75rem;
-        font-weight: 700;
-    }
-
-.history-status-column > .history-workorder-card {
-    margin-top: 0.7rem;
+.history-status-column-heading h4 {
+    flex: 1 1 auto;
+    margin: 0;
+    font-size: 0.86rem;
 }
+
+.history-status-column-heading > span:last-child {
+    display: inline-flex;
+    min-width: 1.5rem;
+    height: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #fff;
+    color: #506985;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.history-status-column > .history-workorder-card { margin-top: 0.7rem; }
 
 .history-column-empty,
 .history-vehicle-empty {
@@ -170,9 +153,7 @@
     text-align: center;
 }
 
-.history-vehicle-empty {
-    margin: 1rem;
-}
+.history-vehicle-empty { margin: 1rem; }
 
 .history-workorder-card {
     position: relative;
@@ -181,31 +162,17 @@
     transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-    .history-workorder-card:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 0.5rem 1.15rem rgba(21, 49, 86, 0.1);
-    }
+.history-workorder-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0.5rem 1.15rem rgba(21, 49, 86, 0.1);
+}
 
-    .history-workorder-card.history-status-requested {
-        border-left-color: #2d73c5;
-    }
-
-    .history-workorder-card.history-status-approved,
-    .history-workorder-card.history-status-waiting {
-        border-left-color: #7854bd;
-    }
-
-    .history-workorder-card.history-status-in-progress {
-        border-left-color: #d18b00;
-    }
-
-    .history-workorder-card.history-status-completed {
-        border-left-color: #23835b;
-    }
-
-    .history-workorder-card.history-status-cancelled {
-        border-left-color: #c63e4b;
-    }
+.history-workorder-card.history-status-requested { border-left-color: #2d73c5; }
+.history-workorder-card.history-status-approved,
+.history-workorder-card.history-status-waiting { border-left-color: #7854bd; }
+.history-workorder-card.history-status-in-progress { border-left-color: #d18b00; }
+.history-workorder-card.history-status-completed { border-left-color: #23835b; }
+.history-workorder-card.history-status-cancelled { border-left-color: #c63e4b; }
 
 .history-workorder-status-pill {
     display: inline-flex;
@@ -217,36 +184,36 @@
     font-weight: 700;
 }
 
-    .history-workorder-status-pill.history-status-requested {
-        border-color: #c7dcf5;
-        background: #edf5ff;
-        color: #245f9f;
-    }
+.history-workorder-status-pill.history-status-requested {
+    border-color: #c7dcf5;
+    background: #edf5ff;
+    color: #245f9f;
+}
 
-    .history-workorder-status-pill.history-status-approved,
-    .history-workorder-status-pill.history-status-waiting {
-        border-color: #ddcff5;
-        background: #f4effd;
-        color: #6948a4;
-    }
+.history-workorder-status-pill.history-status-approved,
+.history-workorder-status-pill.history-status-waiting {
+    border-color: #ddcff5;
+    background: #f4effd;
+    color: #6948a4;
+}
 
-    .history-workorder-status-pill.history-status-in-progress {
-        border-color: #f1d48e;
-        background: #fff7df;
-        color: #966600;
-    }
+.history-workorder-status-pill.history-status-in-progress {
+    border-color: #f1d48e;
+    background: #fff7df;
+    color: #966600;
+}
 
-    .history-workorder-status-pill.history-status-completed {
-        border-color: #bde4d1;
-        background: #edfbf3;
-        color: #1d754f;
-    }
+.history-workorder-status-pill.history-status-completed {
+    border-color: #bde4d1;
+    background: #edfbf3;
+    color: #1d754f;
+}
 
-    .history-workorder-status-pill.history-status-cancelled {
-        border-color: #f2c5cb;
-        background: #fff0f2;
-        color: #a93340;
-    }
+.history-workorder-status-pill.history-status-cancelled {
+    border-color: #f2c5cb;
+    background: #fff0f2;
+    color: #a93340;
+}
 
 .history-live-update {
     margin-top: 0.9rem;
@@ -259,9 +226,7 @@
     line-height: 1.45;
 }
 
-    .history-live-update > div + div {
-        margin-top: 0.3rem;
-    }
+.history-live-update > div + div { margin-top: 0.3rem; }
 
 .history-live-update-heading {
     display: flex;
@@ -328,26 +293,12 @@
     background: #7890af;
 }
 
-    .history-update-item-dot.history-status-requested {
-        background: #2d73c5;
-    }
-
-    .history-update-item-dot.history-status-approved,
-    .history-update-item-dot.history-status-waiting {
-        background: #7854bd;
-    }
-
-    .history-update-item-dot.history-status-in-progress {
-        background: #d18b00;
-    }
-
-    .history-update-item-dot.history-status-completed {
-        background: #23835b;
-    }
-
-    .history-update-item-dot.history-status-cancelled {
-        background: #c63e4b;
-    }
+.history-update-item-dot.history-status-requested { background: #2d73c5; }
+.history-update-item-dot.history-status-approved,
+.history-update-item-dot.history-status-waiting { background: #7854bd; }
+.history-update-item-dot.history-status-in-progress { background: #d18b00; }
+.history-update-item-dot.history-status-completed { background: #23835b; }
+.history-update-item-dot.history-status-cancelled { background: #c63e4b; }
 
 .history-update-item-content {
     min-width: 0;
@@ -361,11 +312,11 @@
     align-items: baseline;
 }
 
-    .history-update-item-meta span,
-    .history-update-item-author {
-        color: #8090a5;
-        font-size: 0.75rem;
-    }
+.history-update-item-meta span,
+.history-update-item-author {
+    color: #8090a5;
+    font-size: 0.75rem;
+}
 
 .history-update-item-author {
     margin-top: 0.2rem;
@@ -388,22 +339,22 @@
     color: #234d87;
 }
 
-    .history-inspection-heading strong,
-    .history-inspection-heading span {
-        display: block;
-    }
+.history-inspection-heading strong,
+.history-inspection-heading span {
+    display: block;
+}
 
-    .history-inspection-heading span {
-        margin-top: 0.2rem;
-        color: #718198;
-        font-size: 0.76rem;
-    }
+.history-inspection-heading span {
+    margin-top: 0.2rem;
+    color: #718198;
+    font-size: 0.76rem;
+}
 
-    .history-inspection-heading .history-inspection-count {
-        margin-top: 0;
-        color: #506985;
-        white-space: nowrap;
-    }
+.history-inspection-heading .history-inspection-count {
+    margin-top: 0;
+    color: #506985;
+    white-space: nowrap;
+}
 
 .history-inspection-row {
     display: grid;
@@ -434,25 +385,10 @@
     white-space: nowrap;
 }
 
-.history-inspection-good {
-    background: #edfbf3;
-    color: #1d754f;
-}
-
-.history-inspection-monitor {
-    background: #edf5ff;
-    color: #245f9f;
-}
-
-.history-inspection-needs-attention {
-    background: #fff7df;
-    color: #966600;
-}
-
-.history-inspection-urgent {
-    background: #fff0f2;
-    color: #a93340;
-}
+.history-inspection-good { background: #edfbf3; color: #1d754f; }
+.history-inspection-monitor { background: #edf5ff; color: #245f9f; }
+.history-inspection-needs-attention { background: #fff7df; color: #966600; }
+.history-inspection-urgent { background: #fff0f2; color: #a93340; }
 
 .history-inspection-recommendation,
 .history-job-description {
@@ -475,10 +411,10 @@
     font-size: 0.84rem;
 }
 
-    .history-job-row:first-child {
-        border-top: 0;
-        padding-top: 0;
-    }
+.history-job-row:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
 
 .history-job-description {
     margin-top: 0.25rem;
@@ -491,30 +427,11 @@
     white-space: nowrap;
 }
 
-.history-job-status.history-status-approved {
-    background: #f4effd;
-    color: #6948a4;
-}
-
-.history-job-status.history-status-requested {
-    background: #edf5ff;
-    color: #245f9f;
-}
-
-.history-job-status.history-status-in-progress {
-    background: #fff7df;
-    color: #966600;
-}
-
-.history-job-status.history-status-completed {
-    background: #edfbf3;
-    color: #1d754f;
-}
-
-.history-job-status.history-status-cancelled {
-    background: #fff0f2;
-    color: #a93340;
-}
+.history-job-status.history-status-approved { background: #f4effd; color: #6948a4; }
+.history-job-status.history-status-requested { background: #edf5ff; color: #245f9f; }
+.history-job-status.history-status-in-progress { background: #fff7df; color: #966600; }
+.history-job-status.history-status-completed { background: #edfbf3; color: #1d754f; }
+.history-job-status.history-status-cancelled { background: #fff0f2; color: #a93340; }
 
 @media (max-width: 600px) {
     .history-job-row {
@@ -533,9 +450,7 @@
 }
 
 @media (max-width: 900px) {
-    .history-status-columns {
-        grid-template-columns: 1fr;
-    }
+    .history-status-columns { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 600px) {
@@ -544,7 +459,5 @@
         flex-direction: column;
     }
 
-    .history-vehicle-count {
-        width: 100%;
-    }
+    .history-vehicle-count { width: 100%; }
 }

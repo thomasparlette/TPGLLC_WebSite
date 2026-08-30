@@ -219,66 +219,63 @@
             @foreach (var job in Entry.Jobs.Where(IsJobApprovalOpen))
             {
                 <div class="customer-approval-item">
-                    <span>@job.Name @if (job.LaborAmount.HasValue) {
-                        <text>(@job.LaborAmount.Value.ToString("C"))</text>
-                    }
-                </span>
-                <button type="button" class="portal-action-button portal-action-button-secondary"
-                        @onclick="() => OnApproveJob.InvokeAsync(job.Id)">
-                    Approve job
+                    <span>@job.Name @if (job.LaborAmount.HasValue) { <text>(@job.LaborAmount.Value.ToString("C"))</text> }</span>
+                    <button type="button" class="portal-action-button portal-action-button-secondary"
+                            @onclick="() => OnApproveJob.InvokeAsync(job.Id)">
+                        Approve job
+                    </button>
+                    <button type="button" class="portal-danger-button"
+                            @onclick="() => OnDeclineJob.InvokeAsync(job.Id)">
+                        Do not approve
+                    </button>
+                </div>
+            }
+            @foreach (var part in Entry.Parts.Where(x => x.IsApplied && !x.IsApproved && !x.IsCustomerDeclined))
+            {
+                <div class="customer-approval-item">
+                    <span>@part.Description</span>
+                    <button type="button" class="portal-action-button portal-action-button-secondary"
+                            @onclick="() => OnApprovePart.InvokeAsync(part.Id)">
+                        Approve
+                    </button>
+                    <button type="button" class="portal-danger-button"
+                            @onclick="() => OnDeclinePart.InvokeAsync(part.Id)">
+                        Do not approve
+                    </button>
+                </div>
+            }
+            <div class="customer-approval-item customer-approval-item-complete">
+                <span>All work proposed</span>
+                <button type="button" class="portal-action-button" @onclick="() => OnApproveWorkOrder.InvokeAsync(Entry.Id)">
+                    Approve all work proposed
                 </button>
-                <button type="button" class="portal-danger-button"
-                        @onclick="() => OnDeclineJob.InvokeAsync(job.Id)">
-                    Do not approve
+                <button type="button" class="portal-danger-button" @onclick="() => OnDeclineWorkOrder.InvokeAsync(Entry.Id)">
+                    Do not approve all work proposed
                 </button>
             </div>
-        }
-        @foreach (var part in Entry.Parts.Where(x => x.IsApplied && !x.IsApproved && !x.IsCustomerDeclined))
-        {
-            <div class="customer-approval-item">
-                <span>@part.Description</span>
-                <button type="button" class="portal-action-button portal-action-button-secondary"
-                        @onclick="() => OnApprovePart.InvokeAsync(part.Id)">
-                    Approve
-                </button>
-                <button type="button" class="portal-danger-button"
-                        @onclick="() => OnDeclinePart.InvokeAsync(part.Id)">
-                    Do not approve
-                </button>
-            </div>
-        }
-        <div class="customer-approval-item customer-approval-item-complete">
-            <span>All work proposed</span>
-            <button type="button" class="portal-action-button" @onclick="() => OnApproveWorkOrder.InvokeAsync(Entry.Id)">
-                Approve all work proposed
-            </button>
-            <button type="button" class="portal-danger-button" @onclick="() => OnDeclineWorkOrder.InvokeAsync(Entry.Id)">
-                Do not approve all work proposed
-            </button>
         </div>
-    </div>
-}
+    }
 
-@if (!string.IsNullOrWhiteSpace(Entry.Technician))
-{
-    <div style="margin-top:0.75rem; color:#6b7280;">
-        Technician: @Entry.Technician
-    </div>
-}
+    @if (!string.IsNullOrWhiteSpace(Entry.Technician))
+    {
+        <div style="margin-top:0.75rem; color:#6b7280;">
+            Technician: @Entry.Technician
+        </div>
+    }
 
-@if (!IsActiveWorkOrder(Entry) && (!string.IsNullOrWhiteSpace(Entry.Diagnosis) || !string.IsNullOrWhiteSpace(Entry.Notes)))
-{
-    <div class="history-completed-summary">
-        @if (!string.IsNullOrWhiteSpace(Entry.Diagnosis))
-        {
-            <div><strong>Diagnosis:</strong> @Entry.Diagnosis</div>
-        }
-        @if (!string.IsNullOrWhiteSpace(Entry.Notes))
-        {
-            <div><strong>Notes:</strong> @Entry.Notes</div>
-        }
-    </div>
-}
+    @if (!IsActiveWorkOrder(Entry) && (!string.IsNullOrWhiteSpace(Entry.Diagnosis) || !string.IsNullOrWhiteSpace(Entry.Notes)))
+    {
+        <div class="history-completed-summary">
+            @if (!string.IsNullOrWhiteSpace(Entry.Diagnosis))
+            {
+                <div><strong>Diagnosis:</strong> @Entry.Diagnosis</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Entry.Notes))
+            {
+                <div><strong>Notes:</strong> @Entry.Notes</div>
+            }
+        </div>
+    }
 </article>
 
 @code {

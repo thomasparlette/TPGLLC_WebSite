@@ -1,4 +1,4 @@
-﻿namespace TPGLLC.Web.Services.Vehicles;
+namespace TPGLLC.Web.Services.Vehicles;
 
 public interface IVpicVehicleDecoder
 {

@@ -18,6 +18,7 @@ public sealed class TPGLLCDbContext
 
     public DbSet<AppointmentRequest> AppointmentRequests => Set<AppointmentRequest>();
     public DbSet<VehicleCatalogEntry> VehicleCatalogEntries => Set<VehicleCatalogEntry>();
+    public DbSet<VehicleCatalogOption> VehicleCatalogOptions => Set<VehicleCatalogOption>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerVehicle> CustomerVehicles => Set<CustomerVehicle>();
     public DbSet<ServiceHistoryEntry> ServiceHistoryEntries => Set<ServiceHistoryEntry>();

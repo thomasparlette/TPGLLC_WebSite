@@ -50,7 +50,8 @@ public sealed class VehicleCatalogImportService
             allowedMakes.Count);
 
         await _db.Database.MigrateAsync(cancellationToken);
-        await SyncOptionCatalogAsync(cancellationToken);
+
+        await SyncOptionsAsync(cancellationToken);
 
         var existingKeys = _settings.ReplaceExisting
             ? new HashSet<VehicleCatalogKey>()
@@ -192,72 +193,6 @@ public sealed class VehicleCatalogImportService
         return rows;
     }
 
-    private async Task SyncOptionCatalogAsync(CancellationToken cancellationToken)
-    {
-        var configured = new Dictionary<string, IReadOnlyCollection<string>>
-        {
-            [VehicleCatalogOptionCategories.Submodel] = _settings.CatalogOptions.Submodels,
-            [VehicleCatalogOptionCategories.BodyStyle] = _settings.CatalogOptions.BodyStyles,
-            [VehicleCatalogOptionCategories.EngineFuel] = _settings.CatalogOptions.EngineFuelTypes,
-            [VehicleCatalogOptionCategories.Transmission] = _settings.CatalogOptions.Transmissions,
-            [VehicleCatalogOptionCategories.DriveType] = _settings.CatalogOptions.DriveTypes,
-            [VehicleCatalogOptionCategories.Brake] = _settings.CatalogOptions.Brakes
-        };
-
-        var existing = await _db.VehicleCatalogOptions
-            .ToListAsync(cancellationToken);
-
-        var now = DateTimeOffset.UtcNow;
-
-        foreach (var category in configured)
-        {
-            var values = category.Value
-                .Select(Normalize)
-                .Where(value => !string.IsNullOrWhiteSpace(value))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var value in values)
-            {
-                var row = existing.FirstOrDefault(x =>
-                    x.Category.Equals(category.Key, StringComparison.OrdinalIgnoreCase) &&
-                    x.Value.Equals(value, StringComparison.OrdinalIgnoreCase));
-
-                if (row is null)
-                {
-                    _db.VehicleCatalogOptions.Add(new VehicleCatalogOption
-                    {
-                        Category = category.Key,
-                        Value = value,
-                        Source = "vPIC",
-                        IsActive = true,
-                        SyncedAtUtc = now
-                    });
-                }
-                else
-                {
-                    row.Source = "vPIC";
-                    row.IsActive = true;
-                    row.SyncedAtUtc = now;
-                }
-            }
-
-            foreach (var row in existing.Where(x =>
-                         x.Category.Equals(category.Key, StringComparison.OrdinalIgnoreCase) &&
-                         !values.Contains(x.Value)))
-            {
-                row.IsActive = false;
-                row.SyncedAtUtc = now;
-            }
-        }
-
-        await _db.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation(
-            "Vehicle option catalog synchronized with {OptionCount} configured values.",
-            configured.Values.Sum(values => values.Count));
-    }
-
     private async Task<HashSet<VehicleCatalogKey>> LoadExistingKeysAsync(CancellationToken cancellationToken)
     {
         var keys = await _db.VehicleCatalogEntries
@@ -269,6 +204,125 @@ public sealed class VehicleCatalogImportService
             .ToListAsync(cancellationToken);
 
         return new HashSet<VehicleCatalogKey>(keys);
+    }
+
+    private async Task SyncOptionsAsync(CancellationToken cancellationToken)
+    {
+        var optionRows = new Dictionary<VehicleCatalogOptionKey, VehicleCatalogOption>();
+
+        foreach (var pair in _settings.SeededOptions ?? new Dictionary<string, List<string>>())
+        {
+            foreach (var value in pair.Value ?? [])
+            {
+                AddOption(optionRows, pair.Key, value, "VehicleImporter");
+            }
+        }
+
+        foreach (var pair in _settings.VpicOptionVariables ?? new Dictionary<string, string>())
+        {
+            try
+            {
+                var values = await _vpic.GetVariableValuesAsync(pair.Value, cancellationToken);
+
+                foreach (var item in values)
+                {
+                    AddOption(optionRows, pair.Key, item.Name, "vPIC");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Lookup option import failed for category {Category} and vPIC variable {Variable}.",
+                    pair.Key,
+                    pair.Value);
+            }
+        }
+
+        if (optionRows.Count == 0)
+        {
+            _logger.LogWarning("No vehicle option values were available to synchronize.");
+            return;
+        }
+
+        var categories = optionRows.Keys
+            .Select(x => x.Category)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var executionStrategy = _db.Database.CreateExecutionStrategy();
+
+        await executionStrategy.ExecuteAsync(async () =>
+        {
+            await using var transaction =
+                await _db.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                if (_settings.ReplaceExisting)
+                {
+                    await _db.VehicleCatalogOptions
+                        .Where(x => categories.Contains(x.Category))
+                        .ExecuteDeleteAsync(cancellationToken);
+
+                    await _db.VehicleCatalogOptions.AddRangeAsync(optionRows.Values, cancellationToken);
+                }
+                else
+                {
+                    var existing = await _db.VehicleCatalogOptions
+                        .AsNoTracking()
+                        .Where(x => categories.Contains(x.Category))
+                        .Select(x => new VehicleCatalogOptionKey(x.Category, x.Value))
+                        .ToListAsync(cancellationToken);
+
+                    var existingSet = new HashSet<VehicleCatalogOptionKey>(existing);
+                    var newRows = optionRows.Values
+                        .Where(x => !existingSet.Contains(new VehicleCatalogOptionKey(x.Category, x.Value)))
+                        .ToList();
+
+                    await _db.VehicleCatalogOptions.AddRangeAsync(newRows, cancellationToken);
+                }
+
+                await _db.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        });
+
+        _logger.LogInformation(
+            "Synchronized {OptionCount} vehicle catalog option values across {CategoryCount} categories.",
+            optionRows.Count,
+            categories.Count);
+    }
+
+    private static void AddOption(
+        IDictionary<VehicleCatalogOptionKey, VehicleCatalogOption> rows,
+        string? category,
+        string? value,
+        string source)
+    {
+        var normalizedCategory = Normalize(category);
+        var normalizedValue = Normalize(value);
+
+        if (string.IsNullOrWhiteSpace(normalizedCategory) ||
+            string.IsNullOrWhiteSpace(normalizedValue) ||
+            normalizedValue.Equals("Not Applicable", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var key = new VehicleCatalogOptionKey(normalizedCategory, normalizedValue);
+        rows[key] = new VehicleCatalogOption
+        {
+            Category = normalizedCategory,
+            Value = normalizedValue,
+            Source = Normalize(source),
+            SyncedAtUtc = DateTimeOffset.UtcNow
+        };
     }
 
     private async Task<int> FlushAsync(List<VehicleCatalogEntry> rows, CancellationToken cancellationToken)
@@ -328,4 +382,8 @@ public sealed class VehicleCatalogImportService
         int ModelYear,
         int MakeId,
         int ModelId);
+
+    private readonly record struct VehicleCatalogOptionKey(
+        string Category,
+        string Value);
 }

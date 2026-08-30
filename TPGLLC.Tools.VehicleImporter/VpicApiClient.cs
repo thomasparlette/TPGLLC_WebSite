@@ -14,6 +14,10 @@ public interface IVpicApiClient
         int makeId,
         int modelYear,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<VpicVariableValueDto>> GetVariableValuesAsync(
+        string variable,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class VpicApiClient : IVpicApiClient
@@ -44,6 +48,16 @@ public sealed class VpicApiClient : IVpicApiClient
         var url = $"vehicles/GetModelsForMakeIdYear/makeId/{makeId}/modelyear/{modelYear}?format=json";
 
         var response = await _http.GetFromJsonAsync<VpicResponse<VpicModelDto>>(url, cancellationToken);
+        return response?.Results ?? [];
+    }
+
+    public async Task<IReadOnlyList<VpicVariableValueDto>> GetVariableValuesAsync(
+        string variable,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"vehicles/GetVehicleVariableValuesList/{Uri.EscapeDataString(variable)}?format=json";
+
+        var response = await _http.GetFromJsonAsync<VpicResponse<VpicVariableValueDto>>(url, cancellationToken);
         return response?.Results ?? [];
     }
 }
@@ -78,4 +92,16 @@ public sealed class VpicModelDto
 
     [JsonPropertyName("Model_Name")]
     public string ModelName { get; set; } = string.Empty;
+}
+
+public sealed class VpicVariableValueDto
+{
+    [JsonPropertyName("ElementName")]
+    public string ElementName { get; set; } = string.Empty;
+
+    [JsonPropertyName("Id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("Name")]
+    public string Name { get; set; } = string.Empty;
 }

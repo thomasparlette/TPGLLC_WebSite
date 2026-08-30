@@ -74,24 +74,24 @@
     background: #f8fbff;
 }
 
-    .vehicle-specifications > div {
-        display: grid;
-        gap: 0.2rem;
-        min-width: 0;
-    }
+.vehicle-specifications > div {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+}
 
-    .vehicle-specifications strong {
-        color: #0d2a63;
-        font-size: 0.8rem;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-    }
+.vehicle-specifications strong {
+    color: #0d2a63;
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
 
-    .vehicle-specifications span {
-        color: #0f172a;
-        font-weight: 600;
-        overflow-wrap: anywhere;
-    }
+.vehicle-specifications span {
+    color: #0f172a;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
 
 .vehicle-specification-wide {
     grid-column: 1 / -1;

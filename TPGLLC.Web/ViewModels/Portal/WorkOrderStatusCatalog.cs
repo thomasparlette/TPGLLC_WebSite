@@ -1,4 +1,4 @@
-﻿namespace TPGLLC.Web.ViewModels.Portal;
+namespace TPGLLC.Web.ViewModels.Portal;
 
 public sealed record WorkOrderStatusDefinition(
     string Key,

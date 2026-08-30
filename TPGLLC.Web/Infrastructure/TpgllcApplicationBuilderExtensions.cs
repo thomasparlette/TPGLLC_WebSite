@@ -60,7 +60,7 @@ public static class TpgllcApplicationBuilderExtensions
             return db.Database.GetConnectionString();
         });
 
-
+       
 
         return app;
     }

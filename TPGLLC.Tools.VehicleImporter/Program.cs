@@ -66,6 +66,7 @@ builder.Services.AddHttpClient<IVpicApiClient, VpicApiClient>(client =>
 {
     client.BaseAddress = new Uri("https://vpic.nhtsa.dot.gov/api/");
     client.Timeout = TimeSpan.FromMinutes(10);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("TPGLLC.VehicleImporter/1.0");
 });
 
 builder.Services.Configure<VehicleImportSettings>(builder.Configuration);

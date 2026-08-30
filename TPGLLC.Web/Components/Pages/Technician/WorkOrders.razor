@@ -1,4 +1,4 @@
-﻿@page "/portal/technician/work-orders"
+@page "/portal/technician/work-orders"
 @layout CustomerLayout
 @attribute [Authorize(Policy = PortalPolicies.Technician)]
 
@@ -96,7 +96,7 @@
                         .OrderByDescending(x => x.ServiceDate)
                         .ThenByDescending(x => x.CreatedUtc))
                     {
-                        <article class="workorder-card" @key="workOrder.Id">
+                        <article class="workorder-card @WorkOrderStatusCatalog.GetDefinition(workOrder.Status).CssClass" @key="workOrder.Id">
                             <div class="workorder-card-header">
                                 <div>
                                     <div class="workorder-number">@(string.IsNullOrWhiteSpace(workOrder.WorkOrderNumber) ? "Work Order Number Pending" : workOrder.WorkOrderNumber)</div>
@@ -114,7 +114,7 @@
 
                             <div class="workorder-meta">
                                 <span class="workorder-badge">Service @workOrder.ServiceDate.ToString("MMM d, yyyy")</span>
-                                <span class="workorder-badge">@workOrder.Status</span>
+                                <span class="workorder-badge workorder-status-badge @WorkOrderStatusCatalog.GetDefinition(workOrder.Status).CssClass">@WorkOrderStatusCatalog.GetDefinition(workOrder.Status).Label</span>
                                 @if (!string.IsNullOrWhiteSpace(workOrder.ApprovalStatus))
                                 {
                                     <span class="workorder-badge">Appointment: @workOrder.ApprovalStatus</span>
@@ -319,9 +319,6 @@
             return false;
         }
 
-        return status.Equals("Completed", StringComparison.OrdinalIgnoreCase)
-            || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
-            || status.Equals("Declined", StringComparison.OrdinalIgnoreCase)
-            || status.Equals("Closed", StringComparison.OrdinalIgnoreCase);
+        return WorkOrderStatusCatalog.IsClosed(status);
     }
 }

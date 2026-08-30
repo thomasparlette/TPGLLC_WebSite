@@ -1,4 +1,4 @@
-﻿.finance-invoice-list {
+.finance-invoice-list {
     display: grid;
     gap: 1rem;
 }
@@ -40,23 +40,23 @@
     text-align: right;
 }
 
-    .finance-invoice-total span,
-    .finance-invoice-total-due span {
-        color: #60718e;
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-    }
+.finance-invoice-total span,
+.finance-invoice-total-due span {
+    color: #60718e;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
 
-    .finance-invoice-total strong,
-    .finance-invoice-total-due strong {
-        color: #12336f;
-        font-size: 1.35rem;
-    }
+.finance-invoice-total strong,
+.finance-invoice-total-due strong {
+    color: #12336f;
+    font-size: 1.35rem;
+}
 
-    .finance-invoice-total-due strong {
-        color: #b42318;
-    }
+.finance-invoice-total-due strong {
+    color: #b42318;
+}
 
 .finance-invoice-meta,
 .finance-payment-stats {
@@ -88,10 +88,10 @@
     gap: 0.5rem;
 }
 
-    .finance-payment-history h4 {
-        margin: 0;
-        color: #12336f;
-    }
+.finance-payment-history h4 {
+    margin: 0;
+    color: #12336f;
+}
 
 .finance-payment-row {
     display: flex;
@@ -105,9 +105,9 @@
     font-size: 0.85rem;
 }
 
-    .finance-payment-row strong {
-        color: #12336f;
-    }
+.finance-payment-row strong {
+    color: #12336f;
+}
 
 .finance-payment-reference {
     color: #60718e;
