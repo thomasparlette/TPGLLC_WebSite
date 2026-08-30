@@ -17,11 +17,24 @@ public sealed class AppointmentRequest
     public string? VehicleYear { get; set; }
     public string? VehicleMake { get; set; }
     public string? VehicleModel { get; set; }
+    public string? VehicleSubmodel { get; set; }
+    public string? BodyStyle { get; set; }
+    public string? EngineFuel { get; set; }
+    public string? Transmission { get; set; }
+    public string? DriveType { get; set; }
+    public string? Brake { get; set; }
+    public string? Gvw { get; set; }
 
     [MaxLength(17)]
     public string? Vin { get; set; }
 
     public string? Mileage { get; set; }
+    public string? LicensePlate { get; set; }
+    public string? StateProvince { get; set; }
+    public string? UnitNumber { get; set; }
+    public string? FleetNumber { get; set; }
+    public string? Color { get; set; }
+    public string? VehicleMemo { get; set; }
 
     [Required]
     public string? PreferredDate { get; set; }

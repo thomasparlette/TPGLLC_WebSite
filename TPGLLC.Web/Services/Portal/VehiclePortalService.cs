@@ -85,9 +85,21 @@ public sealed class VehiclePortalService : IVehiclePortalService
             ModelYear = vehicle.ModelYear?.ToString() ?? string.Empty,
             Make = vehicle.Make ?? string.Empty,
             Model = vehicle.Model ?? string.Empty,
+            Submodel = vehicle.Submodel,
+            BodyStyle = vehicle.BodyStyle,
+            EngineFuel = vehicle.EngineFuel,
+            Transmission = vehicle.Transmission,
+            DriveType = vehicle.DriveType,
+            Brake = vehicle.Brake,
+            Gvw = vehicle.Gvw,
             Vin = vehicle.Vin,
             Nickname = vehicle.Nickname,
             LicensePlate = vehicle.LicensePlate,
+            StateProvince = vehicle.StateProvince,
+            UnitNumber = vehicle.UnitNumber,
+            FleetNumber = vehicle.FleetNumber,
+            Color = vehicle.Color,
+            Memo = vehicle.Memo,
             Mileage = vehicle.Mileage?.ToString(),
             IsPrimary = vehicle.IsPrimary
         };
@@ -194,9 +206,21 @@ public sealed class VehiclePortalService : IVehiclePortalService
         vehicle.ModelYear = modelYear;
         vehicle.Make = string.IsNullOrWhiteSpace(model.Form.Make) ? null : model.Form.Make.Trim();
         vehicle.Model = string.IsNullOrWhiteSpace(model.Form.Model) ? null : model.Form.Model.Trim();
+        vehicle.Submodel = Normalize(model.Form.Submodel);
+        vehicle.BodyStyle = Normalize(model.Form.BodyStyle);
+        vehicle.EngineFuel = Normalize(model.Form.EngineFuel);
+        vehicle.Transmission = Normalize(model.Form.Transmission);
+        vehicle.DriveType = Normalize(model.Form.DriveType);
+        vehicle.Brake = Normalize(model.Form.Brake);
+        vehicle.Gvw = Normalize(model.Form.Gvw);
         vehicle.Vin = string.IsNullOrWhiteSpace(model.Form.Vin) ? null : model.Form.Vin.Trim();
         vehicle.Nickname = string.IsNullOrWhiteSpace(model.Form.Nickname) ? null : model.Form.Nickname.Trim();
         vehicle.LicensePlate = string.IsNullOrWhiteSpace(model.Form.LicensePlate) ? null : model.Form.LicensePlate.Trim();
+        vehicle.StateProvince = Normalize(model.Form.StateProvince);
+        vehicle.UnitNumber = Normalize(model.Form.UnitNumber);
+        vehicle.FleetNumber = Normalize(model.Form.FleetNumber);
+        vehicle.Color = Normalize(model.Form.Color);
+        vehicle.Memo = Normalize(model.Form.Memo);
         vehicle.Mileage = mileage;
         vehicle.IsPrimary = model.Form.IsPrimary;
         vehicle.UpdatedUtc = DateTimeOffset.UtcNow;
@@ -352,6 +376,9 @@ public sealed class VehiclePortalService : IVehiclePortalService
 
         return false;
     }
+
+    private static string? Normalize(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private async Task<Customer> EnsureCustomerAsync(TPGLLCDbContext db, CurrentCustomer current)
     {

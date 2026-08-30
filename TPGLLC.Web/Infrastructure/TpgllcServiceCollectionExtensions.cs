@@ -9,6 +9,7 @@ using TPGLLC.Web.Services;
 using TPGLLC.Web.Services.Appointments;
 using TPGLLC.Web.Services.Customers;
 using TPGLLC.Web.Services.Portal;
+using TPGLLC.Web.Services.Vehicles;
 using TPGLLC.Web.Services.WorkOrders;
 
 namespace TPGLLC.Web.Infrastructure;
@@ -115,6 +116,14 @@ public static class TpgllcServiceCollectionExtensions
         services.AddScoped<IPortalContextService, PortalContextService>();
         services.AddScoped<IWorkOrderPortalService, WorkOrderPortalService>();
         services.AddScoped<IEstimateCatalogService, EstimateCatalogService>();
+        services.AddScoped<IInvoicePaymentService, InvoicePaymentService>();
+
+        services.AddHttpClient<IVpicVehicleDecoder, VpicVehicleDecoder>(client =>
+        {
+            client.BaseAddress = new Uri("https://vpic.nhtsa.dot.gov/api/", UriKind.Absolute);
+            client.Timeout = TimeSpan.FromSeconds(20);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("TPGLLC.Web/1.0");
+        });
 
         services.AddAuthorizationBuilder()
             .AddPolicy(PortalPolicies.Customer, policy =>

@@ -10,6 +10,7 @@
 @using TPGLLC.Web.Authorization
 @using TPGLLC.Web.Services.Appointments
 @using TPGLLC.Web.Services.Portal
+@using TPGLLC.Web.Services.Vehicles
 
 @inject IPortalContextService PortalContextService
 @inject IVehicleCatalogService VehicleCatalog
@@ -174,7 +175,8 @@
                                     OnSave="@EventCallback.Factory.Create(this, SaveRequestAsync)"
                                     OnCancel="@EventCallback.Factory.Create(this, ResetFormAsync)"
                                     OnYearChanged="@EventCallback.Factory.Create(this, OnVehicleYearChangedAsync)"
-                                    OnMakeChanged="@EventCallback.Factory.Create(this, OnVehicleMakeChangedAsync)" />
+                                    OnMakeChanged="@EventCallback.Factory.Create(this, OnVehicleMakeChangedAsync)"
+                                    OnVinDecoded="@(EventCallback.Factory.Create<VpicVehicleDecodeResult>(this, OnVinDecodedAsync))" />
         </div>
     }
 </section>
@@ -242,8 +244,21 @@
         _form.VehicleYear = _selectedVehicle.ModelYear?.ToString(CultureInfo.InvariantCulture);
         _form.VehicleMake = _selectedVehicle.Make;
         _form.VehicleModel = _selectedVehicle.Model;
+        _form.VehicleSubmodel = _selectedVehicle.Submodel;
+        _form.BodyStyle = _selectedVehicle.BodyStyle;
+        _form.EngineFuel = _selectedVehicle.EngineFuel;
+        _form.Transmission = _selectedVehicle.Transmission;
+        _form.DriveType = _selectedVehicle.DriveType;
+        _form.Brake = _selectedVehicle.Brake;
+        _form.Gvw = _selectedVehicle.Gvw;
         _form.Vin = _selectedVehicle.Vin;
         _form.Mileage = _selectedVehicle.Mileage?.ToString(CultureInfo.InvariantCulture);
+        _form.LicensePlate = _selectedVehicle.LicensePlate;
+        _form.StateProvince = _selectedVehicle.StateProvince;
+        _form.UnitNumber = _selectedVehicle.UnitNumber;
+        _form.FleetNumber = _selectedVehicle.FleetNumber;
+        _form.Color = _selectedVehicle.Color;
+        _form.VehicleMemo = _selectedVehicle.Memo;
         _form.Name = _portal.CurrentCustomer.DisplayName;
         _form.Phone = _portal.Profile?.Phone ?? string.Empty;
         _form.Email = _portal.CurrentCustomer.Email;
@@ -306,6 +321,28 @@
         StateHasChanged();
     }
 
+    private async Task OnVinDecodedAsync(VpicVehicleDecodeResult result)
+    {
+        if (!int.TryParse(_form.VehicleYear, out var year))
+        {
+            return;
+        }
+
+        _makes = EnsureSelectedValue(
+            await VehicleCatalog.GetMakesAsync(year),
+            _form.VehicleMake);
+
+        if (!string.IsNullOrWhiteSpace(_form.VehicleMake))
+        {
+            _models = EnsureSelectedValue(
+                await VehicleCatalog.GetModelsAsync(year, _form.VehicleMake),
+                _form.VehicleModel);
+        }
+
+        _selectedVehicle = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
     private async Task SaveRequestAsync()
     {
         _errorMessage = null;
@@ -332,8 +369,21 @@
             request.VehicleYear ??= _selectedVehicle.ModelYear?.ToString(CultureInfo.InvariantCulture);
             request.VehicleMake ??= _selectedVehicle.Make;
             request.VehicleModel ??= _selectedVehicle.Model;
+            request.VehicleSubmodel ??= _selectedVehicle.Submodel;
+            request.BodyStyle ??= _selectedVehicle.BodyStyle;
+            request.EngineFuel ??= _selectedVehicle.EngineFuel;
+            request.Transmission ??= _selectedVehicle.Transmission;
+            request.DriveType ??= _selectedVehicle.DriveType;
+            request.Brake ??= _selectedVehicle.Brake;
+            request.Gvw ??= _selectedVehicle.Gvw;
             request.Vin ??= _selectedVehicle.Vin;
             request.Mileage ??= _selectedVehicle.Mileage?.ToString(CultureInfo.InvariantCulture);
+            request.LicensePlate ??= _selectedVehicle.LicensePlate;
+            request.StateProvince ??= _selectedVehicle.StateProvince;
+            request.UnitNumber ??= _selectedVehicle.UnitNumber;
+            request.FleetNumber ??= _selectedVehicle.FleetNumber;
+            request.Color ??= _selectedVehicle.Color;
+            request.VehicleMemo ??= _selectedVehicle.Memo;
         }
 
         var result = await AppointmentService.SubmitAsync(request);

@@ -50,6 +50,7 @@ public sealed class VehicleCatalogImportService
             allowedMakes.Count);
 
         await _db.Database.MigrateAsync(cancellationToken);
+        await SyncOptionCatalogAsync(cancellationToken);
 
         var existingKeys = _settings.ReplaceExisting
             ? new HashSet<VehicleCatalogKey>()
@@ -189,6 +190,72 @@ public sealed class VehicleCatalogImportService
             failedLookups);
 
         return rows;
+    }
+
+    private async Task SyncOptionCatalogAsync(CancellationToken cancellationToken)
+    {
+        var configured = new Dictionary<string, IReadOnlyCollection<string>>
+        {
+            [VehicleCatalogOptionCategories.Submodel] = _settings.CatalogOptions.Submodels,
+            [VehicleCatalogOptionCategories.BodyStyle] = _settings.CatalogOptions.BodyStyles,
+            [VehicleCatalogOptionCategories.EngineFuel] = _settings.CatalogOptions.EngineFuelTypes,
+            [VehicleCatalogOptionCategories.Transmission] = _settings.CatalogOptions.Transmissions,
+            [VehicleCatalogOptionCategories.DriveType] = _settings.CatalogOptions.DriveTypes,
+            [VehicleCatalogOptionCategories.Brake] = _settings.CatalogOptions.Brakes
+        };
+
+        var existing = await _db.VehicleCatalogOptions
+            .ToListAsync(cancellationToken);
+
+        var now = DateTimeOffset.UtcNow;
+
+        foreach (var category in configured)
+        {
+            var values = category.Value
+                .Select(Normalize)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var value in values)
+            {
+                var row = existing.FirstOrDefault(x =>
+                    x.Category.Equals(category.Key, StringComparison.OrdinalIgnoreCase) &&
+                    x.Value.Equals(value, StringComparison.OrdinalIgnoreCase));
+
+                if (row is null)
+                {
+                    _db.VehicleCatalogOptions.Add(new VehicleCatalogOption
+                    {
+                        Category = category.Key,
+                        Value = value,
+                        Source = "vPIC",
+                        IsActive = true,
+                        SyncedAtUtc = now
+                    });
+                }
+                else
+                {
+                    row.Source = "vPIC";
+                    row.IsActive = true;
+                    row.SyncedAtUtc = now;
+                }
+            }
+
+            foreach (var row in existing.Where(x =>
+                         x.Category.Equals(category.Key, StringComparison.OrdinalIgnoreCase) &&
+                         !values.Contains(x.Value)))
+            {
+                row.IsActive = false;
+                row.SyncedAtUtc = now;
+            }
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Vehicle option catalog synchronized with {OptionCount} configured values.",
+            configured.Values.Sum(values => values.Count));
     }
 
     private async Task<HashSet<VehicleCatalogKey>> LoadExistingKeysAsync(CancellationToken cancellationToken)

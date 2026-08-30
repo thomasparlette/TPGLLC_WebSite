@@ -15,4 +15,7 @@ public interface IVehicleCatalogService
         int year,
         string make,
         CancellationToken cancellationToken = default);
+
+    Task<VehicleCatalogOptions> GetOptionsAsync(
+        CancellationToken cancellationToken = default);
 }

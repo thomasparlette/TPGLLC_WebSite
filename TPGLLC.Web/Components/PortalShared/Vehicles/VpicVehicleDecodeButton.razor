@@ -1,0 +1,54 @@
+﻿@using TPGLLC.Web.Services.Vehicles
+@inject IVpicVehicleDecoder Decoder
+
+<div class="vpic-decode-control">
+    <button type="button"
+            class="portal-action-button vpic-decode-button"
+            disabled="@(_isDecoding || string.IsNullOrWhiteSpace(Vin))"
+            @onclick="DecodeAsync">
+        @(_isDecoding ? "Decoding VIN..." : "Decode VIN")
+    </button>
+
+    @if (!string.IsNullOrWhiteSpace(_message))
+    {
+        <small class="vpic-decode-message @(_succeeded ? "vpic-decode-success" : "vpic-decode-error")">
+            @_message
+        </small>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Vin { get; set; }
+    [Parameter] public EventCallback<VpicVehicleDecodeResult> OnDecoded { get; set; }
+
+    private bool _isDecoding;
+    private bool _succeeded;
+    private string? _message;
+
+    private async Task DecodeAsync()
+    {
+        if (_isDecoding || string.IsNullOrWhiteSpace(Vin))
+        {
+            return;
+        }
+
+        _isDecoding = true;
+        _message = null;
+
+        try
+        {
+            var result = await Decoder.DecodeAsync(Vin);
+            _succeeded = result.Succeeded;
+            _message = result.Message;
+
+            if (result.Succeeded && OnDecoded.HasDelegate)
+            {
+                await OnDecoded.InvokeAsync(result);
+            }
+        }
+        finally
+        {
+            _isDecoding = false;
+        }
+    }
+}

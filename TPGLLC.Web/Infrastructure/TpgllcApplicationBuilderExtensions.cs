@@ -16,7 +16,10 @@ public static class TpgllcApplicationBuilderExtensions
             app.UseHsts();
         }
 
-        app.UseHttpsRedirection();
+        if (app.Configuration.GetValue<bool?>("HttpsRedirection:Enabled") != false)
+        {
+            app.UseHttpsRedirection();
+        }
         app.UseRouting();
 
         app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
@@ -57,7 +60,7 @@ public static class TpgllcApplicationBuilderExtensions
             return db.Database.GetConnectionString();
         });
 
-       
+
 
         return app;
     }

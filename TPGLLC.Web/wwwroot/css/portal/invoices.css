@@ -1,1 +1,126 @@
-﻿/* Reserved for invoices-specific portal styles. */
+﻿.finance-invoice-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.finance-invoice-card {
+    display: grid;
+    gap: 1rem;
+    padding: 1.25rem;
+    border: 1px solid #d8e0ed;
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 0.75rem 1.75rem rgba(12, 41, 91, 0.08);
+}
+
+.finance-invoice-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+}
+
+.finance-invoice-card h3 {
+    margin: 0.2rem 0;
+    color: #12336f;
+}
+
+.finance-invoice-number {
+    color: #12336f;
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.finance-invoice-total,
+.finance-invoice-total-due {
+    display: grid;
+    align-content: start;
+    gap: 0.25rem;
+    min-width: 8rem;
+    text-align: right;
+}
+
+    .finance-invoice-total span,
+    .finance-invoice-total-due span {
+        color: #60718e;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .finance-invoice-total strong,
+    .finance-invoice-total-due strong {
+        color: #12336f;
+        font-size: 1.35rem;
+    }
+
+    .finance-invoice-total-due strong {
+        color: #b42318;
+    }
+
+.finance-invoice-meta,
+.finance-payment-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    color: #60718e;
+    font-size: 0.85rem;
+}
+
+.finance-payment-stats {
+    color: #12336f;
+    font-weight: 700;
+}
+
+.finance-invoice-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.finance-payment-form {
+    margin-top: 1.25rem;
+}
+
+.finance-payment-history {
+    display: grid;
+    gap: 0.5rem;
+}
+
+    .finance-payment-history h4 {
+        margin: 0;
+        color: #12336f;
+    }
+
+.finance-payment-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    align-items: center;
+    padding: 0.7rem 0.8rem;
+    border-radius: 0.65rem;
+    background: #f5f8fc;
+    color: #334155;
+    font-size: 0.85rem;
+}
+
+    .finance-payment-row strong {
+        color: #12336f;
+    }
+
+.finance-payment-reference {
+    color: #60718e;
+}
+
+@media (max-width: 700px) {
+    .finance-invoice-card-header {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .finance-invoice-total,
+    .finance-invoice-total-due {
+        text-align: left;
+    }
+}

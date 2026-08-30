@@ -65,6 +65,7 @@ public sealed class VehicleDetailsService : IVehicleDetailsService
             .ThenInclude(x => x.Parts)
             .Include(x => x.Inspections)
             .Include(x => x.Updates)
+            .Include(x => x.Payments)
             .Where(x => x.CustomerId == customer.Id && x.CustomerVehicleId == vehicle.Id)
             .OrderByDescending(x => x.ServiceDate)
             .ThenByDescending(x => x.CreatedUtc)

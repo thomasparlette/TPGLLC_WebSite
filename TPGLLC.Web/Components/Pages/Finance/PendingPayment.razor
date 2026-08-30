@@ -1,6 +1,8 @@
 ﻿@page "/portal/finance/pending-payment"
 @layout CustomerLayout
-@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Finance")]
+@attribute [Authorize(Policy = PortalPolicies.Finance)]
+
+@inject NavigationManager Navigation
 
 <PageTitle>Work Orders Needing Payment</PageTitle>
 
@@ -11,8 +13,18 @@
         <p>Review invoices that still need payment attention.</p>
     </div>
 
-    <PortalPlaceholderPage Title="Work Orders Needing Payment"
-                           Description="Review invoices that still need payment attention."
-                           BackHref="/portal/finance"
-                           BackText="Back to dashboard" />
+    <div class="portal-loading-card">
+        <div class="portal-loading-icon">↪</div>
+        <div>
+            <div class="portal-loading-title">Opening payment workflow</div>
+            <div class="portal-loading-text">Redirecting to the active payment page.</div>
+        </div>
+    </div>
 </section>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Navigation.NavigateTo("/portal/finance/work-orders-needing-payment", replace: true);
+    }
+}

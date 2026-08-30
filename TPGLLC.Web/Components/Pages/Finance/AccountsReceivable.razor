@@ -2,22 +2,123 @@
 @layout CustomerLayout
 @attribute [Authorize(Policy = PortalPolicies.Finance)]
 
-<PageTitle>Account Received</PageTitle>
+@using System.Globalization
+@using TPGLLC.Web.Services.WorkOrders
+@using TPGLLC.Web.ViewModels.Portal
+
+@inject IInvoicePaymentService InvoicePaymentService
+
+<PageTitle>Accounts Received</PageTitle>
 
 <section class="portal-dashboard">
     <div class="portal-header">
         <p class="section-kicker">Finance Portal</p>
-        <h1>Account Received</h1>
+        <h1>Accounts Received</h1>
         <p>Posted payments and reconciliation items.</p>
     </div>
 
-    <div class="portal-section">
-        <div class="portal-empty-state">
-            <div class="portal-empty-icon">📒</div>
+    @if (_loading)
+    {
+        <div class="portal-loading-card">
+            <div class="portal-loading-icon">⏳</div>
             <div>
-                <div class="portal-empty-title">Account Received coming next</div>
-                <div class="portal-empty-text">This page is ready for the billing workflow.</div>
+                <div class="portal-loading-title">Loading received payments</div>
+                <div class="portal-loading-text">Please wait while we load payment history.</div>
             </div>
         </div>
-    </div>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
+        {
+            <PortalNotice Type="danger" Title="Unable to load received payments">
+                @_model.ErrorMessage
+            </PortalNotice>
+        }
+
+        <div class="portal-section">
+            <div class="portal-section-heading">
+                <div>
+                    <h2>Payment history</h2>
+                    <div class="portal-muted">Payments recorded for issued invoices.</div>
+                </div>
+                <span class="portal-chip">@_model.Invoices.Count invoice(s)</span>
+            </div>
+
+            @if (_model.Invoices.Count == 0)
+            {
+                <div class="portal-empty-state">
+                    <div class="portal-empty-icon">📒</div>
+                    <div>
+                        <div class="portal-empty-title">No payments have been recorded</div>
+                        <div class="portal-empty-text">Recorded cash, PayPal, and Venmo payments will appear here.</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="finance-invoice-list">
+                    @foreach (var invoice in _model.Invoices)
+                    {
+                        <article class="finance-invoice-card">
+                            <div class="finance-invoice-card-header">
+                                <div>
+                                    <div class="finance-invoice-number">@(invoice.InvoiceNumber ?? invoice.WorkOrderNumber ?? "Invoice")</div>
+                                    <h3>@invoice.CustomerName</h3>
+                                    <div class="portal-muted">@invoice.VehicleName · @invoice.Service</div>
+                                    @if (!string.IsNullOrWhiteSpace(invoice.CustomerEmail))
+                                    {
+                                        <div class="portal-muted">@invoice.CustomerEmail</div>
+                                    }
+                                </div>
+                                <div class="finance-invoice-total">
+                                    <span>Invoice total</span>
+                                    <strong>@invoice.InvoiceTotal.ToString("C", CultureInfo.CurrentCulture)</strong>
+                                </div>
+                            </div>
+                            <div class="finance-invoice-meta">
+                                <span>Service @invoice.ServiceDate.ToString("MMM d, yyyy", CultureInfo.InvariantCulture)</span>
+                                <span>Work order @(invoice.WorkOrderNumber ?? "not assigned")</span>
+                                <span>Invoice @invoice.InvoiceStatus</span>
+                            </div>
+                            <div class="finance-payment-stats">
+                                <span>Paid @invoice.PaidAmount.ToString("C", CultureInfo.CurrentCulture)</span>
+                                <span>Balance @invoice.BalanceDue.ToString("C", CultureInfo.CurrentCulture)</span>
+                            </div>
+                            <div class="finance-payment-history">
+                                <h4>Payments received</h4>
+                                @foreach (var payment in invoice.Payments)
+                                {
+                                    <div class="finance-payment-row">
+                                        <strong>@payment.Amount.ToString("C", CultureInfo.CurrentCulture)</strong>
+                                        <span>@payment.PaymentMethod</span>
+                                        <span>@payment.ReceivedUtc.ToLocalTime().ToString("MMM d, yyyy", CultureInfo.InvariantCulture)</span>
+                                        @if (!string.IsNullOrWhiteSpace(payment.ReferenceNumber))
+                                        {
+                                            <span class="finance-payment-reference">Ref: @payment.ReferenceNumber</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(payment.ReceivedBy))
+                                        {
+                                            <span class="finance-payment-reference">By: @payment.ReceivedBy</span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </div>
+    }
 </section>
+
+@code {
+    private InvoicePaymentPageViewModel _model = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _model = await InvoicePaymentService.GetReceivedPaymentsAsync();
+        _loading = false;
+    }
+}

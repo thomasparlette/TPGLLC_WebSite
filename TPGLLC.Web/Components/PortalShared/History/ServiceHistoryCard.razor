@@ -40,6 +40,28 @@
         }
     </div>
 
+    @if (Entry.InvoiceAmount.HasValue && !string.Equals(Entry.InvoiceStatus, "Draft", StringComparison.OrdinalIgnoreCase))
+    {
+        var paidAmount = Entry.Payments.Sum(x => x.Amount);
+        var balanceDue = Math.Max(0m, Entry.InvoiceAmount.Value - paidAmount);
+
+        <div class="history-invoice-summary">
+            <div class="history-invoice-summary-heading">
+                <strong>Invoice @Entry.InvoiceNumber</strong>
+                <span class="history-invoice-status @GetInvoiceStatusCssClass(Entry.InvoiceStatus)">@GetInvoiceStatusLabel(Entry.InvoiceStatus)</span>
+            </div>
+            <div class="history-invoice-summary-values">
+                <span>Total <strong>@Entry.InvoiceAmount.Value.ToString("C")</strong></span>
+                <span>Paid <strong>@paidAmount.ToString("C")</strong></span>
+                <span>Balance <strong>@balanceDue.ToString("C")</strong></span>
+            </div>
+            @if (balanceDue > 0.01m)
+            {
+                <div class="history-invoice-payment-note">Accepted payment methods: Cash, PayPal, and Venmo.</div>
+            }
+        </div>
+    }
+
     @if (!string.IsNullOrWhiteSpace(Entry.Complaint))
     {
         <div style="margin-top:0.75rem; color:#6b7280;">
@@ -283,6 +305,18 @@
         || entry.Parts.Any(x => x.IsApplied)
         || entry.Jobs.Count > 0
         || entry.Inspections.Any(x => x.IsCustomerVisible);
+
+    private static string GetInvoiceStatusLabel(string? status) =>
+        string.IsNullOrWhiteSpace(status) ? "Draft" : status;
+
+    private static string GetInvoiceStatusCssClass(string? status) =>
+        status?.Trim().ToLowerInvariant() switch
+        {
+            "paid" => "history-invoice-status-paid",
+            "partially paid" => "history-invoice-status-partial",
+            "overdue" => "history-invoice-status-overdue",
+            _ => "history-invoice-status-sent"
+        };
 
     private static bool IsJobApprovalOpen(ServiceHistoryJob job) =>
         !job.IsApproved && !job.IsCustomerDeclined && !job.IsDeferred;

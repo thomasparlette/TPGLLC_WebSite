@@ -13,11 +13,50 @@ public sealed class AppointmentRequestFormModel
     [Required(ErrorMessage = "Please select a vehicle model.")]
     public string? VehicleModel { get; set; }
 
+    [StringLength(120)]
+    public string? VehicleSubmodel { get; set; }
+
+    [StringLength(80)]
+    public string? BodyStyle { get; set; }
+
+    [StringLength(160)]
+    public string? EngineFuel { get; set; }
+
+    [StringLength(120)]
+    public string? Transmission { get; set; }
+
+    [StringLength(60)]
+    public string? DriveType { get; set; }
+
+    [StringLength(80)]
+    public string? Brake { get; set; }
+
+    [StringLength(40)]
+    public string? Gvw { get; set; }
+
     [StringLength(17, ErrorMessage = "VIN cannot exceed 17 characters.")]
     public string? Vin { get; set; }
 
     [RegularExpression(@"^\d*$", ErrorMessage = "Mileage must contain numbers only.")]
     public string? Mileage { get; set; }
+
+    [StringLength(25)]
+    public string? LicensePlate { get; set; }
+
+    [StringLength(50)]
+    public string? StateProvince { get; set; }
+
+    [StringLength(50)]
+    public string? UnitNumber { get; set; }
+
+    [StringLength(50)]
+    public string? FleetNumber { get; set; }
+
+    [StringLength(60)]
+    public string? Color { get; set; }
+
+    [StringLength(2000)]
+    public string? VehicleMemo { get; set; }
 
     [Required(ErrorMessage = "Please describe the service requested.")]
     [StringLength(200, ErrorMessage = "Service Needed cannot exceed 200 characters.")]

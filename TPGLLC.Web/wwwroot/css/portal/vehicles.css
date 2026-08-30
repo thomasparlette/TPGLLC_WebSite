@@ -64,6 +64,45 @@
         font-weight: 600;
     }
 
+.vehicle-specifications {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid #e6ecf7;
+    border-radius: 16px;
+    background: #f8fbff;
+}
+
+    .vehicle-specifications > div {
+        display: grid;
+        gap: 0.2rem;
+        min-width: 0;
+    }
+
+    .vehicle-specifications strong {
+        color: #0d2a63;
+        font-size: 0.8rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .vehicle-specifications span {
+        color: #0f172a;
+        font-weight: 600;
+        overflow-wrap: anywhere;
+    }
+
+.vehicle-specification-wide {
+    grid-column: 1 / -1;
+}
+
+.portal-field-optional {
+    color: #64748b;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
 .portal-photo-panel {
     display: grid;
     grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
@@ -153,5 +192,9 @@
     .portal-photo-preview,
     .portal-photo-placeholder {
         min-height: 220px;
+    }
+
+    .vehicle-specifications {
+        grid-template-columns: 1fr;
     }
 }

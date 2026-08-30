@@ -7,6 +7,11 @@
     <h3>@Request.ServiceNeeded</h3>
     <p>@GetVehicleSummary()</p>
 
+    @if (!string.IsNullOrWhiteSpace(GetVehicleDetailsSummary()))
+    {
+        <div class="portal-muted" style="margin-top:0.5rem;">@GetVehicleDetailsSummary()</div>
+    }
+
     <div class="portal-primary-meta" style="margin-top:0.75rem;">
         <span>@FormatAppointmentRequest()</span>
         @if (!string.IsNullOrWhiteSpace(Request.Status))
@@ -169,6 +174,27 @@
         var summary = string.Join(" ", parts);
         return string.IsNullOrWhiteSpace(summary) ? "No vehicle selected" : summary;
     }
+
+    private string GetVehicleDetailsSummary()
+    {
+        var details = new[]
+        {
+            FormatVehicleDetail("Submodel", Request.VehicleSubmodel),
+            FormatVehicleDetail("Body", Request.BodyStyle),
+            FormatVehicleDetail("Engine", Request.EngineFuel),
+            FormatVehicleDetail("Transmission", Request.Transmission),
+            FormatVehicleDetail("Drive", Request.DriveType),
+            FormatVehicleDetail("Brake", Request.Brake),
+            FormatVehicleDetail("GVW", Request.Gvw),
+            FormatVehicleDetail("VIN", Request.Vin),
+            FormatVehicleDetail("Plate", Request.LicensePlate)
+        };
+
+        return string.Join(" · ", details.Where(x => x is not null));
+    }
+
+    private static string? FormatVehicleDetail(string label, string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : $"{label}: {value.Trim()}";
 
     private string FormatAppointmentRequest()
     {

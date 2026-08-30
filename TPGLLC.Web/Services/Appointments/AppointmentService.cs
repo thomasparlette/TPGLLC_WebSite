@@ -182,8 +182,21 @@ public sealed class AppointmentService : IAppointmentService
                 x.VehicleYear == request.VehicleYear &&
                 x.VehicleMake == request.VehicleMake &&
                 x.VehicleModel == request.VehicleModel &&
+                x.VehicleSubmodel == request.VehicleSubmodel &&
+                x.BodyStyle == request.BodyStyle &&
+                x.EngineFuel == request.EngineFuel &&
+                x.Transmission == request.Transmission &&
+                x.DriveType == request.DriveType &&
+                x.Brake == request.Brake &&
+                x.Gvw == request.Gvw &&
                 x.Vin == request.Vin &&
                 x.Mileage == request.Mileage &&
+                x.LicensePlate == request.LicensePlate &&
+                x.StateProvince == request.StateProvince &&
+                x.UnitNumber == request.UnitNumber &&
+                x.FleetNumber == request.FleetNumber &&
+                x.Color == request.Color &&
+                x.VehicleMemo == request.VehicleMemo &&
                 x.PreferredDate == request.PreferredDate &&
                 x.PreferredTime == request.PreferredTime &&
                 x.ServiceNeeded == request.ServiceNeeded &&
@@ -205,8 +218,21 @@ public sealed class AppointmentService : IAppointmentService
             VehicleYear = request.VehicleYear,
             VehicleMake = request.VehicleMake,
             VehicleModel = request.VehicleModel,
+            VehicleSubmodel = request.VehicleSubmodel,
+            BodyStyle = request.BodyStyle,
+            EngineFuel = request.EngineFuel,
+            Transmission = request.Transmission,
+            DriveType = request.DriveType,
+            Brake = request.Brake,
+            Gvw = request.Gvw,
             Vin = request.Vin,
             Mileage = request.Mileage,
+            LicensePlate = request.LicensePlate,
+            StateProvince = request.StateProvince,
+            UnitNumber = request.UnitNumber,
+            FleetNumber = request.FleetNumber,
+            Color = request.Color,
+            VehicleMemo = request.VehicleMemo,
             PreferredDate = request.PreferredDate!,
             PreferredTime = request.PreferredTime!,
             ServiceNeeded = request.ServiceNeeded!,
@@ -392,7 +418,7 @@ public sealed class AppointmentService : IAppointmentService
             vehicle = await db.CustomerVehicles
                 .FirstOrDefaultAsync(
                     x => x.CustomerId == customer.Id &&
-                         x.ModelYear == modelYear &&
+                 x.ModelYear == modelYear &&
                          x.Make == request.VehicleMake &&
                          x.Model == request.VehicleModel,
                     cancellationToken);
@@ -406,8 +432,21 @@ public sealed class AppointmentService : IAppointmentService
                 ModelYear = modelYear,
                 Make = request.VehicleMake,
                 Model = request.VehicleModel,
+                Submodel = request.VehicleSubmodel,
+                BodyStyle = request.BodyStyle,
+                EngineFuel = request.EngineFuel,
+                Transmission = request.Transmission,
+                DriveType = request.DriveType,
+                Brake = request.Brake,
+                Gvw = request.Gvw,
                 Vin = request.Vin,
                 Mileage = mileage,
+                LicensePlate = request.LicensePlate,
+                StateProvince = request.StateProvince,
+                UnitNumber = request.UnitNumber,
+                FleetNumber = request.FleetNumber,
+                Color = request.Color,
+                Memo = request.VehicleMemo,
                 IsPrimary = !await db.CustomerVehicles
                     .AnyAsync(x => x.CustomerId == customer.Id && x.IsPrimary, cancellationToken),
                 CreatedUtc = DateTimeOffset.UtcNow
@@ -426,6 +465,20 @@ public sealed class AppointmentService : IAppointmentService
             {
                 vehicle.Vin = request.Vin;
             }
+
+            vehicle.Submodel = PreferIncoming(vehicle.Submodel, request.VehicleSubmodel);
+            vehicle.BodyStyle = PreferIncoming(vehicle.BodyStyle, request.BodyStyle);
+            vehicle.EngineFuel = PreferIncoming(vehicle.EngineFuel, request.EngineFuel);
+            vehicle.Transmission = PreferIncoming(vehicle.Transmission, request.Transmission);
+            vehicle.DriveType = PreferIncoming(vehicle.DriveType, request.DriveType);
+            vehicle.Brake = PreferIncoming(vehicle.Brake, request.Brake);
+            vehicle.Gvw = PreferIncoming(vehicle.Gvw, request.Gvw);
+            vehicle.LicensePlate = PreferIncoming(vehicle.LicensePlate, request.LicensePlate);
+            vehicle.StateProvince = PreferIncoming(vehicle.StateProvince, request.StateProvince);
+            vehicle.UnitNumber = PreferIncoming(vehicle.UnitNumber, request.UnitNumber);
+            vehicle.FleetNumber = PreferIncoming(vehicle.FleetNumber, request.FleetNumber);
+            vehicle.Color = PreferIncoming(vehicle.Color, request.Color);
+            vehicle.Memo = PreferIncoming(vehicle.Memo, request.VehicleMemo);
 
             vehicle.UpdatedUtc = DateTimeOffset.UtcNow;
         }
@@ -577,8 +630,21 @@ public sealed class AppointmentService : IAppointmentService
         request.VehicleYear = request.VehicleYear?.Trim();
         request.VehicleMake = request.VehicleMake?.Trim();
         request.VehicleModel = request.VehicleModel?.Trim();
+        request.VehicleSubmodel = NormalizeOptional(request.VehicleSubmodel);
+        request.BodyStyle = NormalizeOptional(request.BodyStyle);
+        request.EngineFuel = NormalizeOptional(request.EngineFuel);
+        request.Transmission = NormalizeOptional(request.Transmission);
+        request.DriveType = NormalizeOptional(request.DriveType);
+        request.Brake = NormalizeOptional(request.Brake);
+        request.Gvw = NormalizeOptional(request.Gvw);
         request.Vin = string.IsNullOrWhiteSpace(request.Vin) ? null : request.Vin.Trim();
         request.Mileage = string.IsNullOrWhiteSpace(request.Mileage) ? null : request.Mileage.Trim();
+        request.LicensePlate = NormalizeOptional(request.LicensePlate);
+        request.StateProvince = NormalizeOptional(request.StateProvince);
+        request.UnitNumber = NormalizeOptional(request.UnitNumber);
+        request.FleetNumber = NormalizeOptional(request.FleetNumber);
+        request.Color = NormalizeOptional(request.Color);
+        request.VehicleMemo = NormalizeOptional(request.VehicleMemo);
         request.PreferredDate = request.PreferredDate?.Trim();
         request.PreferredTime = request.PreferredTime?.Trim();
         request.ServiceNeeded = request.ServiceNeeded?.Trim();
@@ -621,6 +687,12 @@ public sealed class AppointmentService : IAppointmentService
 
         return false;
     }
+
+    private static string? NormalizeOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string? PreferIncoming(string? existing, string? incoming) =>
+        string.IsNullOrWhiteSpace(incoming) ? existing : incoming.Trim();
 
     private sealed record AppointmentSaveResult(
         Guid RequestId,

@@ -1,8 +1,8 @@
 {
   "StartYear": 1981,
   "EndYear": 2026,
-  "MaxDegreeOfParallelism": 4,
-  "ReplaceExisting": false,
+  "MaxDegreeOfParallelism": 8,
+  "ReplaceExisting": true,
   "AllowedMakes": [
     "Acura",
     "Audi",
@@ -37,5 +37,64 @@
     "Suzuki",
     "Triumph",
     "Yamaha"
-  ]
+  ],
+  "CatalogOptions": {
+    "Submodels": [
+      "Base",
+      "Sport",
+      "Touring",
+      "Limited",
+      "L",
+      "LE",
+      "LX",
+      "EX",
+      "SE",
+      "SL",
+      "XLE",
+      "XLT",
+      "LT",
+      "LS",
+      "SLE",
+      "SLT",
+      "Denali",
+      "SH-AWD"
+    ],
+    "BodyStyles": [
+      "Sedan",
+      "Coupe",
+      "Hatchback",
+      "Wagon",
+      "SUV",
+      "Crossover",
+      "Minivan",
+      "Pickup",
+      "Van",
+      "Convertible",
+      "Motorcycle",
+      "Other"
+    ],
+    "EngineFuelTypes": [
+      "Gas",
+      "Diesel",
+      "Hybrid",
+      "Electric",
+      "2.0L I4",
+      "2.5L I4",
+      "3.5L V6",
+      "5.0L V8",
+      "5.3L V8",
+      "6.2L V8"
+    ],
+    "Transmissions": [
+      "Automatic",
+      "Manual",
+      "CVT",
+      "6-speed Automatic",
+      "8-speed Automatic",
+      "9-speed Automatic",
+      "10-speed Automatic"
+    ],
+    "DriveTypes": [ "FWD", "RWD", "AWD", "4WD", "4x4", "Other" ],
+    "Brakes": [ "4-Wheel ABS", "2-Wheel ABS", "Rear ABS", "Disc", "Drum", "Other" ]
+  }
 }

@@ -69,6 +69,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             .ThenInclude(x => x.Parts)
             .Include(x => x.Inspections)
             .Include(x => x.Updates)
+            .Include(x => x.Payments)
             .Where(x => x.CustomerId == customer.Id)
             .OrderByDescending(x => x.ServiceDate)
             .ThenByDescending(x => x.CreatedUtc)
@@ -113,6 +114,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             .ThenInclude(x => x.Parts)
             .Include(x => x.Inspections)
             .Include(x => x.Updates)
+            .Include(x => x.Payments)
             .OrderByDescending(x => x.ServiceDate)
             .ThenByDescending(x => x.CreatedUtc)
             .ToListAsync();
@@ -1030,6 +1032,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             .ThenInclude(x => x.Parts)
             .Include(x => x.Inspections)
             .Include(x => x.Updates)
+            .Include(x => x.Payments)
             .Where(x => x.Technician != null && assignmentNames.Contains(x.Technician.Trim()));
     }
 
@@ -1195,6 +1198,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             .ThenInclude(x => x.Parts)
             .Include(x => x.Inspections)
             .Include(x => x.Updates)
+            .Include(x => x.Payments)
             .Where(x => x.Id == workOrderId && x.Customer != null && x.Customer.ApplicationUserId == userId)
             .FirstOrDefaultAsync();
     }

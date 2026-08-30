@@ -152,8 +152,21 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
             VehicleYear = string.IsNullOrWhiteSpace(model.Form.VehicleYear) ? null : model.Form.VehicleYear.Trim(),
             VehicleMake = string.IsNullOrWhiteSpace(model.Form.VehicleMake) ? null : model.Form.VehicleMake.Trim(),
             VehicleModel = string.IsNullOrWhiteSpace(model.Form.VehicleModel) ? null : model.Form.VehicleModel.Trim(),
+            VehicleSubmodel = Normalize(model.Form.VehicleSubmodel),
+            BodyStyle = Normalize(model.Form.BodyStyle),
+            EngineFuel = Normalize(model.Form.EngineFuel),
+            Transmission = Normalize(model.Form.Transmission),
+            DriveType = Normalize(model.Form.DriveType),
+            Brake = Normalize(model.Form.Brake),
+            Gvw = Normalize(model.Form.Gvw),
             Vin = string.IsNullOrWhiteSpace(model.Form.Vin) ? null : model.Form.Vin.Trim(),
             Mileage = string.IsNullOrWhiteSpace(model.Form.Mileage) ? null : model.Form.Mileage.Trim(),
+            LicensePlate = Normalize(model.Form.LicensePlate),
+            StateProvince = Normalize(model.Form.StateProvince),
+            UnitNumber = Normalize(model.Form.UnitNumber),
+            FleetNumber = Normalize(model.Form.FleetNumber),
+            Color = Normalize(model.Form.Color),
+            VehicleMemo = Normalize(model.Form.VehicleMemo),
             PreferredDate = model.Form.PreferredDate.Trim(),
             PreferredTime = model.Form.PreferredTime.Trim(),
             ServiceNeeded = model.Form.ServiceNeeded.Trim(),
@@ -490,6 +503,9 @@ public sealed class AppointmentPortalService : IAppointmentPortalService
 
         return false;
     }
+
+    private static string? Normalize(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static bool TryParseMileage(string? value, out int? mileage)
     {

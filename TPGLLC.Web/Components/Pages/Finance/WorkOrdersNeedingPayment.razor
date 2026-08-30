@@ -2,22 +2,210 @@
 @layout CustomerLayout
 @attribute [Authorize(Policy = PortalPolicies.Finance)]
 
-<PageTitle>Work Order Needing Payment</PageTitle>
+@using System.Globalization
+@using TPGLLC.Web.Services.WorkOrders
+@using TPGLLC.Web.ViewModels.Portal
+
+@inject IInvoicePaymentService InvoicePaymentService
+
+<PageTitle>Work Orders Needing Payment</PageTitle>
 
 <section class="portal-dashboard">
     <div class="portal-header">
         <p class="section-kicker">Finance Portal</p>
-        <h1>Work Order Needing Payment</h1>
+        <h1>Work Orders Needing Payment</h1>
         <p>Invoices that still need to be collected.</p>
     </div>
 
-    <div class="portal-section">
-        <div class="portal-empty-state">
-            <div class="portal-empty-icon">💳</div>
+    @if (_loading)
+    {
+        <div class="portal-loading-card">
+            <div class="portal-loading-icon">⏳</div>
             <div>
-                <div class="portal-empty-title">Work Order Needing Payment coming next</div>
-                <div class="portal-empty-text">This page is ready for the billing workflow.</div>
+                <div class="portal-loading-title">Loading outstanding invoices</div>
+                <div class="portal-loading-text">Please wait while we load balances due.</div>
             </div>
         </div>
-    </div>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
+        {
+            <PortalNotice Type="danger" Title="Unable to load payments">
+                @_model.ErrorMessage
+            </PortalNotice>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_model.SuccessMessage))
+        {
+            <PortalNotice Type="success" Title="Payment recorded">
+                @_model.SuccessMessage
+            </PortalNotice>
+        }
+
+        <div class="portal-section">
+            <div class="portal-section-heading">
+                <div>
+                    <h2>Outstanding invoices</h2>
+                    <div class="portal-muted">Record payments received by cash, PayPal, or Venmo.</div>
+                </div>
+                <span class="portal-chip">@_model.Invoices.Count open</span>
+            </div>
+
+            @if (_model.Invoices.Count == 0)
+            {
+                <div class="portal-empty-state">
+                    <div class="portal-empty-icon">✅</div>
+                    <div>
+                        <div class="portal-empty-title">No outstanding invoice balances</div>
+                        <div class="portal-empty-text">Invoices with an amount due will appear here after they are issued.</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="finance-invoice-list">
+                    @foreach (var invoice in _model.Invoices)
+                    {
+                        <article class="finance-invoice-card">
+                            <div class="finance-invoice-card-header">
+                                <div>
+                                    <div class="finance-invoice-number">@(invoice.InvoiceNumber ?? invoice.WorkOrderNumber ?? "Invoice")</div>
+                                    <h3>@invoice.CustomerName</h3>
+                                    <div class="portal-muted">@invoice.VehicleName · @invoice.Service</div>
+                                    @if (!string.IsNullOrWhiteSpace(invoice.CustomerEmail))
+                                    {
+                                        <div class="portal-muted">@invoice.CustomerEmail</div>
+                                    }
+                                </div>
+                                <div class="finance-invoice-total-due">
+                                    <span>Balance due</span>
+                                    <strong>@invoice.BalanceDue.ToString("C", CultureInfo.CurrentCulture)</strong>
+                                </div>
+                            </div>
+                            <div class="finance-invoice-meta">
+                                <span>Work order @(invoice.WorkOrderNumber ?? "not assigned")</span>
+                                <span>Service @invoice.ServiceDate.ToString("MMM d, yyyy", CultureInfo.InvariantCulture)</span>
+                                <span>Invoice @invoice.InvoiceStatus</span>
+                                @if (invoice.InvoiceDueUtc.HasValue)
+                                {
+                                    <span>Due @invoice.InvoiceDueUtc.Value.ToLocalTime().ToString("MMM d, yyyy", CultureInfo.InvariantCulture)</span>
+                                }
+                            </div>
+                            <div class="finance-payment-stats">
+                                <span>Total @invoice.InvoiceTotal.ToString("C", CultureInfo.CurrentCulture)</span>
+                                <span>Paid @invoice.PaidAmount.ToString("C", CultureInfo.CurrentCulture)</span>
+                            </div>
+                            <div class="finance-invoice-actions">
+                                <button type="button" class="portal-action-button" @onclick="() => SelectInvoice(invoice)">
+                                    Record payment
+                                </button>
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </div>
+
+        @if (_selectedInvoiceId.HasValue && SelectedInvoice is not null)
+        {
+            <div class="portal-section finance-payment-form">
+                <div class="portal-section-heading">
+                    <div>
+                        <h2>Record payment</h2>
+                        <div class="portal-muted">@SelectedInvoice.InvoiceNumber · Balance due @SelectedInvoice.BalanceDue.ToString("C", CultureInfo.CurrentCulture)</div>
+                    </div>
+                </div>
+
+                <EditForm Model="_model.PaymentForm" OnValidSubmit="SavePaymentAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="workorder-form-grid">
+                        <div class="workorder-field">
+                            <label class="portal-field-label" for="payment-amount">Payment amount</label>
+                            <InputText id="payment-amount" class="portal-input" @bind-Value="_model.PaymentForm.Amount" placeholder="0.00" />
+                            <ValidationMessage For="@(() => _model.PaymentForm.Amount)" />
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label" for="payment-method">Payment method</label>
+                            <InputSelect id="payment-method" class="portal-input" @bind-Value="_model.PaymentForm.PaymentMethod">
+                                @foreach (var method in PaymentMethodCatalog.AcceptedMethods)
+                                {
+                                    <option value="@method">@method</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => _model.PaymentForm.PaymentMethod)" />
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label" for="payment-date">Received date</label>
+                            <InputDate id="payment-date" class="portal-input" @bind-Value="_model.PaymentForm.ReceivedDate" />
+                        </div>
+
+                        <div class="workorder-field">
+                            <label class="portal-field-label" for="payment-reference">Reference number (optional)</label>
+                            <InputText id="payment-reference" class="portal-input" @bind-Value="_model.PaymentForm.ReferenceNumber" />
+                        </div>
+                    </div>
+
+                    <div class="workorder-field">
+                        <label class="portal-field-label" for="payment-notes">Notes (optional)</label>
+                        <InputTextArea id="payment-notes" class="portal-input" @bind-Value="_model.PaymentForm.Notes" />
+                    </div>
+
+                    <div class="finance-invoice-actions">
+                        <button type="submit" class="portal-action-button">Save payment</button>
+                        <button type="button" class="portal-action-button portal-action-button-secondary" @onclick="ClearSelection">Cancel</button>
+                    </div>
+                </EditForm>
+            </div>
+        }
+    }
 </section>
+
+@code {
+    private InvoicePaymentPageViewModel _model = new();
+    private Guid? _selectedInvoiceId;
+    private bool _loading = true;
+
+    private InvoiceSummaryViewModel? SelectedInvoice =>
+        _selectedInvoiceId.HasValue
+            ? _model.Invoices.FirstOrDefault(x => x.Id == _selectedInvoiceId.Value)
+            : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _model = await InvoicePaymentService.GetPendingPaymentsAsync();
+        _loading = false;
+    }
+
+    private void SelectInvoice(InvoiceSummaryViewModel invoice)
+    {
+        _selectedInvoiceId = invoice.Id;
+        _model.ErrorMessage = null;
+        _model.SuccessMessage = null;
+        _model.PaymentForm = new PaymentEntryViewModel
+        {
+            WorkOrderId = invoice.Id,
+            PaymentMethod = PaymentMethodCatalog.AcceptedMethods[0],
+            ReceivedDate = DateTime.Today
+        };
+    }
+
+    private async Task SavePaymentAsync()
+    {
+        _model = await InvoicePaymentService.RecordPaymentAsync(_model);
+        if (string.IsNullOrWhiteSpace(_model.ErrorMessage))
+        {
+            _selectedInvoiceId = null;
+        }
+    }
+
+    private void ClearSelection()
+    {
+        _selectedInvoiceId = null;
+        _model.ErrorMessage = null;
+    }
+}

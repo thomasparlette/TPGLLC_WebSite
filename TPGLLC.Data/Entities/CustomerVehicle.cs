@@ -12,11 +12,35 @@ public sealed class CustomerVehicle
 
     public string? Model { get; set; }
 
+    public string? Submodel { get; set; }
+
+    public string? BodyStyle { get; set; }
+
+    public string? EngineFuel { get; set; }
+
+    public string? Transmission { get; set; }
+
+    public string? DriveType { get; set; }
+
+    public string? Brake { get; set; }
+
+    public string? Gvw { get; set; }
+
     public string? Vin { get; set; }
 
     public string? Nickname { get; set; }
 
     public string? LicensePlate { get; set; }
+
+    public string? StateProvince { get; set; }
+
+    public string? UnitNumber { get; set; }
+
+    public string? FleetNumber { get; set; }
+
+    public string? Color { get; set; }
+
+    public string? Memo { get; set; }
 
     public int? Mileage { get; set; }
 

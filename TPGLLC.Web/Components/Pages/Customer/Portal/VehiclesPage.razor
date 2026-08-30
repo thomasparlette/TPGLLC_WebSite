@@ -4,12 +4,15 @@
 
 @using System.Globalization
 @using TPGLLC.Data.Entities
+@using TPGLLC.Services.Vehicles
 @using TPGLLC.Web.Components.PortalShared.Vehicles
 @using TPGLLC.Web.Components.Shared
 @using TPGLLC.Web.Authorization
 @using TPGLLC.Web.Services.Portal
+@using TPGLLC.Web.Services.Vehicles
 
 @inject IVehiclePortalService VehicleService
+@inject IVehicleCatalogService VehicleCatalog
 
 <PageTitle>Vehicles</PageTitle>
 
@@ -148,7 +151,8 @@
                          OnSave="@EventCallback.Factory.Create(this, SaveAsync)"
                          OnCancel="@EventCallback.Factory.Create(this, ResetAsync)"
                          OnYearChanged="@EventCallback.Factory.Create(this, YearChangedAsync)"
-                         OnMakeChanged="@EventCallback.Factory.Create(this, MakeChangedAsync)" />
+                         OnMakeChanged="@EventCallback.Factory.Create(this, MakeChangedAsync)"
+                         OnVinDecoded="@(EventCallback.Factory.Create<VpicVehicleDecodeResult>(this, VinDecodedAsync))" />
         </div>
     }
 </section>
@@ -204,6 +208,47 @@
         _model = await VehicleService.MakeChangedAsync(_model) ?? new VehiclePageViewModel();
     }
 
+    private async Task VinDecodedAsync(VpicVehicleDecodeResult result)
+    {
+        if (!int.TryParse(_model.Form.ModelYear, out var year))
+        {
+            return;
+        }
+
+        if (!_model.Years.Contains(year))
+        {
+            _model.Years.Insert(0, year);
+        }
+
+        _model.Makes = EnsureSelectedValue(
+            await VehicleCatalog.GetMakesAsync(year),
+            _model.Form.Make).ToList();
+
+        if (!string.IsNullOrWhiteSpace(_model.Form.Make))
+        {
+            _model.Models = EnsureSelectedValue(
+                await VehicleCatalog.GetModelsAsync(year, _model.Form.Make),
+                _model.Form.Model).ToList();
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private static IReadOnlyList<string> EnsureSelectedValue(
+        IReadOnlyList<string> values,
+        string? selectedValue)
+    {
+        var result = values.ToList();
+
+        if (!string.IsNullOrWhiteSpace(selectedValue) &&
+            !result.Any(value => string.Equals(value, selectedValue, StringComparison.OrdinalIgnoreCase)))
+        {
+            result.Insert(0, selectedValue);
+        }
+
+        return result;
+    }
+
     private static string GetVehicleTitle(CustomerVehicle vehicle)
     {
         var year = vehicle.ModelYear?.ToString(CultureInfo.InvariantCulture);
@@ -222,6 +267,21 @@
         if (!string.IsNullOrWhiteSpace(vehicle.Vin))
         {
             parts.Add($"VIN {vehicle.Vin}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(vehicle.Submodel))
+        {
+            parts.Add(vehicle.Submodel!);
+        }
+
+        if (!string.IsNullOrWhiteSpace(vehicle.EngineFuel))
+        {
+            parts.Add(vehicle.EngineFuel!);
+        }
+
+        if (!string.IsNullOrWhiteSpace(vehicle.Transmission))
+        {
+            parts.Add(vehicle.Transmission!);
         }
 
         if (vehicle.Mileage.HasValue)

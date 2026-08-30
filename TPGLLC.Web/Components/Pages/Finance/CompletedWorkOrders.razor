@@ -2,6 +2,14 @@
 @layout CustomerLayout
 @attribute [Authorize(Policy = PortalPolicies.Finance)]
 
+@using System.Globalization
+@using TPGLLC.Web.Authorization
+@using TPGLLC.Web.Components.Shared
+@using TPGLLC.Web.Services.WorkOrders
+@using TPGLLC.Web.ViewModels.Portal
+
+@inject IInvoicePaymentService InvoicePaymentService
+
 <PageTitle>Work orders completed</PageTitle>
 
 <section class="portal-dashboard">
@@ -11,13 +19,101 @@
         <p>Completed repair orders ready for finance review.</p>
     </div>
 
-    <div class="portal-section">
-        <div class="portal-empty-state">
-            <div class="portal-empty-icon">✅</div>
+    @if (_loading)
+    {
+        <div class="portal-loading-card">
+            <div class="portal-loading-icon">⏳</div>
             <div>
-                <div class="portal-empty-title">Work orders completed coming next</div>
-                <div class="portal-empty-text">This page is ready for the billing workflow.</div>
+                <div class="portal-loading-title">Loading completed work</div>
+                <div class="portal-loading-text">Please wait while we load work orders ready for invoicing.</div>
             </div>
         </div>
-    </div>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(_model.ErrorMessage))
+        {
+            <PortalNotice Type="danger" Title="Unable to load invoices">
+                @_model.ErrorMessage
+            </PortalNotice>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_model.SuccessMessage))
+        {
+            <PortalNotice Type="success" Title="Invoice updated">
+                @_model.SuccessMessage
+            </PortalNotice>
+        }
+
+        <div class="portal-section">
+            <div class="portal-section-heading">
+                <div>
+                    <h2>Ready to invoice</h2>
+                    <div class="portal-muted">Issue invoices after the repair is completed and the final amount is confirmed.</div>
+                </div>
+                <span class="portal-chip">@_model.Invoices.Count ready</span>
+            </div>
+
+            @if (_model.Invoices.Count == 0)
+            {
+                <div class="portal-empty-state">
+                    <div class="portal-empty-icon">✅</div>
+                    <div>
+                        <div class="portal-empty-title">No completed work is waiting for an invoice</div>
+                        <div class="portal-empty-text">Completed work orders with a final amount will appear here.</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="finance-invoice-list">
+                    @foreach (var invoice in _model.Invoices)
+                    {
+                        <article class="finance-invoice-card">
+                            <div class="finance-invoice-card-header">
+                                <div>
+                                    <div class="finance-invoice-number">@(invoice.WorkOrderNumber ?? "Work order")</div>
+                                    <h3>@invoice.CustomerName</h3>
+                                    <div class="portal-muted">@invoice.VehicleName · @invoice.Service</div>
+                                    @if (!string.IsNullOrWhiteSpace(invoice.CustomerEmail))
+                                    {
+                                        <div class="portal-muted">@invoice.CustomerEmail</div>
+                                    }
+                                </div>
+                                <div class="finance-invoice-total">
+                                    <span>Final total</span>
+                                    <strong>@invoice.InvoiceTotal.ToString("C", CultureInfo.CurrentCulture)</strong>
+                                </div>
+                            </div>
+                            <div class="finance-invoice-meta">
+                                <span>Service @invoice.ServiceDate.ToString("MMM d, yyyy", CultureInfo.InvariantCulture)</span>
+                                <span>Invoice number follows work order</span>
+                            </div>
+                            <div class="finance-invoice-actions">
+                                <button type="button" class="portal-action-button" @onclick="() => IssueInvoiceAsync(invoice.Id)">
+                                    Issue invoice @(invoice.WorkOrderNumber ?? string.Empty)
+                                </button>
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </div>
+    }
 </section>
+
+@code {
+    private InvoicePaymentPageViewModel _model = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _model = await InvoicePaymentService.GetCompletedWorkOrdersAsync();
+        _loading = false;
+    }
+
+    private async Task IssueInvoiceAsync(Guid workOrderId)
+    {
+        _model = await InvoicePaymentService.IssueInvoiceAsync(workOrderId);
+    }
+}

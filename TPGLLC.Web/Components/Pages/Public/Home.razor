@@ -3,6 +3,8 @@
 @using TPGLLC.Web.Services;
 @using TPGLLC.Services.Vehicles;
 @using TPGLLC.Web.Services.Appointments
+@using TPGLLC.Web.Components.PortalShared.Vehicles
+@using TPGLLC.Web.Services.Vehicles
 @inject IVehicleCatalogService VehicleCatalog
 @inject IAppointmentService AppointmentService
 
@@ -297,7 +299,7 @@
                             <label>Vehicle Year</label>
                             <select class="input" @bind="_appointment.VehicleYear" @bind:after="OnVehicleYearChanged">
                                 <option value="">Select year</option>
-                                @foreach (var year in _years)
+                                @foreach (var year in GetYearOptions())
                                 {
                                     <option value="@year">@year</option>
                                 }
@@ -308,7 +310,7 @@
                             <label>Vehicle Make</label>
                             <select class="input" @bind="_appointment.VehicleMake" @bind:after="OnVehicleMakeChanged" disabled="@(_makes.Count == 0)">
                                 <option value="">Select make</option>
-                                @foreach (var make in _makes)
+                                @foreach (var make in GetOptions(_makes, _vpicResult?.MakeOptions))
                                 {
                                     <option value="@make">@make</option>
                                 }
@@ -319,7 +321,7 @@
                             <label>Vehicle Model</label>
                             <select class="input" @bind="_appointment.VehicleModel" @bind:after="OnVehicleModelChanged" disabled="@(_models.Count == 0)">
                                 <option value="">Select model</option>
-                                @foreach (var model in _models)
+                                @foreach (var model in GetOptions(_models, _vpicResult?.ModelOptions))
                                 {
                                     <option value="@model">@model</option>
                                 }
@@ -327,15 +329,124 @@
                         </div>
                     </div>
 
-                    <div class="form-field full">
-                        <label>VIN (optional)</label>
-                        <InputText class="input" @bind-Value="_appointment.Vin" maxlength="17" placeholder="17-character VIN" />
+                    <div class="form-grid vehicle-details-grid">
+                        <div class="form-field">
+                            <label>Submodel (optional)</label>
+                            <InputText class="input" @bind-Value="_appointment.VehicleSubmodel" list="public-vehicle-submodel-options" placeholder="Select or enter submodel" />
+                        </div>
+
+                        <div class="form-field">
+                            <label>Body Style (optional)</label>
+                            <InputSelect class="input" @bind-Value="_appointment.BodyStyle">
+                                <option value="">Not specified</option>
+                                @foreach (var option in GetOptions(VehicleAttributeOptions.BodyStyles.Concat(_catalogOptions.BodyStyles), _vpicResult?.BodyStyleOptions))
+                                {
+                                    <option value="@option">@option</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="form-field">
+                            <label>Engine / Fuel (optional)</label>
+                            <InputText class="input" @bind-Value="_appointment.EngineFuel" list="public-vehicle-engine-options" placeholder="Select or enter engine" />
+                        </div>
+
+                        <div class="form-field">
+                            <label>Transmission (optional)</label>
+                            <InputText class="input" @bind-Value="_appointment.Transmission" list="public-vehicle-transmission-options" placeholder="Select or enter transmission" />
+                        </div>
+
+                        <div class="form-field">
+                            <label>Drive Type (optional)</label>
+                            <InputSelect class="input" @bind-Value="_appointment.DriveType">
+                                <option value="">Not specified</option>
+                                @foreach (var option in GetOptions(VehicleAttributeOptions.DriveTypes.Concat(_catalogOptions.DriveTypes), _vpicResult?.DriveTypeOptions))
+                                {
+                                    <option value="@option">@option</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="form-field">
+                            <label>Brake (optional)</label>
+                            <InputSelect class="input" @bind-Value="_appointment.Brake">
+                                <option value="">Not specified</option>
+                                @foreach (var option in GetOptions(VehicleAttributeOptions.BrakeTypes.Concat(_catalogOptions.Brakes), _vpicResult?.BrakeOptions))
+                                {
+                                    <option value="@option">@option</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="form-field">
+                            <label>GVW (optional)</label>
+                            <InputText class="input" @bind-Value="_appointment.Gvw" inputmode="numeric" placeholder="Gross vehicle weight" />
+                        </div>
+
+                        <div class="form-field">
+                            <label>VIN (optional)</label>
+                            <div class="vpic-vin-entry">
+                                <InputText class="input" @bind-Value="_appointment.Vin" maxlength="17" placeholder="17-character VIN" />
+                                <VpicVehicleDecodeButton Vin="@_appointment.Vin" OnDecoded="ApplyVpicDecodeAsync" />
+                            </div>
+                        </div>
+
+                        <div class="form-field">
+                            <label>Mileage</label>
+                            <InputText class="input" @bind-Value="_appointment.Mileage" />
+                        </div>
+
+                        <div class="form-field">
+                            <label>License Plate (optional)</label>
+                            <InputText class="input" @bind-Value="_appointment.LicensePlate" />
+                        </div>
+
+                        <div class="form-field">
+                            <label>State / Province (optional)</label>
+                            <InputText class="input" @bind-Value="_appointment.StateProvince" />
+                        </div>
+
+                        <div class="form-field">
+                            <label>Unit # (optional)</label>
+                            <InputText class="input" @bind-Value="_appointment.UnitNumber" />
+                        </div>
+
+                        <div class="form-field">
+                            <label>Fleet # (optional)</label>
+                            <InputText class="input" @bind-Value="_appointment.FleetNumber" />
+                        </div>
+
+                        <div class="form-field">
+                            <label>Color (optional)</label>
+                            <InputText class="input" @bind-Value="_appointment.Color" />
+                        </div>
                     </div>
 
-                    <div class="form-field">
-                        <label>Mileage</label>
-                        <InputText class="input" @bind-Value="_appointment.Mileage" />
+                    <div class="form-field full">
+                        <label>Vehicle Memo (optional)</label>
+                        <InputTextArea class="input textarea" @bind-Value="_appointment.VehicleMemo" rows="3" />
                     </div>
+
+                    <datalist id="public-vehicle-submodel-options">
+                        @foreach (var option in GetOptions(VehicleAttributeOptions.CommonSubmodels.Concat(_catalogOptions.Submodels), _vpicResult?.SubmodelOptions))
+                        {
+                            <option value="@option"></option>
+                        }
+                    </datalist>
+
+                    <datalist id="public-vehicle-engine-options">
+                        @foreach (var option in GetOptions(VehicleAttributeOptions.CommonEngineFuelTypes.Concat(_catalogOptions.EngineFuelTypes), _vpicResult?.EngineFuelOptions))
+                        {
+                            <option value="@option"></option>
+                        }
+                    </datalist>
+
+                    <datalist id="public-vehicle-transmission-options">
+                        @foreach (var option in GetOptions(VehicleAttributeOptions.CommonTransmissions.Concat(_catalogOptions.Transmissions), _vpicResult?.TransmissionOptions))
+                        {
+                            <option value="@option"></option>
+                        }
+                    </datalist>
 
                     <div class="form-field">
                         <label>Preferred Date</label>
@@ -382,15 +493,18 @@
     private IReadOnlyList<int> _years = [];
     private IReadOnlyList<string> _makes = [];
     private IReadOnlyList<string> _models = [];
+    private VehicleCatalogOptions _catalogOptions = new();
 
     private string? _submitError;
     private string? _requestId;
     private bool _submitted;
     private bool _isSubmitting;
+    private VpicVehicleDecodeResult? _vpicResult;
 
     protected override async Task OnInitializedAsync()
     {
         _years = await VehicleCatalog.GetYearsAsync();
+        _catalogOptions = await VehicleCatalog.GetOptionsAsync();
 
         if (_years.Count == 0)
         {
@@ -402,6 +516,7 @@
 
     private async Task OnVehicleYearChanged()
     {
+        _vpicResult = null;
         _appointment.VehicleMake = null;
         _appointment.VehicleModel = null;
 
@@ -418,6 +533,7 @@
 
     private async Task OnVehicleMakeChanged()
     {
+        _vpicResult = null;
         _appointment.VehicleModel = null;
         _models = [];
 
@@ -433,6 +549,64 @@
     private Task OnVehicleModelChanged()
     {
         return Task.CompletedTask;
+    }
+
+    private async Task ApplyVpicDecodeAsync(VpicVehicleDecodeResult result)
+    {
+        _vpicResult = result;
+        _appointment.VehicleYear = result.GetOnly(result.ModelYearOptions) ?? _appointment.VehicleYear;
+        _appointment.VehicleMake = result.GetOnly(result.MakeOptions) ?? _appointment.VehicleMake;
+        _appointment.VehicleModel = result.GetOnly(result.ModelOptions) ?? _appointment.VehicleModel;
+        _appointment.VehicleSubmodel = result.GetOnly(result.SubmodelOptions) ?? _appointment.VehicleSubmodel;
+        _appointment.BodyStyle = result.GetOnly(result.BodyStyleOptions) ?? _appointment.BodyStyle;
+        _appointment.EngineFuel = result.GetOnly(result.EngineFuelOptions) ?? _appointment.EngineFuel;
+        _appointment.Transmission = result.GetOnly(result.TransmissionOptions) ?? _appointment.Transmission;
+        _appointment.DriveType = result.GetOnly(result.DriveTypeOptions) ?? _appointment.DriveType;
+        _appointment.Brake = result.GetOnly(result.BrakeOptions) ?? _appointment.Brake;
+        _appointment.Gvw = result.GetOnly(result.GvwOptions) ?? _appointment.Gvw;
+
+        if (int.TryParse(_appointment.VehicleYear, out var year))
+        {
+            _makes = GetOptions(
+                await VehicleCatalog.GetMakesAsync(year),
+                result.MakeOptions);
+        }
+
+        if (int.TryParse(_appointment.VehicleYear, out year) &&
+            !string.IsNullOrWhiteSpace(_appointment.VehicleMake))
+        {
+            _models = GetOptions(
+                await VehicleCatalog.GetModelsAsync(year, _appointment.VehicleMake),
+                result.ModelOptions);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private IEnumerable<int> GetYearOptions()
+    {
+        var years = _years.ToList();
+
+        foreach (var option in _vpicResult?.ModelYearOptions ?? [])
+        {
+            if (int.TryParse(option, out var year) && !years.Contains(year))
+            {
+                years.Add(year);
+            }
+        }
+
+        return years.OrderByDescending(year => year);
+    }
+
+    private static IReadOnlyList<string> GetOptions(
+        IEnumerable<string> existing,
+        IEnumerable<string>? decoded)
+    {
+        return existing
+            .Concat(decoded ?? [])
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private async Task SubmitAppointment()
@@ -492,8 +666,21 @@
         _appointment.VehicleYear = null;
         _appointment.VehicleMake = null;
         _appointment.VehicleModel = null;
+        _appointment.VehicleSubmodel = null;
+        _appointment.BodyStyle = null;
+        _appointment.EngineFuel = null;
+        _appointment.Transmission = null;
+        _appointment.DriveType = null;
+        _appointment.Brake = null;
+        _appointment.Gvw = null;
         _appointment.Vin = null;
         _appointment.Mileage = null;
+        _appointment.LicensePlate = null;
+        _appointment.StateProvince = null;
+        _appointment.UnitNumber = null;
+        _appointment.FleetNumber = null;
+        _appointment.Color = null;
+        _appointment.VehicleMemo = null;
         _appointment.PreferredDate = null;
         _appointment.PreferredTime = null;
         _appointment.ServiceNeeded = null;
@@ -501,6 +688,7 @@
 
         _makes = [];
         _models = [];
+        _vpicResult = null;
         _submitError = null;
         _requestId = null;
         _submitted = false;

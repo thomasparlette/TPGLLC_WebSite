@@ -68,6 +68,7 @@ public sealed class PortalContextService : IPortalContextService
                 .ThenInclude(x => x.Parts)
                 .Include(x => x.Inspections)
                 .Include(x => x.Updates)
+                .Include(x => x.Payments)
                 .Where(x => x.CustomerId == customer.Id)
                 .OrderByDescending(x => x.ServiceDate)
                 .ToListAsync(cancellationToken);

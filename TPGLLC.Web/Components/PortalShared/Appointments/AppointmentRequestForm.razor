@@ -1,5 +1,9 @@
 ﻿@using System.Linq.Expressions
 @using Microsoft.AspNetCore.Components.Forms
+@using TPGLLC.Services.Vehicles
+@using TPGLLC.Web.Components.PortalShared.Vehicles
+@using TPGLLC.Web.Services.Vehicles
+@inject IVehicleCatalogService VehicleCatalog
 
 <EditForm EditContext="@_editContext" OnValidSubmit="@HandleValidSubmitAsync">
     <DataAnnotationsValidator />
@@ -13,7 +17,7 @@
                          ValueChanged="@OnYearChangedInternalAsync"
                          ValueExpression="@(() => Form.VehicleYear)">
                 <option value="">Select year</option>
-                @foreach (var year in Years)
+                @foreach (var year in GetYearOptions())
                 {
                     <option value="@year.ToString()">@year</option>
                 }
@@ -29,7 +33,7 @@
                          ValueChanged="@OnMakeChangedInternalAsync"
                          ValueExpression="@(() => Form.VehicleMake)">
                 <option value="">Select make</option>
-                @foreach (var make in Makes)
+                @foreach (var make in GetOptions(Makes, _vpicResult?.MakeOptions))
                 {
                     <option value="@make">@make</option>
                 }
@@ -43,7 +47,7 @@
                          class="@GetFieldCss(() => Form.VehicleModel)"
                          @bind-Value="Form.VehicleModel">
                 <option value="">Select model</option>
-                @foreach (var model in Models)
+                @foreach (var model in GetOptions(Models, _vpicResult?.ModelOptions))
                 {
                     <option value="@model">@model</option>
                 }
@@ -52,8 +56,83 @@
         </div>
 
         <div class="form-field">
+            <label>Submodel <span class="portal-field-optional">(optional)</span></label>
+            <InputText class="@GetFieldCss(() => Form.VehicleSubmodel)"
+                       @bind-Value="Form.VehicleSubmodel"
+                       list="appointment-vehicle-submodel-options"
+                       placeholder="Select or enter submodel" />
+            <ValidationMessage For="@(() => Form.VehicleSubmodel)" />
+        </div>
+
+        <div class="form-field">
+            <label>Body Style <span class="portal-field-optional">(optional)</span></label>
+            <InputSelect class="@GetFieldCss(() => Form.BodyStyle)" @bind-Value="Form.BodyStyle">
+                <option value="">Not specified</option>
+                @foreach (var option in GetOptions(VehicleAttributeOptions.BodyStyles.Concat(_catalogOptions.BodyStyles), _vpicResult?.BodyStyleOptions))
+                {
+                    <option value="@option">@option</option>
+                }
+            </InputSelect>
+            <ValidationMessage For="@(() => Form.BodyStyle)" />
+        </div>
+
+        <div class="form-field">
+            <label>Engine / Fuel <span class="portal-field-optional">(optional)</span></label>
+            <InputText class="@GetFieldCss(() => Form.EngineFuel)"
+                       @bind-Value="Form.EngineFuel"
+                       list="appointment-vehicle-engine-options"
+                       placeholder="Select or enter engine" />
+            <ValidationMessage For="@(() => Form.EngineFuel)" />
+        </div>
+
+        <div class="form-field">
+            <label>Transmission <span class="portal-field-optional">(optional)</span></label>
+            <InputText class="@GetFieldCss(() => Form.Transmission)"
+                       @bind-Value="Form.Transmission"
+                       list="appointment-vehicle-transmission-options"
+                       placeholder="Select or enter transmission" />
+            <ValidationMessage For="@(() => Form.Transmission)" />
+        </div>
+
+        <div class="form-field">
+            <label>Drive Type <span class="portal-field-optional">(optional)</span></label>
+            <InputSelect class="@GetFieldCss(() => Form.DriveType)" @bind-Value="Form.DriveType">
+                <option value="">Not specified</option>
+                @foreach (var option in GetOptions(VehicleAttributeOptions.DriveTypes.Concat(_catalogOptions.DriveTypes), _vpicResult?.DriveTypeOptions))
+                {
+                    <option value="@option">@option</option>
+                }
+            </InputSelect>
+            <ValidationMessage For="@(() => Form.DriveType)" />
+        </div>
+
+        <div class="form-field">
+            <label>Brake <span class="portal-field-optional">(optional)</span></label>
+            <InputSelect class="@GetFieldCss(() => Form.Brake)" @bind-Value="Form.Brake">
+                <option value="">Not specified</option>
+                @foreach (var option in GetOptions(VehicleAttributeOptions.BrakeTypes.Concat(_catalogOptions.Brakes), _vpicResult?.BrakeOptions))
+                {
+                    <option value="@option">@option</option>
+                }
+            </InputSelect>
+            <ValidationMessage For="@(() => Form.Brake)" />
+        </div>
+
+        <div class="form-field">
+            <label>GVW <span class="portal-field-optional">(optional)</span></label>
+            <InputText class="@GetFieldCss(() => Form.Gvw)"
+                       @bind-Value="Form.Gvw"
+                       inputmode="numeric"
+                       placeholder="Gross vehicle weight" />
+            <ValidationMessage For="@(() => Form.Gvw)" />
+        </div>
+
+        <div class="form-field">
             <label>VIN</label>
-            <InputText class="@GetFieldCss(() => Form.Vin)" @bind-Value="Form.Vin" />
+            <div class="vpic-vin-entry">
+                <InputText class="@GetFieldCss(() => Form.Vin)" @bind-Value="Form.Vin" />
+                <VpicVehicleDecodeButton Vin="@Form.Vin" OnDecoded="ApplyDecodedAsync" />
+            </div>
             <ValidationMessage For="@(() => Form.Vin)" />
         </div>
 
@@ -63,48 +142,63 @@
             <ValidationMessage For="@(() => Form.Mileage)" />
         </div>
 
-        <div class="form-field full">
-            <label>Service Needed</label>
-            <InputText class="@GetFieldCss(() => Form.ServiceNeeded)" @bind-Value="Form.ServiceNeeded" />
-            <ValidationMessage For="@(() => Form.ServiceNeeded)" />
+        <div class="form-field">
+            <label>License Plate</label>
+            <InputText class="@GetFieldCss(() => Form.LicensePlate)" @bind-Value="Form.LicensePlate" />
+            <ValidationMessage For="@(() => Form.LicensePlate)" />
         </div>
 
         <div class="form-field">
-            <label>Preferred Date</label>
-            <InputText type="date" class="@GetFieldCss(() => Form.PreferredDate)" @bind-Value="Form.PreferredDate" />
-            <ValidationMessage For="@(() => Form.PreferredDate)" />
+            <label>State / Province <span class="portal-field-optional">(optional)</span></label>
+            <InputText class="@GetFieldCss(() => Form.StateProvince)" @bind-Value="Form.StateProvince" />
+            <ValidationMessage For="@(() => Form.StateProvince)" />
         </div>
 
         <div class="form-field">
-            <label>Preferred Time</label>
-            <InputText type="time" class="@GetFieldCss(() => Form.PreferredTime)" @bind-Value="Form.PreferredTime" />
-            <ValidationMessage For="@(() => Form.PreferredTime)" />
-        </div>
-
-        <div class="form-field full">
-            <label>Name</label>
-            <InputText class="@GetFieldCss(() => Form.Name)" @bind-Value="Form.Name" />
-            <ValidationMessage For="@(() => Form.Name)" />
+            <label>Unit # <span class="portal-field-optional">(optional)</span></label>
+            <InputText class="@GetFieldCss(() => Form.UnitNumber)" @bind-Value="Form.UnitNumber" />
+            <ValidationMessage For="@(() => Form.UnitNumber)" />
         </div>
 
         <div class="form-field">
-            <label>Email</label>
-            <InputText type="email" class="@GetFieldCss(() => Form.Email)" @bind-Value="Form.Email" />
-            <ValidationMessage For="@(() => Form.Email)" />
+            <label>Fleet # <span class="portal-field-optional">(optional)</span></label>
+            <InputText class="@GetFieldCss(() => Form.FleetNumber)" @bind-Value="Form.FleetNumber" />
+            <ValidationMessage For="@(() => Form.FleetNumber)" />
         </div>
 
         <div class="form-field">
-            <label>Phone</label>
-            <InputText class="@GetFieldCss(() => Form.Phone)" @bind-Value="Form.Phone" />
-            <ValidationMessage For="@(() => Form.Phone)" />
+            <label>Color <span class="portal-field-optional">(optional)</span></label>
+            <InputText class="@GetFieldCss(() => Form.Color)" @bind-Value="Form.Color" />
+            <ValidationMessage For="@(() => Form.Color)" />
         </div>
 
         <div class="form-field full">
-            <label>Message</label>
-            <InputTextArea class="@GetFieldCss(() => Form.Message)" @bind-Value="Form.Message" />
-            <ValidationMessage For="@(() => Form.Message)" />
+            <label>Vehicle Memo <span class="portal-field-optional">(optional)</span></label>
+            <InputTextArea class="@GetFieldCss(() => Form.VehicleMemo)" @bind-Value="Form.VehicleMemo" />
+            <ValidationMessage For="@(() => Form.VehicleMemo)" />
         </div>
     </div>
+
+    <datalist id="appointment-vehicle-submodel-options">
+        @foreach (var option in GetOptions(VehicleAttributeOptions.CommonSubmodels.Concat(_catalogOptions.Submodels), _vpicResult?.SubmodelOptions))
+        {
+            <option value="@option"></option>
+        }
+    </datalist>
+
+    <datalist id="appointment-vehicle-engine-options">
+        @foreach (var option in GetOptions(VehicleAttributeOptions.CommonEngineFuelTypes.Concat(_catalogOptions.EngineFuelTypes), _vpicResult?.EngineFuelOptions))
+        {
+            <option value="@option"></option>
+        }
+    </datalist>
+
+    <datalist id="appointment-vehicle-transmission-options">
+        @foreach (var option in GetOptions(VehicleAttributeOptions.CommonTransmissions.Concat(_catalogOptions.Transmissions), _vpicResult?.TransmissionOptions))
+        {
+            <option value="@option"></option>
+        }
+    </datalist>
 
     <div class="portal-actions" style="margin-top: 1.25rem;">
         <button type="submit"
@@ -126,15 +220,24 @@
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback OnYearChanged { get; set; }
     [Parameter] public EventCallback OnMakeChanged { get; set; }
+    [Parameter] public EventCallback<VpicVehicleDecodeResult> OnVinDecoded { get; set; }
 
     private EditContext _editContext = default!;
     private bool _isSubmitting;
+    private VpicVehicleDecodeResult? _vpicResult;
+    private VehicleCatalogOptions _catalogOptions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _catalogOptions = await VehicleCatalog.GetOptionsAsync();
+    }
 
     protected override void OnParametersSet()
     {
         if (_editContext is null || !ReferenceEquals(_editContext.Model, Form))
         {
             _editContext = new EditContext(Form);
+            _vpicResult = null;
         }
     }
 
@@ -197,6 +300,53 @@
         {
             await OnMakeChanged.InvokeAsync();
         }
+    }
+
+    private async Task ApplyDecodedAsync(VpicVehicleDecodeResult result)
+    {
+        _vpicResult = result;
+
+        Form.VehicleYear = result.GetOnly(result.ModelYearOptions) ?? Form.VehicleYear;
+        Form.VehicleMake = result.GetOnly(result.MakeOptions) ?? Form.VehicleMake;
+        Form.VehicleModel = result.GetOnly(result.ModelOptions) ?? Form.VehicleModel;
+        Form.VehicleSubmodel = result.GetOnly(result.SubmodelOptions) ?? Form.VehicleSubmodel;
+        Form.BodyStyle = result.GetOnly(result.BodyStyleOptions) ?? Form.BodyStyle;
+        Form.EngineFuel = result.GetOnly(result.EngineFuelOptions) ?? Form.EngineFuel;
+        Form.Transmission = result.GetOnly(result.TransmissionOptions) ?? Form.Transmission;
+        Form.DriveType = result.GetOnly(result.DriveTypeOptions) ?? Form.DriveType;
+        Form.Brake = result.GetOnly(result.BrakeOptions) ?? Form.Brake;
+        Form.Gvw = result.GetOnly(result.GvwOptions) ?? Form.Gvw;
+
+        if (OnVinDecoded.HasDelegate)
+        {
+            await OnVinDecoded.InvokeAsync(result);
+        }
+    }
+
+    private IEnumerable<int> GetYearOptions()
+    {
+        var years = Years.ToList();
+
+        foreach (var option in _vpicResult?.ModelYearOptions ?? [])
+        {
+            if (int.TryParse(option, out var year) && !years.Contains(year))
+            {
+                years.Add(year);
+            }
+        }
+
+        return years.OrderByDescending(year => year);
+    }
+
+    private static IReadOnlyList<string> GetOptions(
+        IEnumerable<string> existing,
+        IEnumerable<string>? decoded)
+    {
+        return existing
+            .Concat(decoded ?? [])
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private string GetFieldCss<TValue>(Expression<Func<TValue>> accessor)
