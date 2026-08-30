@@ -38,6 +38,20 @@ namespace TPGLLC.Data.Migrations
                 name: "IX_ServiceHistoryUpdates_ServiceHistoryEntryId_CreatedUtc",
                 table: "ServiceHistoryUpdates",
                 columns: new[] { "ServiceHistoryEntryId", "CreatedUtc" });
+
+            migrationBuilder.Sql("""
+                INSERT INTO [ServiceHistoryUpdates]
+                    ([Id], [ServiceHistoryEntryId], [Status], [Message], [AuthorName], [IsCustomerVisible], [CreatedUtc])
+                SELECT
+                    NEWID(),
+                    [Id],
+                    [Status],
+                    CONCAT('Work order status: ', [Status], '.'),
+                    NULL,
+                    CAST(1 AS bit),
+                    COALESCE([UpdatedUtc], [CreatedUtc])
+                FROM [ServiceHistoryEntries]
+                """);
         }
 
         /// <inheritdoc />

@@ -12,7 +12,7 @@ using TPGLLC.Data;
 namespace TPGLLC.Data.Migrations
 {
     [DbContext(typeof(TPGLLCDbContext))]
-    [Migration("20260829223633_AddStructuredEstimatesAndInspections")]
+    [Migration("20260829204551_AddStructuredEstimatesAndInspections")]
     partial class AddStructuredEstimatesAndInspections
     {
         /// <inheritdoc />

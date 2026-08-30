@@ -12,8 +12,8 @@ using TPGLLC.Data;
 namespace TPGLLC.Data.Migrations
 {
     [DbContext(typeof(TPGLLCDbContext))]
-    [Migration("20260829160036_AddServiceHistoryUpdates")]
-    partial class AddServiceHistoryUpdates
+    [Migration("20260830005456_AddInvoicePaymentWorkflow")]
+    partial class AddInvoicePaymentWorkflow
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -443,6 +443,100 @@ namespace TPGLLC.Data.Migrations
                     b.ToTable("CustomerVehicles");
                 });
 
+            modelBuilder.Entity("TPGLLC.Data.Entities.LaborCatalogItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<decimal>("DefaultHours")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<decimal>("HourlyRate")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTimeOffset?>("UpdatedUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("IsActive", "Name");
+
+                    b.ToTable("LaborCatalogItems", (string)null);
+                });
+
+            modelBuilder.Entity("TPGLLC.Data.Entities.PartsCatalogItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("PartNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal?>("UnitCost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset?>("UpdatedUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PartNumber")
+                        .IsUnique();
+
+                    b.HasIndex("IsActive", "Name");
+
+                    b.ToTable("PartsCatalogItems", (string)null);
+                });
+
             modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -485,9 +579,26 @@ namespace TPGLLC.Data.Migrations
                     b.Property<decimal?>("InvoiceAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTimeOffset?>("InvoiceDueUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("InvoiceIssuedUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("InvoiceNotes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
                     b.Property<string>("InvoiceNumber")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("InvoiceStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Draft");
 
                     b.Property<decimal?>("LaborAmount")
                         .HasColumnType("decimal(18,2)");
@@ -548,6 +659,120 @@ namespace TPGLLC.Data.Migrations
                     b.ToTable("ServiceHistoryEntries", (string)null);
                 });
 
+            modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryInspection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Area")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("Condition")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("Finding")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<bool>("IsCustomerVisible")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Recommendation")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<Guid>("ServiceHistoryEntryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("UpdatedUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Condition");
+
+                    b.HasIndex("ServiceHistoryEntryId", "CreatedUtc");
+
+                    b.ToTable("ServiceHistoryInspections", (string)null);
+                });
+
+            modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsCustomerDeclined")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeferred")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("LaborAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("LaborCatalogItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("LaborHours")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("LaborRate")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("ServiceHistoryEntryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTimeOffset?>("UpdatedUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LaborCatalogItemId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("ServiceHistoryEntryId", "SortOrder");
+
+                    b.ToTable("ServiceHistoryJobs", (string)null);
+                });
+
             modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryPart", b =>
                 {
                     b.Property<Guid>("Id")
@@ -568,10 +793,16 @@ namespace TPGLLC.Data.Migrations
                     b.Property<bool>("IsCustomerDeclined")
                         .HasColumnType("bit");
 
+                    b.Property<Guid?>("PartsCatalogItemId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<Guid>("ServiceHistoryEntryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ServiceHistoryJobId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal?>("UnitPrice")
@@ -579,9 +810,56 @@ namespace TPGLLC.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("PartsCatalogItemId");
+
                     b.HasIndex("ServiceHistoryEntryId");
 
+                    b.HasIndex("ServiceHistoryJobId");
+
                     b.ToTable("ServiceHistoryParts", (string)null);
+                });
+
+            modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ReceivedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTimeOffset>("ReceivedUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("ServiceHistoryEntryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentMethod");
+
+                    b.HasIndex("ServiceHistoryEntryId", "ReceivedUtc");
+
+                    b.ToTable("ServiceHistoryPayments", (string)null);
                 });
 
             modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryUpdate", b =>
@@ -943,10 +1221,64 @@ namespace TPGLLC.Data.Migrations
                     b.Navigation("Vehicle");
                 });
 
-            modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryPart", b =>
+            modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryInspection", b =>
                 {
                     b.HasOne("TPGLLC.Data.Entities.ServiceHistoryEntry", "ServiceHistoryEntry")
+                        .WithMany("Inspections")
+                        .HasForeignKey("ServiceHistoryEntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ServiceHistoryEntry");
+                });
+
+            modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryJob", b =>
+                {
+                    b.HasOne("TPGLLC.Data.Entities.LaborCatalogItem", "LaborCatalogItem")
+                        .WithMany("ServiceHistoryJobs")
+                        .HasForeignKey("LaborCatalogItemId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("TPGLLC.Data.Entities.ServiceHistoryEntry", "ServiceHistoryEntry")
+                        .WithMany("Jobs")
+                        .HasForeignKey("ServiceHistoryEntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LaborCatalogItem");
+
+                    b.Navigation("ServiceHistoryEntry");
+                });
+
+            modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryPart", b =>
+                {
+                    b.HasOne("TPGLLC.Data.Entities.PartsCatalogItem", "PartsCatalogItem")
+                        .WithMany("ServiceHistoryParts")
+                        .HasForeignKey("PartsCatalogItemId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("TPGLLC.Data.Entities.ServiceHistoryEntry", "ServiceHistoryEntry")
                         .WithMany("Parts")
+                        .HasForeignKey("ServiceHistoryEntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TPGLLC.Data.Entities.ServiceHistoryJob", "ServiceHistoryJob")
+                        .WithMany("Parts")
+                        .HasForeignKey("ServiceHistoryJobId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("PartsCatalogItem");
+
+                    b.Navigation("ServiceHistoryEntry");
+
+                    b.Navigation("ServiceHistoryJob");
+                });
+
+            modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryPayment", b =>
+                {
+                    b.HasOne("TPGLLC.Data.Entities.ServiceHistoryEntry", "ServiceHistoryEntry")
+                        .WithMany("Payments")
                         .HasForeignKey("ServiceHistoryEntryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -979,11 +1311,32 @@ namespace TPGLLC.Data.Migrations
                     b.Navigation("Vehicles");
                 });
 
+            modelBuilder.Entity("TPGLLC.Data.Entities.LaborCatalogItem", b =>
+                {
+                    b.Navigation("ServiceHistoryJobs");
+                });
+
+            modelBuilder.Entity("TPGLLC.Data.Entities.PartsCatalogItem", b =>
+                {
+                    b.Navigation("ServiceHistoryParts");
+                });
+
             modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryEntry", b =>
                 {
+                    b.Navigation("Inspections");
+
+                    b.Navigation("Jobs");
+
                     b.Navigation("Parts");
 
+                    b.Navigation("Payments");
+
                     b.Navigation("Updates");
+                });
+
+            modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryJob", b =>
+                {
+                    b.Navigation("Parts");
                 });
 #pragma warning restore 612, 618
         }

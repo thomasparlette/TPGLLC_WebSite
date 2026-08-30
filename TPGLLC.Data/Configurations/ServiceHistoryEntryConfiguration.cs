@@ -56,6 +56,14 @@ public sealed class ServiceHistoryEntryConfiguration
         builder.Property(x => x.InvoiceAmount)
             .HasColumnType("decimal(18,2)");
 
+        builder.Property(x => x.InvoiceStatus)
+            .HasMaxLength(30)
+            .IsRequired()
+            .HasDefaultValue("Draft");
+
+        builder.Property(x => x.InvoiceNotes)
+            .HasMaxLength(4000);
+
         builder.Property(x => x.Notes)
             .HasMaxLength(4000);
 

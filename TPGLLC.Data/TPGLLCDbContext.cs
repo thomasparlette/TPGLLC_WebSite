@@ -25,6 +25,7 @@ public sealed class TPGLLCDbContext
     public DbSet<ServiceHistoryJob> ServiceHistoryJobs => Set<ServiceHistoryJob>();
     public DbSet<ServiceHistoryInspection> ServiceHistoryInspections => Set<ServiceHistoryInspection>();
     public DbSet<ServiceHistoryUpdate> ServiceHistoryUpdates => Set<ServiceHistoryUpdate>();
+    public DbSet<ServiceHistoryPayment> ServiceHistoryPayments => Set<ServiceHistoryPayment>();
     public DbSet<PartsCatalogItem> PartsCatalogItems => Set<PartsCatalogItem>();
     public DbSet<LaborCatalogItem> LaborCatalogItems => Set<LaborCatalogItem>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();

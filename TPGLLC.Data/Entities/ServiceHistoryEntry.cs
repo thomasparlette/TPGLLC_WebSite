@@ -26,6 +26,10 @@ public sealed class ServiceHistoryEntry
     public decimal? LaborAmount { get; set; }
     public string? InvoiceNumber { get; set; }
     public decimal? InvoiceAmount { get; set; }
+    public string InvoiceStatus { get; set; } = "Draft";
+    public DateTimeOffset? InvoiceIssuedUtc { get; set; }
+    public DateTimeOffset? InvoiceDueUtc { get; set; }
+    public string? InvoiceNotes { get; set; }
 
     public string? Notes { get; set; }
     public string? InternalNotes { get; set; }
@@ -39,4 +43,5 @@ public sealed class ServiceHistoryEntry
     public ICollection<ServiceHistoryJob> Jobs { get; set; } = [];
     public ICollection<ServiceHistoryInspection> Inspections { get; set; } = [];
     public ICollection<ServiceHistoryUpdate> Updates { get; set; } = [];
+    public ICollection<ServiceHistoryPayment> Payments { get; set; } = [];
 }

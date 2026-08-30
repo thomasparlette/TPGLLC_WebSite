@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TPGLLC.Data;
 
@@ -11,9 +12,11 @@ using TPGLLC.Data;
 namespace TPGLLC.Data.Migrations
 {
     [DbContext(typeof(TPGLLCDbContext))]
-    partial class TPGLLCDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260829224835_AddPartsAndLaborCatalog")]
+    partial class AddPartsAndLaborCatalog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -576,26 +579,9 @@ namespace TPGLLC.Data.Migrations
                     b.Property<decimal?>("InvoiceAmount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateTimeOffset?>("InvoiceDueUtc")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<DateTimeOffset?>("InvoiceIssuedUtc")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("InvoiceNotes")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
                     b.Property<string>("InvoiceNumber")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("InvoiceStatus")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)")
-                        .HasDefaultValue("Draft");
 
                     b.Property<decimal?>("LaborAmount")
                         .HasColumnType("decimal(18,2)");
@@ -814,49 +800,6 @@ namespace TPGLLC.Data.Migrations
                     b.HasIndex("ServiceHistoryJobId");
 
                     b.ToTable("ServiceHistoryParts", (string)null);
-                });
-
-            modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryPayment", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("PaymentMethod")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("ReceivedBy")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateTimeOffset>("ReceivedUtc")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetimeoffset")
-                        .HasDefaultValueSql("SYSUTCDATETIME()");
-
-                    b.Property<string>("ReferenceNumber")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<Guid>("ServiceHistoryEntryId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PaymentMethod");
-
-                    b.HasIndex("ServiceHistoryEntryId", "ReceivedUtc");
-
-                    b.ToTable("ServiceHistoryPayments", (string)null);
                 });
 
             modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryUpdate", b =>
@@ -1272,17 +1215,6 @@ namespace TPGLLC.Data.Migrations
                     b.Navigation("ServiceHistoryJob");
                 });
 
-            modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryPayment", b =>
-                {
-                    b.HasOne("TPGLLC.Data.Entities.ServiceHistoryEntry", "ServiceHistoryEntry")
-                        .WithMany("Payments")
-                        .HasForeignKey("ServiceHistoryEntryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ServiceHistoryEntry");
-                });
-
             modelBuilder.Entity("TPGLLC.Data.Entities.ServiceHistoryUpdate", b =>
                 {
                     b.HasOne("TPGLLC.Data.Entities.ServiceHistoryEntry", "ServiceHistoryEntry")
@@ -1325,8 +1257,6 @@ namespace TPGLLC.Data.Migrations
                     b.Navigation("Jobs");
 
                     b.Navigation("Parts");
-
-                    b.Navigation("Payments");
 
                     b.Navigation("Updates");
                 });
