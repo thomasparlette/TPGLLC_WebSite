@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using TPGLLC.Data;
 using TPGLLC.Shared.Identity;
 using TPGLLC.Web.Components;
+using TPGLLC.Web.Integration;
 
 namespace TPGLLC.Web.Infrastructure;
 
@@ -27,6 +28,7 @@ public static class TpgllcApplicationBuilderExtensions
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseAntiforgery();
+        app.MapAutoShop();
 
         app.MapRazorPages();
         app.MapStaticAssets();
@@ -55,10 +57,6 @@ public static class TpgllcApplicationBuilderExtensions
                 : Results.NotFound();
         }).AllowAnonymous();
 
-        app.MapGet("/db", (TPGLLCDbContext db) =>
-        {
-            return db.Database.GetConnectionString();
-        });
 
        
 
