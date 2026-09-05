@@ -1,9 +1,36 @@
 -- Run against the database used by ConnectionStrings:WebsiteDb, after confirming
--- the database name and taking a backup. Existing tables and data are untouched.
+-- the database name and taking a backup. Existing columns and records are preserved.
 SET XACT_ABORT ON;
 BEGIN TRANSACTION;
 IF OBJECT_ID(N'dbo.AppointmentRequests', N'U') IS NULL
     THROW 50001, 'Expected AppointmentRequests table is absent. Verify the target database before running this repair.', 1;
+IF OBJECT_ID(N'dbo.CustomerVehicles', N'U') IS NULL
+    THROW 50002, 'Expected CustomerVehicles table is absent. Verify the target database before running this repair.', 1;
+
+IF COL_LENGTH(N'dbo.CustomerVehicles', N'Submodel') IS NULL
+    ALTER TABLE dbo.CustomerVehicles ADD Submodel nvarchar(120) NULL;
+IF COL_LENGTH(N'dbo.CustomerVehicles', N'BodyStyle') IS NULL
+    ALTER TABLE dbo.CustomerVehicles ADD BodyStyle nvarchar(80) NULL;
+IF COL_LENGTH(N'dbo.CustomerVehicles', N'EngineFuel') IS NULL
+    ALTER TABLE dbo.CustomerVehicles ADD EngineFuel nvarchar(160) NULL;
+IF COL_LENGTH(N'dbo.CustomerVehicles', N'Transmission') IS NULL
+    ALTER TABLE dbo.CustomerVehicles ADD Transmission nvarchar(120) NULL;
+IF COL_LENGTH(N'dbo.CustomerVehicles', N'DriveType') IS NULL
+    ALTER TABLE dbo.CustomerVehicles ADD DriveType nvarchar(60) NULL;
+IF COL_LENGTH(N'dbo.CustomerVehicles', N'Brake') IS NULL
+    ALTER TABLE dbo.CustomerVehicles ADD Brake nvarchar(80) NULL;
+IF COL_LENGTH(N'dbo.CustomerVehicles', N'Gvw') IS NULL
+    ALTER TABLE dbo.CustomerVehicles ADD Gvw nvarchar(40) NULL;
+IF COL_LENGTH(N'dbo.CustomerVehicles', N'StateProvince') IS NULL
+    ALTER TABLE dbo.CustomerVehicles ADD StateProvince nvarchar(50) NULL;
+IF COL_LENGTH(N'dbo.CustomerVehicles', N'UnitNumber') IS NULL
+    ALTER TABLE dbo.CustomerVehicles ADD UnitNumber nvarchar(50) NULL;
+IF COL_LENGTH(N'dbo.CustomerVehicles', N'FleetNumber') IS NULL
+    ALTER TABLE dbo.CustomerVehicles ADD FleetNumber nvarchar(50) NULL;
+IF COL_LENGTH(N'dbo.CustomerVehicles', N'Color') IS NULL
+    ALTER TABLE dbo.CustomerVehicles ADD Color nvarchar(60) NULL;
+IF COL_LENGTH(N'dbo.CustomerVehicles', N'Memo') IS NULL
+    ALTER TABLE dbo.CustomerVehicles ADD Memo nvarchar(2000) NULL;
 
 IF COL_LENGTH(N'dbo.AppointmentRequests', N'VehicleSubmodel') IS NULL
     ALTER TABLE dbo.AppointmentRequests ADD VehicleSubmodel nvarchar(120) NULL;
