@@ -12,13 +12,14 @@
 
 @inject IWorkOrderPortalService WorkOrderService
 
-<PageTitle>Work Orders & Invoices</PageTitle>
+<PageTitle>My repairs | Customer portal</PageTitle>
 
 <section class="portal-dashboard">
     <div class="portal-header">
         <p class="section-kicker">Customer Portal</p>
-        <h1>Work Orders & Invoices</h1>
-        <p>Track the repairs we are recommending, what is approved, and the invoices tied to completed work.</p>
+        <h1>Your vehicle. Your repair updates.</h1>
+        <p>Follow your repair’s progress, review parts and estimates, and hear directly from your repair team.</p>
+        <button class="portal-action-button" @onclick="RefreshAsync" disabled="@_loading">Refresh repair updates</button>
     </div>
 
     @if (_loading)
@@ -85,6 +86,12 @@
                 <div class="portal-dashboard-grid">
                     @foreach (var workOrder in _model.WorkOrders.OrderByDescending(x => x.ServiceDate).ThenByDescending(x => x.CreatedUtc))
                     {
+                        @if (workOrder.Service == "Repair managed by AutoShop")
+                        {
+                            <AutoShopRepairCard Entry="workOrder" @key="workOrder.Id" />
+                        }
+                        else
+                        {
                         <ServiceHistoryCard Entry="@workOrder"
                                             CanApprove="@CanCustomerApprove(workOrder)"
                                             OnApprovePart="@(partId => ApprovePartAsync(partId, workOrder.Id))"
@@ -94,6 +101,7 @@
                                             OnApproveWorkOrder="ApproveWorkOrderAsync"
                                             OnDeclineWorkOrder="DeclineWorkOrderAsync"
                                             @key="workOrder.Id" />
+                        }
                     }
                 </div>
             }
@@ -146,7 +154,11 @@
     private string? _errorMessage;
 
     protected override async Task OnInitializedAsync()
+        => await RefreshAsync();
+
+    private async Task RefreshAsync()
     {
+        _loading = true;
         try
         {
             _model = await WorkOrderService.GetCustomerAsync();
@@ -178,6 +190,7 @@
 
     private static bool CanCustomerApprove(ServiceHistoryEntry workOrder)
     {
+        if (workOrder.Service == "Repair managed by AutoShop") return false;
         var statusIsOpen = string.Equals(workOrder.Status, "Waiting on Customer Approval", StringComparison.OrdinalIgnoreCase)
             || string.Equals(workOrder.Status, "In Progress", StringComparison.OrdinalIgnoreCase);
 

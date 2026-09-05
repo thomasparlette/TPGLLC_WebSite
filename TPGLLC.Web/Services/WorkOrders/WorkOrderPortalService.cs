@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -345,6 +345,12 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             return model;
         }
 
+        if (workOrder.Service == "Repair managed by AutoShop")
+        {
+            model.ErrorMessage = "Update this repair in AutoShop, then publish it to the portal.";
+            return model;
+        }
+
         var previousStatus = workOrder.Status;
         var previousDiagnosis = workOrder.Diagnosis;
         var previousNotes = workOrder.Notes;
@@ -675,6 +681,12 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             return model;
         }
 
+        if (workOrder.Service == "Repair managed by AutoShop")
+        {
+            model.ErrorMessage = "Update this repair in AutoShop, then publish it to the portal.";
+            return model;
+        }
+
         var previousStatus = workOrder.Status;
         var previousDiagnosis = workOrder.Diagnosis;
         var previousNotes = workOrder.Notes;
@@ -752,7 +764,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             return new WorkOrderPageViewModel { ErrorMessage = "Work order not found." };
         }
 
-        if (!IsCustomerApprovalOpen(workOrder.Status))
+        if (workOrder.Service == "Repair managed by AutoShop" || !IsCustomerApprovalOpen(workOrder.Status))
         {
             return await GetCustomerErrorAsync("This work order is not waiting for customer approval.");
         }
@@ -788,7 +800,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             return new WorkOrderPageViewModel { ErrorMessage = "Work order not found." };
         }
 
-        if (!IsCustomerApprovalOpen(workOrder.Status))
+        if (workOrder.Service == "Repair managed by AutoShop" || !IsCustomerApprovalOpen(workOrder.Status))
         {
             return await GetCustomerErrorAsync("This work order is not open for customer decisions.");
         }
@@ -828,7 +840,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             return new WorkOrderPageViewModel { ErrorMessage = "Work order not found." };
         }
 
-        if (!IsCustomerApprovalOpen(workOrder.Status))
+        if (workOrder.Service == "Repair managed by AutoShop" || !IsCustomerApprovalOpen(workOrder.Status))
         {
             return await GetCustomerErrorAsync("This work order is not waiting for customer approval.");
         }
@@ -867,7 +879,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             return new WorkOrderPageViewModel { ErrorMessage = "Work order not found." };
         }
 
-        if (!IsCustomerApprovalOpen(workOrder.Status))
+        if (workOrder.Service == "Repair managed by AutoShop" || !IsCustomerApprovalOpen(workOrder.Status))
         {
             return await GetCustomerErrorAsync("This work order is not open for customer decisions.");
         }
@@ -909,7 +921,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             return new WorkOrderPageViewModel { ErrorMessage = "Work order not found." };
         }
 
-        if (!IsCustomerApprovalOpen(workOrder.Status))
+        if (workOrder.Service == "Repair managed by AutoShop" || !IsCustomerApprovalOpen(workOrder.Status))
         {
             return await GetCustomerErrorAsync("This work order is not waiting for customer approval.");
         }
@@ -951,7 +963,7 @@ public sealed class WorkOrderPortalService : IWorkOrderPortalService
             return new WorkOrderPageViewModel { ErrorMessage = "Work order not found." };
         }
 
-        if (!IsCustomerApprovalOpen(workOrder.Status))
+        if (workOrder.Service == "Repair managed by AutoShop" || !IsCustomerApprovalOpen(workOrder.Status))
         {
             return await GetCustomerErrorAsync("This work order is not open for customer decisions.");
         }

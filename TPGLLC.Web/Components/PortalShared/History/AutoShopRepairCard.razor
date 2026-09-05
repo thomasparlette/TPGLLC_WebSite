@@ -1,0 +1,58 @@
+@using TPGLLC.Data.Entities
+
+<article class="repair-card">
+    <header class="repair-heading">
+        <div><span class="repair-eyebrow">@Entry.WorkOrderNumber</span><h3>@Entry.VehicleName</h3></div>
+        <span class="repair-status">@Entry.Status</span>
+    </header>
+    <ol class="repair-progress" aria-label="Repair progress">
+        @for (var i = 0; i < Steps.Length; i++)
+        {
+            var active = i <= Stage;
+            <li class="@(active ? "reached" : "")" aria-current="@(i == Stage ? "step" : null)"><span>@(i + 1)</span>@Steps[i]</li>
+        }
+    </ol>
+    @if (Entry.Status == "Cancelled")
+    {
+        <p class="repair-message">This repair has been canceled. Contact the shop with any questions.</p>
+    }
+    else if (Entry.Status == "Waiting on Customer Approval")
+    {
+        <p class="repair-message">Your repair needs a decision. Please contact the shop to review and authorize the proposed work.</p>
+    }
+    <section class="repair-update">
+        <span class="repair-eyebrow">Latest from your repair team</span>
+        <p>@(string.IsNullOrWhiteSpace(Entry.Notes) ? "Your repair team will post an update here as work progresses." : Entry.Notes)</p>
+        @if (Entry.UpdatedUtc.HasValue)
+        {
+            <small>Published @Entry.UpdatedUtc.Value.ToString("MMM d, yyyy • HH:mm 'UTC'")</small>
+        }
+    </section>
+    @if (Entry.Parts.Count > 0)
+    {
+        <details class="repair-details"><summary>Parts on your repair <span>@Entry.Parts.Count items</span></summary>
+            <div class="repair-parts">
+                @foreach (var part in Entry.Parts.OrderBy(p => p.Description))
+                {
+                    <div><span>@part.Description <small>Qty @part.Quantity.ToString("0.##")</small></span><strong>@((part.Quantity * (part.UnitPrice ?? 0m)).ToString("C"))</strong></div>
+                }
+            </div>
+        </details>
+    }
+    <footer><span>Current estimate <small>Includes the shop’s labor, parts, tax, and discounts.</small></span><strong>@Entry.EstimateAmount?.ToString("C")</strong></footer>
+    @if (Entry.Updates.Any(u => u.IsCustomerVisible))
+    {
+        <details class="repair-details"><summary>Repair update history</summary><ol class="repair-history">
+            @foreach (var update in Entry.Updates.Where(u => u.IsCustomerVisible).OrderByDescending(u => u.CreatedUtc))
+            {
+                <li><strong>@update.Status</strong><p>@update.Message</p><small>@update.CreatedUtc.ToString("MMM d, yyyy • HH:mm 'UTC'")</small></li>
+            }
+        </ol></details>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public ServiceHistoryEntry Entry { get; set; } = default!;
+    private static readonly string[] Steps = ["Received", "Repair underway", "Repair complete"];
+    private int Stage => Entry.Status switch { "Completed" or "Closed" => 2, "In Progress" => 1, _ => 0 };
+}
