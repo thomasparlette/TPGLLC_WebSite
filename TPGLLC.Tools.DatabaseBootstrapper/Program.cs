@@ -67,7 +67,7 @@ builder.Services
     {
         options.User.RequireUniqueEmail = true;
 
-        options.Password.RequiredLength = 10;
+        options.Password.RequiredLength = 6;
         options.Password.RequireDigit = true;
         options.Password.RequireLowercase = true;
         options.Password.RequireUppercase = true;
