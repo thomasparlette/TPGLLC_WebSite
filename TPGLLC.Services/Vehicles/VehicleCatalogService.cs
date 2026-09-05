@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using TPGLLC.Data;
 using Microsoft.Data.SqlClient;
@@ -10,13 +10,13 @@ public sealed class VehicleCatalogService : IVehicleCatalogService
 {
     private static readonly TimeSpan CacheDuration = TimeSpan.FromHours(12);
 
-    private readonly TPGLLCDbContext _db;
+    private readonly IDbContextFactory<TPGLLCDbContext> _dbFactory;
     private readonly IMemoryCache _cache;
     private readonly ILogger<VehicleCatalogService>? _logger;
 
-    public VehicleCatalogService(TPGLLCDbContext db, IMemoryCache cache, ILogger<VehicleCatalogService>? logger = null)
+    public VehicleCatalogService(IDbContextFactory<TPGLLCDbContext> dbFactory, IMemoryCache cache, ILogger<VehicleCatalogService>? logger = null)
     {
-        _db = db;
+        _dbFactory = dbFactory;
         _cache = cache;
         _logger = logger;
     }
@@ -32,7 +32,8 @@ public sealed class VehicleCatalogService : IVehicleCatalogService
             return cached;
         }
 
-        var result = await _db.VehicleCatalogEntries
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var result = await db.VehicleCatalogEntries
             .AsNoTracking()
             .Select(x => x.ModelYear)
             .Distinct()
@@ -59,7 +60,8 @@ public sealed class VehicleCatalogService : IVehicleCatalogService
             return cached;
         }
 
-        var result = await _db.VehicleCatalogEntries
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var result = await db.VehicleCatalogEntries
             .AsNoTracking()
             .Where(x =>  x.ModelYear == year)
             .Select(x => x.Make)
@@ -89,7 +91,8 @@ public sealed class VehicleCatalogService : IVehicleCatalogService
             return cached;
         }
 
-        var result = await _db.VehicleCatalogEntries
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var result = await db.VehicleCatalogEntries
             .AsNoTracking()
             .Where(x =>
                 x.ModelYear == year &&
@@ -127,7 +130,8 @@ public sealed class VehicleCatalogService : IVehicleCatalogService
         List<string> result;
         try
         {
-            result = await _db.VehicleCatalogOptions
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            result = await db.VehicleCatalogOptions
             .AsNoTracking()
             .Where(x => x.Category == normalizedCategory)
             .Select(x => x.Value)

@@ -16,9 +16,9 @@ public class VehicleCatalogFallbackTests
     public async Task MissingOptionalTableReturnsFallbackAndCachesBriefly()
     {
         var failure = new QueryFailure(CreateSqlException(208));
-        await using var db = Database(failure);
+        var factory = new CatalogFactory(failure);
         using var cache = new MemoryCache(new MemoryCacheOptions());
-        var catalog = new VehicleCatalogService(db, cache);
+        var catalog = new VehicleCatalogService(factory, cache);
         Assert.Empty(await catalog.GetOptionsAsync("BodyStyle"));
         Assert.Empty(await catalog.GetOptionsAsync("BodyStyle"));
         Assert.Equal(1, failure.Calls);
@@ -29,24 +29,56 @@ public class VehicleCatalogFallbackTests
     [InlineData(207)]   // Invalid columns need a real schema fix.
     public async Task OtherDatabaseFailuresPropagate(int number)
     {
-        await using var db = Database(new QueryFailure(CreateSqlException(number)));
+        var factory = new CatalogFactory(new QueryFailure(CreateSqlException(number)));
         using var cache = new MemoryCache(new MemoryCacheOptions());
-        await Assert.ThrowsAsync<SqlException>(() => new VehicleCatalogService(db, cache).GetOptionsAsync("BodyStyle"));
+        await Assert.ThrowsAsync<SqlException>(() => new VehicleCatalogService(factory, cache).GetOptionsAsync("BodyStyle"));
     }
 
     [Fact]
     public async Task ExistingCatalogStillReturnsDatabaseChoices()
     {
-        await using var db = Database();
+        var factory = new CatalogFactory();
+        await using var db = factory.CreateDbContext();
         db.VehicleCatalogOptions.Add(new() { Category = "BodyStyle", Value = "Hatchback", Source = "Test" });
         await db.SaveChangesAsync();
         using var cache = new MemoryCache(new MemoryCacheOptions());
-        Assert.Equal(new[] { "Hatchback" }, await new VehicleCatalogService(db, cache).GetOptionsAsync("BodyStyle"));
+        Assert.Equal(new[] { "Hatchback" }, await new VehicleCatalogService(factory, cache).GetOptionsAsync("BodyStyle"));
     }
 
-    private static TPGLLCDbContext Database(params IInterceptor[] interceptors) => new(
-        new DbContextOptionsBuilder<TPGLLCDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .AddInterceptors(interceptors).Options);
+    [Fact]
+    public async Task CatalogWorksAfterEarlierContextsAreDisposed()
+    {
+        var factory = new CatalogFactory();
+        await using (var seed = factory.CreateDbContext())
+        {
+            seed.VehicleCatalogEntries.Add(new() { ModelYear = 2020, Make = "Ford", Model = "Focus" });
+            seed.VehicleCatalogOptions.Add(new() { Category = "BodyStyle", Value = "Hatchback", Source = "Test" });
+            await seed.SaveChangesAsync();
+        }
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var catalog = new VehicleCatalogService(factory, cache);
+        Assert.Equal(new[] { 2020 }, await catalog.GetYearsAsync());
+        Assert.Equal(new[] { "Ford" }, await catalog.GetMakesAsync(2020));
+        Assert.Equal(new[] { "Focus" }, await catalog.GetModelsAsync(2020, "Ford"));
+        Assert.Equal(new[] { "Hatchback" }, await catalog.GetOptionsAsync("BodyStyle"));
+        Assert.Equal(5, factory.Contexts.Count);
+        Assert.All(factory.Contexts, db => Assert.Throws<ObjectDisposedException>(() => db.VehicleCatalogEntries));
+        Assert.Equal(new[] { "Hatchback" }, await catalog.GetOptionsAsync("BodyStyle"));
+        Assert.Equal(5, factory.Contexts.Count); // Cache hits need no connection.
+    }
+
+    private sealed class CatalogFactory(params IInterceptor[] interceptors) : IDbContextFactory<TPGLLCDbContext>
+    {
+        private readonly DbContextOptions<TPGLLCDbContext> _options = new DbContextOptionsBuilder<TPGLLCDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).AddInterceptors(interceptors).Options;
+        public List<TPGLLCDbContext> Contexts { get; } = [];
+        public TPGLLCDbContext CreateDbContext()
+        {
+            var db = new TPGLLCDbContext(_options);
+            Contexts.Add(db);
+            return db;
+        }
+    }
 
     private sealed class QueryFailure(Exception error) : IQueryExpressionInterceptor
     {
