@@ -591,6 +591,13 @@ try {
 
     if (-not $SkipHealthCheck) {
         Test-DeploymentHealth -Url $HealthCheckUrl
+        # /health only proves the process is running. Render the actual homepage
+        # as well so a database-backed page failure triggers the existing rollback.
+        $homepageUri = [UriBuilder]::new($HealthCheckUrl)
+        $homepageUri.Path = '/'
+        $homepageUri.Query = ''
+        $homepageUri.Fragment = ''
+        Test-DeploymentHealth -Url $homepageUri.Uri.AbsoluteUri
     }
     else {
         Write-Log "Health check skipped by request." 'WARN'

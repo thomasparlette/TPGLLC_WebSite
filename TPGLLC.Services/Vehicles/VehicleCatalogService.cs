@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using TPGLLC.Data;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 
 namespace TPGLLC.Services.Vehicles;
 
@@ -10,11 +12,13 @@ public sealed class VehicleCatalogService : IVehicleCatalogService
 
     private readonly TPGLLCDbContext _db;
     private readonly IMemoryCache _cache;
+    private readonly ILogger<VehicleCatalogService>? _logger;
 
-    public VehicleCatalogService(TPGLLCDbContext db, IMemoryCache cache)
+    public VehicleCatalogService(TPGLLCDbContext db, IMemoryCache cache, ILogger<VehicleCatalogService>? logger = null)
     {
         _db = db;
         _cache = cache;
+        _logger = logger;
     }
 
 
@@ -120,13 +124,26 @@ public sealed class VehicleCatalogService : IVehicleCatalogService
             return cached;
         }
 
-        var result = await _db.VehicleCatalogOptions
+        List<string> result;
+        try
+        {
+            result = await _db.VehicleCatalogOptions
             .AsNoTracking()
             .Where(x => x.Category == normalizedCategory)
             .Select(x => x.Value)
             .Distinct()
             .OrderBy(x => x)
             .ToListAsync(cancellationToken);
+        }
+        catch (SqlException ex) when (ex.Number == 208)
+        {
+            // This optional catalog was absent in older databases. Callers already
+            // provide standard choices for an empty result; keep that path usable.
+            _logger?.LogWarning(ex, "Optional VehicleCatalogOptions table is unavailable; using standard vehicle choices.");
+            IReadOnlyList<string> fallback = Array.Empty<string>();
+            _cache.Set(key, fallback, TimeSpan.FromMinutes(1));
+            return fallback;
+        }
 
         if (result.Count > 0)
         {
